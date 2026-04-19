@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { getAutoscuola, getActivities } from "@/lib/actions/autoscuole"
+import { getDocuments } from "@/lib/actions/documents"
 import { AutoscuolaClient } from "@/components/pages/autoscuola-client"
 import { STAGES } from "@/lib/constants"
 
@@ -16,6 +17,7 @@ export default async function AutoscuolaPage(props: {
   if (!result) notFound()
 
   const activitiesResult = await getActivities(id)
+  const documentsResult = await getDocuments(id)
 
   const activitiesFlat = activitiesResult.map((a) => ({
     ...a.activity,
@@ -36,6 +38,7 @@ export default async function AutoscuolaPage(props: {
       salesUser={result.salesUser}
       activities={activitiesFlat}
       stages={[...STAGES]}
+      documents={documentsResult}
     />
   )
 }

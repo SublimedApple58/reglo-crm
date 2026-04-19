@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Calendar,
   Mic,
+  ExternalLink,
 } from "lucide-react"
 import type { Autoscuola } from "@/lib/db/schema"
 
@@ -93,7 +94,8 @@ export function HomeClient({
 
         {/* Integrations */}
         <div className="grid grid-rows-2 gap-3">
-          <div className="flex overflow-hidden rounded-[14px] border border-border-1">
+          <a href="https://cal.com" target="_blank" rel="noopener noreferrer" className="group relative flex overflow-hidden rounded-[14px] border border-border-1 transition-all hover:-translate-y-px hover:shadow-[var(--shadow)]">
+            <ExternalLink className="absolute top-2.5 right-2.5 h-3.5 w-3.5 text-white/40 transition-colors group-hover:text-white/70" />
             <div className="flex flex-1 flex-col justify-center bg-[#0B1220] px-5 py-4">
               <p className="mb-0.5 text-[10.5px] font-medium text-white/50 uppercase">Integrazione</p>
               <h4 className="mb-1 text-[15px] font-bold text-white">Cal.com</h4>
@@ -104,8 +106,9 @@ export function HomeClient({
             <div className="flex w-[130px] items-center justify-center border-l border-border-2 bg-surface">
               <Calendar className="h-[26px] w-[26px] text-ink-400" />
             </div>
-          </div>
-          <div className="flex overflow-hidden rounded-[14px] border border-border-1">
+          </a>
+          <a href="https://grain.com" target="_blank" rel="noopener noreferrer" className="group relative flex overflow-hidden rounded-[14px] border border-border-1 transition-all hover:-translate-y-px hover:shadow-[var(--shadow)]">
+            <ExternalLink className="absolute top-2.5 right-2.5 h-3.5 w-3.5 text-white/40 transition-colors group-hover:text-white/70" />
             <div className="flex flex-1 flex-col justify-center bg-[#0B1220] px-5 py-4">
               <p className="mb-0.5 text-[10.5px] font-medium text-white/50 uppercase">Integrazione</p>
               <h4 className="mb-1 text-[15px] font-bold text-white">Grain</h4>
@@ -116,7 +119,7 @@ export function HomeClient({
             <div className="flex w-[130px] items-center justify-center border-l border-border-2 bg-surface">
               <Mic className="h-[26px] w-[26px] text-ink-400" />
             </div>
-          </div>
+          </a>
         </div>
       </div>
 

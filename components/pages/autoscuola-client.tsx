@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useCallback, useRef } from "react"
 import {
   Building,
   MapPin,
@@ -17,15 +17,50 @@ import {
   FileText,
   StickyNote,
   Lightbulb,
+  ExternalLink,
+  Download,
+  Trash2,
+  Upload,
+  File,
 } from "lucide-react"
 import { STAGES } from "@/lib/constants"
 import { updateAutoscuolaStage, updateAutoscuola, createActivity } from "@/lib/actions/autoscuole"
-import type { Autoscuola, PipelineStage, User, Activity } from "@/lib/db/schema"
+import { deleteDocument } from "@/lib/actions/documents"
+import type { Autoscuola, PipelineStage, User, Activity, Document } from "@/lib/db/schema"
 
 type ActivityFlat = Activity & {
   userName: string
   userColor: string
   userInitials: string
+}
+
+type DocumentWithUser = {
+  document: Document
+  user: { id: string; name: string }
+}
+
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/msword",
+  "application/vnd.ms-excel",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getFileIcon(contentType: string) {
+  if (contentType === "application/pdf") return FileText
+  if (contentType.startsWith("image/")) return File
+  return File
 }
 
 export function AutoscuolaClient({
@@ -34,12 +69,14 @@ export function AutoscuolaClient({
   salesUser,
   activities,
   stages,
+  documents,
 }: {
   autoscuola: Autoscuola
   stage: PipelineStage
   salesUser: User | null
   activities: ActivityFlat[]
   stages: typeof STAGES extends readonly (infer T)[] ? T[] : never
+  documents: DocumentWithUser[]
 }) {
   const [activeTab, setActiveTab] = useState("attivita")
   const [currentStageId, setCurrentStageId] = useState(autoscuola.stageId)
@@ -117,10 +154,11 @@ export function AutoscuolaClient({
                 <Mail className="h-3.5 w-3.5" />
                 Email
               </button>
-              <button className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90">
+              <a href="https://cal.com" target="_blank" rel="noopener noreferrer" className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90">
                 <Calendar className="h-3.5 w-3.5" />
                 Fissa meeting
-              </button>
+                <ExternalLink className="h-3 w-3 opacity-70" />
+              </a>
             </div>
           </div>
 
@@ -279,13 +317,10 @@ export function AutoscuolaClient({
           )}
 
           {activeTab === "documenti" && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <FileText className="mb-3 h-12 w-12 text-ink-300" />
-              <p className="text-[14px] font-medium text-ink-500">Nessun documento caricato</p>
-              <p className="text-[12.5px] text-ink-400">
-                Carica contratti, preventivi e altri file
-              </p>
-            </div>
+            <DocumentiTab
+              documents={documents}
+              autoscuolaId={autoscuola.id}
+            />
           )}
 
           {activeTab === "contratto" && (
@@ -449,6 +484,219 @@ function AnagraficaTab({ autoscuola }: { autoscuola: Autoscuola }) {
       >
         Salva modifiche
       </button>
+    </div>
+  )
+}
+
+function DocumentiTab({
+  documents,
+  autoscuolaId,
+}: {
+  documents: DocumentWithUser[]
+  autoscuolaId: string
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleUpload = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return
+      setUploading(true)
+
+      try {
+        for (const file of Array.from(files)) {
+          if (!ACCEPTED_TYPES.includes(file.type)) {
+            alert(`Tipo file non supportato: ${file.name}`)
+            continue
+          }
+
+          // 1. Get presigned URL from API
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              autoscuolaId,
+              filename: file.name,
+              contentType: file.type,
+              size: file.size,
+            }),
+          })
+
+          if (!res.ok) {
+            alert(`Errore durante il caricamento di ${file.name}`)
+            continue
+          }
+
+          const { uploadUrl } = await res.json()
+
+          // 2. Upload file directly to R2
+          await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file,
+          })
+        }
+
+        // 3. Refresh the page to show new documents
+        startTransition(() => {
+          // Trigger revalidation by calling a no-op transition
+          window.location.reload()
+        })
+      } catch {
+        alert("Errore durante il caricamento")
+      } finally {
+        setUploading(false)
+      }
+    },
+    [autoscuolaId]
+  )
+
+  const handleDownload = useCallback(async (docId: number, name: string) => {
+    const res = await fetch(`/api/upload/${docId}`)
+    if (!res.ok) return
+    const { url } = await res.json()
+    const a = document.createElement("a")
+    a.href = url
+    a.download = name
+    a.target = "_blank"
+    a.rel = "noopener noreferrer"
+    a.click()
+  }, [])
+
+  const handleDelete = useCallback((docId: number) => {
+    if (!confirm("Eliminare questo documento?")) return
+    startTransition(async () => {
+      await deleteDocument(docId)
+    })
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      handleUpload(e.dataTransfer.files)
+    },
+    [handleUpload]
+  )
+
+  return (
+    <div>
+      {/* Upload zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`mb-6 flex flex-col items-center justify-center rounded-[14px] border-2 border-dashed p-8 transition-colors ${
+          isDragging
+            ? "border-pink bg-pink/5"
+            : "border-border-2 bg-surface-2/50"
+        }`}
+      >
+        <Upload
+          className={`mb-3 h-8 w-8 ${
+            isDragging ? "text-pink" : "text-ink-400"
+          }`}
+        />
+        <p className="mb-1 text-[13px] font-medium text-ink-700">
+          {uploading
+            ? "Caricamento in corso..."
+            : isDragging
+            ? "Rilascia i file qui"
+            : "Trascina i file qui o clicca per caricare"}
+        </p>
+        <p className="mb-3 text-[11.5px] text-ink-400">
+          PDF, DOCX, XLSX, immagini
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.docx,.xlsx,.doc,.xls,.png,.jpg,.jpeg,.webp,.gif"
+          className="hidden"
+          onChange={(e) => handleUpload(e.target.files)}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1.5 rounded-[999px] bg-pink px-4 py-2 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          {uploading ? "Caricamento..." : "Carica file"}
+        </button>
+      </div>
+
+      {/* Document list */}
+      {documents.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <FileText className="mb-3 h-12 w-12 text-ink-300" />
+          <p className="text-[14px] font-medium text-ink-500">
+            Nessun documento caricato
+          </p>
+          <p className="text-[12.5px] text-ink-400">
+            Carica contratti, preventivi e altri file
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {documents.map(({ document: doc, user }) => {
+            const IconComponent = getFileIcon(doc.contentType)
+            return (
+              <div
+                key={doc.id}
+                className="flex items-center gap-3 rounded-[12px] border border-border-1 bg-surface p-3 transition-colors hover:bg-surface-2"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-2">
+                  <IconComponent className="h-5 w-5 text-ink-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-ink-900">
+                    {doc.name}
+                  </p>
+                  <p className="text-[11.5px] text-ink-400">
+                    {formatFileSize(doc.size)} · {user.name} ·{" "}
+                    {doc.createdAt
+                      ? new Date(doc.createdAt).toLocaleDateString("it-IT", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleDownload(doc.id, doc.name)}
+                    className="flex h-8 w-8 items-center justify-center rounded-[8px] text-ink-400 transition-colors hover:bg-surface-2 hover:text-ink-700"
+                    title="Scarica"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    disabled={isPending}
+                    className="flex h-8 w-8 items-center justify-center rounded-[8px] text-ink-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                    title="Elimina"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

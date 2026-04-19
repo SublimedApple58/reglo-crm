@@ -91,6 +91,17 @@ export const commissionLines = pgTable("commission_lines", {
   date: timestamp("date").notNull(),
 })
 
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  autoscuolaId: text("autoscuola_id").notNull().references(() => autoscuole.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  key: text("key").notNull(), // R2 object key
+  size: integer("size").notNull(),
+  contentType: text("content_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 export const resources = pgTable("resources", {
   id: serial("id").primaryKey(),
   category: text("category").notNull(),
@@ -115,3 +126,4 @@ export type News = typeof news.$inferSelect
 export type Commission = typeof commissions.$inferSelect
 export type CommissionLine = typeof commissionLines.$inferSelect
 export type Resource = typeof resources.$inferSelect
+export type Document = typeof documents.$inferSelect
