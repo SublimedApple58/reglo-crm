@@ -56,15 +56,24 @@ export async function upsertResource(data: {
   color?: string
 }) {
   if (data.id) {
+    const { id, ...rest } = data
     await db.update(resources).set({
-      ...data,
+      ...rest,
       updatedAt: new Date(),
-    }).where(eq(resources.id, data.id))
-    return data.id
+    }).where(eq(resources.id, id))
+    return id
   } else {
     const session = await auth()
+    const { id: _id, ...rest } = data
     const [result] = await db.insert(resources).values({
-      ...data,
+      category: rest.category,
+      title: rest.title,
+      excerpt: rest.excerpt ?? null,
+      html: rest.html ?? null,
+      tags: rest.tags ?? [],
+      pinned: rest.pinned ?? false,
+      icon: rest.icon ?? null,
+      color: rest.color ?? null,
       authorId: session?.user?.id ?? null,
     }).returning()
     return result.id
