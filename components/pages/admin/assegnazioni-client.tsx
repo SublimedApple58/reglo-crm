@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { Search, AlertCircle, Check } from "lucide-react"
+import { useState, useTransition, useMemo } from "react"
+import { Search, AlertCircle, Check, MapPin } from "lucide-react"
 import { StageChip } from "@/components/ui/stage-chip"
 import { updateAutoscuola, bulkReassign } from "@/lib/actions/autoscuole"
 
@@ -34,13 +34,20 @@ export function AssegnazioniClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState("")
   const [filterProvince, setFilterProvince] = useState<string | null>(null)
+  const [filterAssignment, setFilterAssignment] = useState<string | null>(null) // "unassigned" | salesId | null
   const [bulkTarget, setBulkTarget] = useState("")
   const [isPending, startTransition] = useTransition()
+  const [showProvinceAssign, setShowProvinceAssign] = useState(false)
+  const [provinceTarget, setProvinceTarget] = useState("")
+  const [provinceSales, setProvinceSales] = useState("")
 
   const unassignedCount = autoscuole.filter((a) => !a.assignedTo).length
+  const provinces = useMemo(() => [...new Set(autoscuole.map((a) => a.province))].sort(), [autoscuole])
 
   const filtered = autoscuole.filter((a) => {
     if (filterProvince && a.province !== filterProvince) return false
+    if (filterAssignment === "unassigned" && a.assignedTo !== null) return false
+    if (filterAssignment && filterAssignment !== "unassigned" && a.assignedTo !== filterAssignment) return false
     if (search) {
       const q = search.toLowerCase()
       return a.name.toLowerCase().includes(q) || a.town.toLowerCase().includes(q)
@@ -48,7 +55,8 @@ export function AssegnazioniClient({
     return true
   })
 
-  const provinces = [...new Set(autoscuole.map((a) => a.province))].sort()
+  // Limit displayed rows for performance
+  const displayed = filtered.slice(0, 200)
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -60,10 +68,10 @@ export function AssegnazioniClient({
   }
 
   function toggleAll() {
-    if (selected.size === filtered.length) {
+    if (selected.size === displayed.length) {
       setSelected(new Set())
     } else {
-      setSelected(new Set(filtered.map((a) => a.id)))
+      setSelected(new Set(displayed.map((a) => a.id)))
     }
   }
 
@@ -95,6 +103,38 @@ export function AssegnazioniClient({
     setBulkTarget("")
   }
 
+  function handleProvinceAssign() {
+    if (!provinceTarget || !provinceSales) return
+    const ids = autoscuole
+      .filter((a) => a.province === provinceTarget && !a.assignedTo)
+      .map((a) => a.id)
+    if (ids.length === 0) return
+    const salesName = salesOptions.find((s) => s.id === provinceSales)?.name ?? null
+    setAutoscuole((prev) =>
+      prev.map((a) =>
+        ids.includes(a.id) ? { ...a, assignedTo: provinceSales, salesName } : a
+      )
+    )
+    startTransition(() => {
+      bulkReassign(ids, provinceSales)
+    })
+    setShowProvinceAssign(false)
+    setProvinceTarget("")
+    setProvinceSales("")
+  }
+
+  // Province stats
+  const provinceStats = useMemo(() => {
+    const map = new Map<string, { total: number; unassigned: number }>()
+    for (const a of autoscuole) {
+      const stat = map.get(a.province) ?? { total: 0, unassigned: 0 }
+      stat.total++
+      if (!a.assignedTo) stat.unassigned++
+      map.set(a.province, stat)
+    }
+    return map
+  }, [autoscuole])
+
   return (
     <div className="mx-auto max-w-[1400px] px-8 py-6">
       {/* Header */}
@@ -119,14 +159,22 @@ export function AssegnazioniClient({
             </>
           )}
         </span>
+        <div className="flex-1" />
+        <button
+          onClick={() => setShowProvinceAssign(true)}
+          className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
+        >
+          <MapPin className="h-3.5 w-3.5" />
+          Assegna per provincia
+        </button>
       </div>
 
       {/* Sales summary strip */}
-      <div className="mb-5 grid auto-cols-[180px] grid-flow-col gap-2 overflow-x-auto">
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         {salesOptions.map((s) => (
           <div
             key={s.id}
-            className="rounded-[12px] border border-border-1 bg-surface p-3"
+            className="w-[180px] shrink-0 rounded-[12px] border border-border-1 bg-surface p-3"
           >
             <div className="flex items-center gap-2">
               <div
@@ -143,9 +191,8 @@ export function AssegnazioniClient({
             </div>
           </div>
         ))}
-        {/* Unassigned card */}
         {unassignedCount > 0 && (
-          <div className="rounded-[12px] border-2 border-dashed border-red/30 bg-red-50 p-3">
+          <div className="w-[180px] shrink-0 rounded-[12px] border-2 border-dashed border-red/30 bg-red-50 p-3">
             <p className="text-[12px] font-semibold text-red">Non assegnate</p>
             <p className="font-mono text-[18px] font-bold text-red">{unassignedCount}</p>
           </div>
@@ -169,13 +216,29 @@ export function AssegnazioniClient({
           className="h-8 rounded-[999px] border border-border-1 bg-surface px-3 text-[12px] text-ink-600 outline-none"
         >
           <option value="">Tutte le province</option>
-          {provinces.map((p) => (
-            <option key={p} value={p}>{p}</option>
+          {provinces.map((p) => {
+            const stat = provinceStats.get(p)
+            return (
+              <option key={p} value={p}>
+                {p} ({stat?.total ?? 0} · {stat?.unassigned ?? 0} libere)
+              </option>
+            )
+          })}
+        </select>
+        <select
+          value={filterAssignment ?? ""}
+          onChange={(e) => setFilterAssignment(e.target.value || null)}
+          className="h-8 rounded-[999px] border border-border-1 bg-surface px-3 text-[12px] text-ink-600 outline-none"
+        >
+          <option value="">Tutti</option>
+          <option value="unassigned">Solo non assegnate</option>
+          {salesOptions.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
 
         <span className="ml-auto text-[12px] text-ink-400">
-          {filtered.length} risultati
+          {filtered.length} risultati{filtered.length > 200 ? " (prime 200)" : ""}
         </span>
       </div>
 
@@ -214,7 +277,7 @@ export function AssegnazioniClient({
               <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
-                  checked={selected.size === filtered.length && filtered.length > 0}
+                  checked={selected.size === displayed.length && displayed.length > 0}
                   onChange={toggleAll}
                   className="accent-pink"
                 />
@@ -237,7 +300,7 @@ export function AssegnazioniClient({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((a) => (
+            {displayed.map((a) => (
               <tr
                 key={a.id}
                 className="border-b border-border-2 transition-colors hover:bg-surface-2"
@@ -277,6 +340,75 @@ export function AssegnazioniClient({
           </tbody>
         </table>
       </div>
+
+      {/* Province assign dialog */}
+      {showProvinceAssign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowProvinceAssign(false)}>
+          <div className="w-[480px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-1 text-[18px] font-bold text-ink-900">Assegna per provincia</h2>
+            <p className="mb-5 text-[13px] text-ink-500">
+              Assegna tutte le autoscuole non assegnate di una provincia a un sales.
+            </p>
+
+            <div className="space-y-3.5">
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Provincia</label>
+                <select
+                  value={provinceTarget}
+                  onChange={(e) => setProvinceTarget(e.target.value)}
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                >
+                  <option value="">Seleziona provincia…</option>
+                  {provinces.map((p) => {
+                    const stat = provinceStats.get(p)
+                    return (
+                      <option key={p} value={p}>
+                        {p} — {stat?.unassigned ?? 0} non assegnate su {stat?.total ?? 0}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Assegna a</label>
+                <select
+                  value={provinceSales}
+                  onChange={(e) => setProvinceSales(e.target.value)}
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                >
+                  <option value="">Seleziona sales…</option>
+                  {salesOptions.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.territory})</option>
+                  ))}
+                </select>
+              </div>
+
+              {provinceTarget && (
+                <div className="rounded-[10px] bg-surface-2 px-3 py-2 text-[12.5px] text-ink-600">
+                  Verranno assegnate <strong>{provinceStats.get(provinceTarget)?.unassigned ?? 0}</strong> autoscuole della provincia <strong>{provinceTarget}</strong>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setShowProvinceAssign(false)}
+                className="h-9 rounded-[999px] border border-border-1 px-4 text-[13px] font-medium text-ink-600 hover:bg-surface-2"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleProvinceAssign}
+                disabled={!provinceTarget || !provinceSales || isPending}
+                className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+              >
+                {isPending ? "Assegnazione..." : "Assegna"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
