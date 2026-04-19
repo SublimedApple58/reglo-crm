@@ -35,6 +35,12 @@ export function CommissioniClient({
   const quotaProgress = quota > 0 ? gross / quota : 0
   const ytd = commissions.reduce((sum, c) => sum + (c.gross ?? 0), 0)
 
+  // Calculate real trend vs previous month
+  const prevMonth = commissions.length >= 2 ? commissions[commissions.length - 2] : null
+  const prevGross = prevMonth?.gross ?? 0
+  const trend = prevGross > 0 ? ((gross - prevGross) / prevGross) * 100 : 0
+  const trendPositive = trend >= 0
+
   const chartData = commissions.map((c) => ({
     month: MONTHS_IT[c.month],
     gross: c.gross,
@@ -56,10 +62,18 @@ export function CommissioniClient({
             <span className="font-mono text-[36px] font-bold leading-none tracking-tight text-ink-900">
               €{gross.toLocaleString("it-IT")}
             </span>
-            <span className="mb-1 flex items-center gap-1 rounded-[999px] bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green">
-              <TrendingUp className="h-3 w-3" />
-              +12.4%
-            </span>
+            {prevGross > 0 && (
+              <span
+                className="mb-1 flex items-center gap-1 rounded-[999px] px-2 py-0.5 text-[11px] font-semibold"
+                style={{
+                  backgroundColor: trendPositive ? "#ECFDF5" : "#FEF2F2",
+                  color: trendPositive ? "#10B981" : "#EF4444",
+                }}
+              >
+                {trendPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {trendPositive ? "+" : ""}{trend.toFixed(1)}%
+              </span>
+            )}
           </div>
           <p className="mt-2 text-[12px] text-ink-400">
             {contracts} contratti · media €{contracts > 0 ? Math.round(gross / contracts).toLocaleString("it-IT") : "0"}/contratto

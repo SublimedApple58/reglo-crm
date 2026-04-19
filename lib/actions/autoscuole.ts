@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { autoscuole, pipelineStages, activities, users } from "@/lib/db/schema"
+import { autoscuole, pipelineStages, activities, users, commissionLines, documents } from "@/lib/db/schema"
 import { eq, and, ilike, or, desc, asc, sql } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
@@ -180,4 +180,75 @@ export async function bulkReassign(autoscuolaIds: string[], newSalesId: string |
 
   revalidatePath("/admin/assegnazioni")
   revalidatePath("/pipeline")
+}
+
+export async function deleteAutoscuola(id: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  // Cascade delete: commission lines referencing this autoscuola
+  await db.delete(commissionLines).where(eq(commissionLines.autoscuolaId, id))
+  // Delete documents
+  await db.delete(documents).where(eq(documents.autoscuolaId, id))
+  // Delete activities
+  await db.delete(activities).where(eq(activities.autoscuolaId, id))
+  // Delete autoscuola
+  await db.delete(autoscuole).where(eq(autoscuole.id, id))
+
+  revalidatePath("/pipeline")
+  revalidatePath("/admin/assegnazioni")
+}
+
+export async function getRecentActivities(limit: number = 10) {
+  return db
+    .select({
+      activity: activities,
+      user: users,
+      autoscuola: autoscuole,
+    })
+    .from(activities)
+    .innerJoin(users, eq(activities.userId, users.id))
+    .innerJoin(autoscuole, eq(activities.autoscuolaId, autoscuole.id))
+    .orderBy(desc(activities.createdAt))
+    .limit(limit)
+}
+
+export async function searchGlobal(query: string) {
+  if (!query || query.length < 2) return { autoscuole: [], users: [] }
+
+  const autoscuoleResults = await db
+    .select({
+      id: autoscuole.id,
+      name: autoscuole.name,
+      town: autoscuole.town,
+      province: autoscuole.province,
+    })
+    .from(autoscuole)
+    .where(
+      or(
+        ilike(autoscuole.name, `%${query}%`),
+        ilike(autoscuole.town, `%${query}%`)
+      )
+    )
+    .orderBy(asc(autoscuole.name))
+    .limit(10)
+
+  const usersResults = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+    })
+    .from(users)
+    .where(
+      or(
+        ilike(users.name, `%${query}%`),
+        ilike(users.email, `%${query}%`)
+      )
+    )
+    .orderBy(asc(users.name))
+    .limit(5)
+
+  return { autoscuole: autoscuoleResults, users: usersResults }
 }

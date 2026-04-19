@@ -3,6 +3,8 @@
 import { db } from "@/lib/db"
 import { news, commissions, commissionLines, resources, users, autoscuole } from "@/lib/db/schema"
 import { eq, desc, and, sql, asc } from "drizzle-orm"
+import { revalidatePath } from "next/cache"
+import { auth } from "@/lib/auth"
 
 export async function getNews() {
   return db.select().from(news).orderBy(desc(news.pinned), desc(news.createdAt))
@@ -60,9 +62,10 @@ export async function upsertResource(data: {
     }).where(eq(resources.id, data.id))
     return data.id
   } else {
+    const session = await auth()
     const [result] = await db.insert(resources).values({
       ...data,
-      authorId: "u_admin",
+      authorId: session?.user?.id ?? null,
     }).returning()
     return result.id
   }
@@ -79,6 +82,41 @@ export async function getSalesTeam() {
     .from(users)
     .where(sql`${users.role} IN ('sales', 'both')`)
     .orderBy(asc(users.name))
+}
+
+export async function createNews(data: {
+  category: string
+  title: string
+  excerpt?: string
+  body?: string
+  pinned?: boolean
+  authorId: string
+}) {
+  const [result] = await db.insert(news).values(data).returning()
+  return result
+}
+
+export async function updateNews(
+  id: number,
+  data: Partial<{
+    category: string
+    title: string
+    excerpt: string
+    body: string
+    pinned: boolean
+  }>
+) {
+  await db.update(news).set(data).where(eq(news.id, id))
+}
+
+export async function deleteNews(id: number) {
+  await db.delete(news).where(eq(news.id, id))
+}
+
+export async function toggleNewsPin(id: number) {
+  const [item] = await db.select().from(news).where(eq(news.id, id)).limit(1)
+  if (!item) return
+  await db.update(news).set({ pinned: !item.pinned }).where(eq(news.id, id))
 }
 
 export async function getAdminStats() {

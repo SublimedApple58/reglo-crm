@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { User, Mail, Phone, MapPin, Shield, Lock } from "lucide-react"
+import { useState, useTransition } from "react"
+import { User, Mail, MapPin, Shield } from "lucide-react"
+import { changePassword } from "@/lib/actions/users"
 
 type UserInfo = {
   id: string
@@ -12,8 +13,11 @@ type UserInfo = {
 }
 
 export function ProfiloClient({ user }: { user: UserInfo }) {
+  const [currentPassword, setCurrentPassword] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [isPending, startTransition] = useTransition()
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const initials = user.name
     .split(" ")
@@ -21,6 +25,35 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
     .join("")
     .toUpperCase()
     .slice(0, 2)
+
+  function handleChangePassword() {
+    setMessage(null)
+
+    if (password.length < 8) {
+      setMessage({ type: "error", text: "La password deve essere di almeno 8 caratteri" })
+      return
+    }
+    if (password !== confirmPassword) {
+      setMessage({ type: "error", text: "Le password non coincidono" })
+      return
+    }
+    if (!currentPassword) {
+      setMessage({ type: "error", text: "Inserisci la password corrente" })
+      return
+    }
+
+    startTransition(async () => {
+      try {
+        await changePassword(currentPassword, password)
+        setMessage({ type: "success", text: "Password aggiornata con successo" })
+        setCurrentPassword("")
+        setPassword("")
+        setConfirmPassword("")
+      } catch (err) {
+        setMessage({ type: "error", text: err instanceof Error ? err.message : "Errore durante il cambio password" })
+      }
+    })
+  }
 
   return (
     <div className="mx-auto max-w-[640px] px-6 py-8">
@@ -72,6 +105,18 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
         <div className="space-y-3">
           <div>
             <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">
+              Password corrente
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+              placeholder="••••••••"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">
               Nuova password
             </label>
             <input
@@ -94,8 +139,25 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
               placeholder="••••••••"
             />
           </div>
-          <button className="mt-2 rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90">
-            Salva
+
+          {message && (
+            <div
+              className="rounded-[10px] px-3 py-2 text-[12.5px] font-medium"
+              style={{
+                backgroundColor: message.type === "success" ? "#ECFDF5" : "#FEF2F2",
+                color: message.type === "success" ? "#10B981" : "#EF4444",
+              }}
+            >
+              {message.text}
+            </div>
+          )}
+
+          <button
+            onClick={handleChangePassword}
+            disabled={isPending}
+            className="mt-2 rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+          >
+            {isPending ? "Salvataggio..." : "Salva"}
           </button>
         </div>
       </div>

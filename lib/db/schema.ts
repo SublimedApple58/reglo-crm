@@ -48,6 +48,10 @@ export const autoscuole = pgTable("autoscuole", {
   lat: real("lat"),
   lng: real("lng"),
   address: text("address"),
+  package: text("package"), // e.g. "Starter", "Professional", "Enterprise"
+  closeProbability: real("close_probability"), // 0-100
+  commissionRate: real("commission_rate"), // 0-1
+  expectedCloseDate: timestamp("expected_close_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

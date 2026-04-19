@@ -9,8 +9,6 @@ import {
   BookOpen,
   Search,
   Pin,
-  ThumbsUp,
-  ThumbsDown,
   Calendar,
 } from "lucide-react"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
@@ -160,17 +158,6 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
               />
             )}
 
-            <div className="mt-8 flex items-center gap-3 border-t border-border-1 pt-4">
-              <span className="text-[12.5px] text-ink-500">Questa risorsa è stata utile?</span>
-              <button className="flex h-7 items-center gap-1 rounded-[999px] border border-border-1 px-3 text-[11.5px] text-ink-600 hover:bg-green-50 hover:text-green">
-                <ThumbsUp className="h-3 w-3" />
-                Utile
-              </button>
-              <button className="flex h-7 items-center gap-1 rounded-[999px] border border-border-1 px-3 text-[11.5px] text-ink-600 hover:bg-red-50 hover:text-red">
-                <ThumbsDown className="h-3 w-3" />
-                Migliorabile
-              </button>
-            </div>
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-ink-400">

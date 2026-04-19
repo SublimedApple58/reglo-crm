@@ -1,13 +1,18 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { getCommissions, getCommissionLines } from "@/lib/actions/data"
+import { getUser } from "@/lib/actions/users"
 import { CommissioniClient } from "@/components/pages/commissioni-client"
 
 export default async function CommissioniPage() {
   const session = await auth()
   if (!session?.user) redirect("/sign-in")
 
-  const commissions = await getCommissions(session.user.id)
+  const [commissions, user] = await Promise.all([
+    getCommissions(session.user.id),
+    getUser(session.user.id),
+  ])
+
   const currentMonth = commissions[commissions.length - 1]
 
   let lines: Awaited<ReturnType<typeof getCommissionLines>> = []
@@ -20,7 +25,7 @@ export default async function CommissioniPage() {
       commissions={commissions}
       currentMonth={currentMonth ?? null}
       lines={lines}
-      quota={5750}
+      quota={user?.quota ?? 5750}
     />
   )
 }

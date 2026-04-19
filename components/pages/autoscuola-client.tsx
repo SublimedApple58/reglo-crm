@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition, useCallback, useRef } from "react"
+import { useRouter } from "next/navigation"
 import {
   Building,
   MapPin,
@@ -24,7 +25,7 @@ import {
   File,
 } from "lucide-react"
 import { STAGES } from "@/lib/constants"
-import { updateAutoscuolaStage, updateAutoscuola, createActivity } from "@/lib/actions/autoscuole"
+import { updateAutoscuolaStage, updateAutoscuola, createActivity, deleteAutoscuola } from "@/lib/actions/autoscuole"
 import { deleteDocument } from "@/lib/actions/documents"
 import type { Autoscuola, PipelineStage, User, Activity, Document } from "@/lib/db/schema"
 
@@ -78,11 +79,13 @@ export function AutoscuolaClient({
   stages: typeof STAGES extends readonly (infer T)[] ? T[] : never
   documents: DocumentWithUser[]
 }) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("attivita")
   const [currentStageId, setCurrentStageId] = useState(autoscuola.stageId)
   const [isPending, startTransition] = useTransition()
   const [activityText, setActivityText] = useState("")
   const [activityType, setActivityType] = useState<"call" | "email" | "meeting" | "note">("call")
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const currentStageOrder = STAGES.findIndex((s) => s.id === currentStageId)
 
@@ -113,6 +116,16 @@ export function AutoscuolaClient({
     })
   }
 
+  function handleDelete() {
+    startTransition(async () => {
+      await deleteAutoscuola(autoscuola.id)
+      router.push("/pipeline")
+    })
+  }
+
+  const commissionRate = autoscuola.commissionRate ?? 0.15
+  const closeProbability = autoscuola.closeProbability ?? null
+
   const tabs = [
     { id: "attivita", label: "Attività" },
     { id: "anagrafica", label: "Anagrafica" },
@@ -138,22 +151,44 @@ export function AutoscuolaClient({
               <p className="flex items-center gap-2 text-[12.5px] text-ink-500">
                 <MapPin className="h-3 w-3" />
                 {autoscuola.town}, {autoscuola.province}
-                <span className="mx-1 text-ink-300">·</span>
-                <Users className="h-3 w-3" />
-                {autoscuola.students} allievi
-                <span className="mx-1 text-ink-300">·</span>
-                <span className="font-mono text-ink-400">{autoscuola.id}</span>
+                {autoscuola.students ? (
+                  <>
+                    <span className="mx-1 text-ink-300">·</span>
+                    <Users className="h-3 w-3" />
+                    {autoscuola.students} allievi
+                  </>
+                ) : null}
               </p>
             </div>
             <div className="flex gap-2">
-              <button className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-600 hover:bg-surface-2">
-                <Phone className="h-3.5 w-3.5" />
-                Chiama
-              </button>
-              <button className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-600 hover:bg-surface-2">
-                <Mail className="h-3.5 w-3.5" />
-                Email
-              </button>
+              {autoscuola.phone ? (
+                <a
+                  href={`tel:${autoscuola.phone}`}
+                  className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-600 hover:bg-surface-2"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  Chiama
+                </a>
+              ) : (
+                <button disabled className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-400 opacity-50">
+                  <Phone className="h-3.5 w-3.5" />
+                  Chiama
+                </button>
+              )}
+              {autoscuola.email ? (
+                <a
+                  href={`mailto:${autoscuola.email}`}
+                  className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-600 hover:bg-surface-2"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  Email
+                </a>
+              ) : (
+                <button disabled className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-400 opacity-50">
+                  <Mail className="h-3.5 w-3.5" />
+                  Email
+                </button>
+              )}
               <a href="https://cal.com" target="_blank" rel="noopener noreferrer" className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90">
                 <Calendar className="h-3.5 w-3.5" />
                 Fissa meeting
@@ -313,7 +348,10 @@ export function AutoscuolaClient({
           )}
 
           {activeTab === "anagrafica" && (
-            <AnagraficaTab autoscuola={autoscuola} />
+            <AnagraficaTab
+              autoscuola={autoscuola}
+              onDelete={() => setShowDeleteConfirm(true)}
+            />
           )}
 
           {activeTab === "documenti" && (
@@ -348,22 +386,25 @@ export function AutoscuolaClient({
           </h3>
           <div className="space-y-2.5">
             {autoscuola.phone && (
-              <div className="flex items-center gap-2.5 text-[13px]">
+              <a href={`tel:${autoscuola.phone}`} className="flex items-center gap-2.5 text-[13px] hover:text-pink">
                 <Phone className="h-3.5 w-3.5 text-ink-400" />
                 <span className="text-ink-700">{autoscuola.phone}</span>
-              </div>
+              </a>
             )}
             {autoscuola.email && (
-              <div className="flex items-center gap-2.5 text-[13px]">
+              <a href={`mailto:${autoscuola.email}`} className="flex items-center gap-2.5 text-[13px] hover:text-pink">
                 <Mail className="h-3.5 w-3.5 text-ink-400" />
                 <span className="text-ink-700">{autoscuola.email}</span>
-              </div>
+              </a>
             )}
             {autoscuola.address && (
               <div className="flex items-center gap-2.5 text-[13px]">
                 <MapPin className="h-3.5 w-3.5 text-ink-400" />
                 <span className="text-ink-700">{autoscuola.address}</span>
               </div>
+            )}
+            {!autoscuola.phone && !autoscuola.email && !autoscuola.address && (
+              <p className="text-[12.5px] text-ink-400">Nessun contatto disponibile</p>
             )}
           </div>
         </div>
@@ -392,7 +433,7 @@ export function AutoscuolaClient({
           </div>
         )}
 
-        {/* Deal info */}
+        {/* Deal info — real data */}
         <div className="border-b border-border-1 p-5">
           <h3 className="mb-3 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
             Deal
@@ -400,24 +441,40 @@ export function AutoscuolaClient({
           <div className="space-y-2.5">
             <div className="flex justify-between text-[13px]">
               <span className="text-ink-500">Pacchetto</span>
-              <span className="font-medium text-ink-900">Professional</span>
+              <span className="font-medium text-ink-900">{autoscuola.package ?? "–"}</span>
             </div>
             <div className="flex justify-between text-[13px]">
               <span className="text-ink-500">Valore</span>
               <span className="font-mono font-semibold text-ink-900">
-                €{autoscuola.pipelineValue?.toLocaleString("it-IT") ?? "–"}
+                {autoscuola.pipelineValue ? `€${autoscuola.pipelineValue.toLocaleString("it-IT")}` : "–"}
               </span>
             </div>
             <div className="flex justify-between text-[13px]">
-              <span className="text-ink-500">Commissione</span>
+              <span className="text-ink-500">Commissione ({Math.round(commissionRate * 100)}%)</span>
               <span className="font-mono font-medium text-green">
-                €{Math.round((autoscuola.pipelineValue ?? 0) * 0.15).toLocaleString("it-IT")}
+                {autoscuola.pipelineValue
+                  ? `€${Math.round(autoscuola.pipelineValue * commissionRate).toLocaleString("it-IT")}`
+                  : "–"}
               </span>
             </div>
             <div className="flex justify-between text-[13px]">
               <span className="text-ink-500">Prob. chiusura</span>
-              <span className="font-medium text-ink-900">65%</span>
+              <span className="font-medium text-ink-900">
+                {closeProbability !== null ? `${closeProbability}%` : "–"}
+              </span>
             </div>
+            {autoscuola.expectedCloseDate && (
+              <div className="flex justify-between text-[13px]">
+                <span className="text-ink-500">Chiusura prevista</span>
+                <span className="font-medium text-ink-900">
+                  {new Date(autoscuola.expectedCloseDate).toLocaleDateString("it-IT", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -437,11 +494,38 @@ export function AutoscuolaClient({
           </div>
         </div>
       </div>
+
+      {/* Delete confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="w-[420px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-2 text-[18px] font-bold text-ink-900">Elimina autoscuola</h2>
+            <p className="mb-5 text-[13px] text-ink-500">
+              Stai per eliminare &quot;{autoscuola.name}&quot;. Verranno eliminati anche documenti, attività e commissioni associate. Questa azione è irreversibile.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="h-9 rounded-[999px] border border-border-1 px-4 text-[13px] font-medium text-ink-600 hover:bg-surface-2"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isPending}
+                className="h-9 rounded-[999px] bg-red-500 px-5 text-[13px] font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                {isPending ? "Eliminazione..." : "Elimina"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function AnagraficaTab({ autoscuola }: { autoscuola: Autoscuola }) {
+function AnagraficaTab({ autoscuola, onDelete }: { autoscuola: Autoscuola; onDelete: () => void }) {
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({
     name: autoscuola.name,
@@ -477,13 +561,21 @@ function AnagraficaTab({ autoscuola }: { autoscuola: Autoscuola }) {
           />
         </div>
       ))}
-      <button
-        onClick={handleSave}
-        disabled={isPending}
-        className="mt-2 rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
-      >
-        Salva modifiche
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={isPending}
+          className="mt-2 rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+        >
+          Salva modifiche
+        </button>
+        <button
+          onClick={onDelete}
+          className="mt-2 rounded-[999px] border border-red-200 px-5 py-2 text-[13px] font-semibold text-red-500 hover:bg-red-50"
+        >
+          Elimina autoscuola
+        </button>
+      </div>
     </div>
   )
 }
@@ -512,7 +604,6 @@ function DocumentiTab({
             continue
           }
 
-          // 1. Get presigned URL from API
           const res = await fetch("/api/upload", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -531,7 +622,6 @@ function DocumentiTab({
 
           const { uploadUrl } = await res.json()
 
-          // 2. Upload file directly to R2
           await fetch(uploadUrl, {
             method: "PUT",
             headers: { "Content-Type": file.type },
@@ -539,9 +629,7 @@ function DocumentiTab({
           })
         }
 
-        // 3. Refresh the page to show new documents
         startTransition(() => {
-          // Trigger revalidation by calling a no-op transition
           window.location.reload()
         })
       } catch {
@@ -593,7 +681,6 @@ function DocumentiTab({
 
   return (
     <div>
-      {/* Upload zone */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -637,7 +724,6 @@ function DocumentiTab({
         </button>
       </div>
 
-      {/* Document list */}
       {documents.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <FileText className="mb-3 h-12 w-12 text-ink-300" />

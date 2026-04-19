@@ -21,6 +21,9 @@ export const PROVINCES_LAZIO = [
   { code: "RI", name: "Rieti", lat: 42.4025, lng: 12.8579 },
 ] as const
 
+// Keep backward compatibility alias
+export const PROVINCES = PROVINCES_LAZIO
+
 export const RESOURCE_CATEGORIES = [
   { id: "script", label: "Script chiamate", icon: "phone", color: "#EC4899" },
   { id: "template", label: "Template email", icon: "mail", color: "#3B82F6" },
