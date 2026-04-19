@@ -52,21 +52,36 @@ async function seed() {
   await db.insert(schema.pipelineStages).values(stages)
   console.log("✅ Pipeline stages seeded")
 
-  // 2. Admin user: Tiziano
-  const hashedPassword = await bcrypt.hash("Reglo2026!", 10)
-  await db.insert(schema.users).values({
-    id: "u_tiziano",
-    name: "Tiziano Di Felice",
-    email: "Tiziano.difelice@reglo.it",
-    password: hashedPassword,
-    phone: "+39 06 0000 0001",
-    role: "admin",
-    territory: "Italia",
-    color: "#EC4899",
-    active: true,
-    quota: 0,
-  })
-  console.log("✅ Admin user created")
+  // 2. Users
+  const adminPassword = await bcrypt.hash("Reglo2026!", 10)
+  const salesPassword = await bcrypt.hash("reglo2026", 10)
+  await db.insert(schema.users).values([
+    {
+      id: "u_tiziano",
+      name: "Tiziano Di Felice",
+      email: "Tiziano.difelice@reglo.it",
+      password: adminPassword,
+      phone: "+39 06 0000 0001",
+      role: "admin" as const,
+      territory: "Italia",
+      color: "#EC4899",
+      active: true,
+      quota: 0,
+    },
+    {
+      id: "u_gabriele",
+      name: "Gabriele Ruzzu",
+      email: "gabriele.ruzzu@reglo.it",
+      password: salesPassword,
+      phone: "+39 06 9876 5432",
+      role: "both" as const,
+      territory: "Lazio",
+      color: "#EC4899",
+      active: true,
+      quota: 5750,
+    },
+  ])
+  console.log("✅ Users created")
 
   console.log("\n🎉 Seed complete!")
   console.log("\n📧 Login credentials:")
