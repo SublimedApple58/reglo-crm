@@ -2,43 +2,23 @@
 
 import Link from "next/link"
 import {
-  Phone,
-  Mail,
-  Shield,
-  FileText,
-  BookOpen,
   Map,
-  ArrowRight,
-  Calendar,
-  Mic,
-  ExternalLink,
+  ArrowUpRight,
 } from "lucide-react"
-import type { Autoscuola } from "@/lib/db/schema"
 
 const SHORTCUTS = [
-  { label: "Script", emoji: "📞", icon: Phone, href: "/risorse", color: "#EC4899" },
-  { label: "Template", emoji: "📧", icon: Mail, href: "/risorse", color: "#3B82F6" },
-  { label: "Obiezioni", emoji: "🛡️", icon: Shield, href: "/risorse", color: "#F97316" },
-  { label: "Listino", emoji: "📋", icon: FileText, href: "/risorse", color: "#10B981" },
-  { label: "Procedure", emoji: "📖", icon: BookOpen, href: "/risorse", color: "#8B5CF6" },
+  { label: "Script Chiamate", emoji: "📞", href: "/risorse" },
+  { label: "Template Email", emoji: "✉️", href: "/risorse" },
+  { label: "Gestione Obiezioni", emoji: "🛡️", href: "/risorse" },
+  { label: "Listino Prezzi", emoji: "💰", href: "/risorse" },
 ]
-
-type StagePreview = {
-  id: string
-  label: string
-  color: string
-  count: number
-  items: Autoscuola[]
-}
 
 export function HomeClient({
   userName,
-  stagesWithCounts,
-  previewByStage,
 }: {
   userName: string
   stagesWithCounts: { id: string; label: string; color: string; count: number }[]
-  previewByStage: StagePreview[]
+  previewByStage: unknown[]
 }) {
   const firstName = userName.split(" ")[0]
 
@@ -54,137 +34,110 @@ export function HomeClient({
       </p>
 
       {/* Shortcuts */}
-      <div className="mb-6 grid grid-cols-5 gap-3">
+      <div className="mb-6 grid grid-cols-4 gap-3">
         {SHORTCUTS.map((s) => (
           <Link
             key={s.label}
             href={s.href}
-            className="group flex flex-col items-center gap-2 rounded-[14px] border border-border-1 bg-surface p-4 text-center transition-all hover:-translate-y-px hover:border-ink-300 hover:shadow-[var(--shadow)]"
+            className="group flex items-center justify-center gap-2.5 rounded-[14px] border border-border-1 bg-surface px-4 py-4 text-center transition-all hover:-translate-y-px hover:border-ink-300 hover:shadow-[var(--shadow)]"
           >
-            <span className="text-[22px]">{s.emoji}</span>
-            <span className="text-[12.5px] font-semibold text-ink-700">{s.label}</span>
+            <span className="text-[20px]">{s.emoji}</span>
+            <span className="text-[13px] font-semibold text-ink-800">{s.label}</span>
           </Link>
         ))}
       </div>
 
-      {/* Two-column: Map Teaser + Integrations */}
-      <div className="mb-6 grid grid-cols-2 gap-4">
-        {/* Map Teaser */}
-        <Link
-          href="/pipeline/mappa"
-          className="group relative flex h-[260px] items-end overflow-hidden rounded-[22px] p-6"
+      {/* Map Teaser — full width */}
+      <Link
+        href="/pipeline/mappa"
+        className="group relative mb-6 flex h-[300px] w-full items-end overflow-hidden rounded-[22px]"
+      >
+        {/* Dark map background */}
+        <div
+          className="absolute inset-0"
           style={{
-            background: "linear-gradient(180deg, #0B1220 0%, #111F33 100%)",
+            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
           }}
+        />
+        {/* Decorative map grid */}
+        <div className="absolute inset-0 opacity-[0.08]" style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+        }} />
+        {/* Italy silhouette placeholder */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Map className="h-32 w-32 text-white/[0.06]" />
+        </div>
+        {/* Territory label */}
+        <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2">
+          <span className="rounded-[6px] bg-[#3B82F6]/80 px-3 py-1 text-[10px] font-bold tracking-[1px] text-white uppercase backdrop-blur-sm">
+            Territorio attivo
+          </span>
+          {/* Dashed border box */}
+          <div className="mt-2 h-[120px] w-[160px] -translate-x-[10px] rounded-[4px] border-2 border-dashed border-[#3B82F6]/40" />
+        </div>
+        {/* Bottom-right expand icon */}
+        <div className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-[8px] bg-white/10 text-white/60 backdrop-blur-sm transition-colors group-hover:bg-white/20">
+          <ArrowUpRight className="h-4 w-4" />
+        </div>
+      </Link>
+
+      {/* Cal.com + Grain — two cards side by side */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Cal.com */}
+        <a
+          href="https://cal.com/reglo?redirect=false"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex overflow-hidden rounded-[18px] border border-border-1 bg-[#1a1a2e] transition-all hover:-translate-y-px hover:shadow-lg"
         >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Map className="h-24 w-24 text-white/10" />
-          </div>
-          <div className="relative z-10">
-            <p className="mb-1 text-[11px] font-semibold tracking-wider text-white/60 uppercase">
-              Il tuo territorio
+          <div className="flex flex-1 flex-col justify-center px-6 py-5">
+            <h4 className="mb-1.5 text-[16px] font-bold text-white">
+              Reglo | Cal.com
+            </h4>
+            <p className="mb-3 text-[12.5px] leading-[1.6] text-white/50">
+              Cal è l&apos;organizzatore N*1 per prenotare appuntamenti, non lasciartene scappare nessuno.
             </p>
-            <h3 className="mb-2 text-[18px] font-bold text-white">Mappa autoscuole</h3>
-            <span className="inline-flex items-center gap-1 rounded-[999px] bg-white/10 px-3 py-1 text-[11.5px] font-semibold text-white/90 backdrop-blur-sm transition-colors group-hover:bg-white/20">
-              Esplora
-              <ArrowRight className="h-3 w-3" />
-            </span>
+            <div className="flex items-center gap-2">
+              <img src="/cal-logo.png" alt="Cal" className="h-5 w-5 rounded-[4px]" />
+              <span className="text-[12px] text-white/40 underline decoration-white/20 underline-offset-2">
+                https://cal.com/reglo?redirect=false
+              </span>
+            </div>
           </div>
-        </Link>
-
-        {/* Integrations */}
-        <div className="grid grid-rows-2 gap-3">
-          <a href="https://cal.com" target="_blank" rel="noopener noreferrer" className="group relative flex overflow-hidden rounded-[14px] border border-border-1 transition-all hover:-translate-y-px hover:shadow-[var(--shadow)]">
-            <ExternalLink className="absolute top-2.5 right-2.5 h-3.5 w-3.5 text-white/40 transition-colors group-hover:text-white/70" />
-            <div className="flex flex-1 flex-col justify-center bg-[#0B1220] px-5 py-4">
-              <p className="mb-0.5 text-[10.5px] font-medium text-white/50 uppercase">Integrazione</p>
-              <h4 className="mb-1 text-[15px] font-bold text-white">Cal.com</h4>
-              <p className="text-[12px] leading-relaxed text-white/60">
-                Sincronizza il tuo calendario e fissa meeting direttamente dalla pipeline.
-              </p>
-            </div>
-            <div className="flex w-[130px] items-center justify-center border-l border-border-2 bg-surface">
-              <Calendar className="h-[26px] w-[26px] text-ink-400" />
-            </div>
-          </a>
-          <a href="https://grain.com" target="_blank" rel="noopener noreferrer" className="group relative flex overflow-hidden rounded-[14px] border border-border-1 transition-all hover:-translate-y-px hover:shadow-[var(--shadow)]">
-            <ExternalLink className="absolute top-2.5 right-2.5 h-3.5 w-3.5 text-white/40 transition-colors group-hover:text-white/70" />
-            <div className="flex flex-1 flex-col justify-center bg-[#0B1220] px-5 py-4">
-              <p className="mb-0.5 text-[10.5px] font-medium text-white/50 uppercase">Integrazione</p>
-              <h4 className="mb-1 text-[15px] font-bold text-white">Grain</h4>
-              <p className="text-[12px] leading-relaxed text-white/60">
-                Registra e analizza le tue chiamate con AI per migliorare le conversioni.
-              </p>
-            </div>
-            <div className="flex w-[130px] items-center justify-center border-l border-border-2 bg-surface">
-              <Mic className="h-[26px] w-[26px] text-ink-400" />
-            </div>
-          </a>
-        </div>
-      </div>
-
-      {/* Pipeline Preview */}
-      <div className="rounded-[22px] border border-border-1 bg-surface p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="mb-1 text-[11px] font-medium text-ink-400">🐚 Pipeline</p>
-            <h2 className="text-[20px] font-bold tracking-tight text-ink-900">Outbound</h2>
+          <div className="w-[170px] shrink-0 self-stretch overflow-hidden">
+            <img src="/cal-papero.png" alt="" className="h-[115%] w-full object-cover -mt-[5%]" />
           </div>
-          <Link
-            href="/pipeline"
-            className="flex items-center gap-1 rounded-[999px] border border-border-1 px-3.5 py-1.5 text-[12px] font-semibold text-ink-700 transition-colors hover:border-ink-300 hover:bg-surface-2"
-          >
-            Apri pipeline
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
+        </a>
 
-        <div className="flex gap-3 overflow-x-auto">
-          {previewByStage.map((stage) => (
-            <div key={stage.id} className="min-w-[200px] flex-1">
-              <div
-                className="mb-2 flex items-center gap-2 rounded-t-[12px] px-3 py-2"
-                style={{ backgroundColor: stage.color + "12" }}
-              >
-                <span
-                  className="inline-block h-[6px] w-[6px] rounded-full"
-                  style={{ backgroundColor: stage.color }}
-                />
-                <span className="text-[11.5px] font-semibold" style={{ color: stage.color }}>
-                  {stage.label}
-                </span>
-                <span
-                  className="ml-auto rounded-full bg-white px-2 py-0.5 font-mono text-[10px]"
-                  style={{ color: stage.color }}
-                >
-                  {stage.count}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                {stage.items.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/autoscuola/${item.id}`}
-                    className="block rounded-[10px] border border-border-2 bg-surface p-2.5 transition-all hover:-translate-y-px hover:shadow-sm"
-                    style={{ borderLeft: `3px solid ${stage.color}` }}
-                  >
-                    <p className="text-[12px] font-semibold leading-tight text-ink-900">
-                      {item.name.replace("Autoscuola ", "")}
-                    </p>
-                    <p className="mt-0.5 text-[10.5px] text-ink-400">
-                      {item.town}, {item.province}
-                    </p>
-                  </Link>
-                ))}
-                {stage.count > 3 && (
-                  <p className="px-2 text-[10.5px] text-ink-400">
-                    +{stage.count - 3} altre
-                  </p>
-                )}
-              </div>
+        {/* Grain */}
+        <a
+          href="https://grain.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex overflow-hidden rounded-[18px] border border-border-1 bg-[#1a1a2e] transition-all hover:-translate-y-px hover:shadow-lg"
+        >
+          <div className="flex flex-1 flex-col justify-center px-6 py-5">
+            <h4 className="mb-1.5 text-[16px] font-bold text-white">
+              Grain | The AI Notetaker
+            </h4>
+            <p className="mb-3 text-[12.5px] leading-[1.6] text-white/50">
+              Grain usa il potere dell&apos;AI per registrare i tuoi meeting e rendere la vendita più veloce.
+            </p>
+            <div className="flex items-center gap-2">
+              <img src="/grain-logo.svg" alt="Grain" className="h-5 w-5" />
+              <span className="text-[12px] text-white/40 underline decoration-white/20 underline-offset-2">
+                https://grain.com/
+              </span>
             </div>
-          ))}
-        </div>
+          </div>
+          <div className="w-[170px] shrink-0 self-stretch overflow-hidden">
+            <img src="/grain-papero.png" alt="" className="h-[115%] w-full object-cover -mt-[5%]" />
+          </div>
+        </a>
       </div>
     </div>
   )

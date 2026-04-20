@@ -8,23 +8,47 @@ import {
   Pin,
   Save,
   Eye,
+  Trash2,
   X,
   Bold,
   Italic,
   Underline,
+  Strikethrough,
   Heading1,
   Heading2,
+  Heading3,
   List,
   ListOrdered,
   Quote,
+  Code,
+  Minus,
+  Link2,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Highlighter,
+  Undo2,
+  Redo2,
+  Table as TableIcon,
   Tag,
   FileText,
+  RemoveFormatting,
 } from "lucide-react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import UnderlineExt from "@tiptap/extension-underline"
+import LinkExt from "@tiptap/extension-link"
+import TextAlign from "@tiptap/extension-text-align"
+import Highlight from "@tiptap/extension-highlight"
+import { TextStyle } from "@tiptap/extension-text-style"
+import Color from "@tiptap/extension-color"
+import { Table } from "@tiptap/extension-table"
+import TableRow from "@tiptap/extension-table-row"
+import TableCell from "@tiptap/extension-table-cell"
+import TableHeader from "@tiptap/extension-table-header"
+import Placeholder from "@tiptap/extension-placeholder"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
-import { upsertResource } from "@/lib/actions/data"
+import { upsertResource, deleteResource } from "@/lib/actions/data"
 import type { Resource } from "@/lib/db/schema"
 
 export function GestioneRisorseClient({ resources: initial }: { resources: Resource[] }) {
@@ -44,13 +68,27 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   const [newTag, setNewTag] = useState("")
 
   const editor = useEditor({
-    extensions: [StarterKit, UnderlineExt],
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({ codeBlock: false }),
+      UnderlineExt,
+      LinkExt.configure({ openOnClick: false }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Highlight.configure({ multicolor: true }),
+      TextStyle,
+      Color,
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      Placeholder.configure({ placeholder: "Inizia a scrivere..." }),
+    ],
     content: selected?.html ?? "",
     onUpdate: () => setModified(true),
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[20px] [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:mb-2 [&_p]:mb-2",
+          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[20px] [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:mb-2 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:mb-2 [&_p]:mb-2 [&_a]:text-pink [&_a]:underline [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1",
       },
     },
   })
@@ -98,8 +136,41 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         tags: [],
         pinned: false,
       })
-      // Refresh to get the new resource
-      router.refresh()
+      const newResource: Resource = {
+        id: newId,
+        category: RESOURCE_CATEGORIES[0].label,
+        title: "Nuova risorsa",
+        excerpt: null,
+        html: "",
+        authorId: null,
+        tags: [],
+        pinned: false,
+        icon: null,
+        color: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      setResources((prev) => [newResource, ...prev])
+      setSelectedId(newId)
+      setEditTitle("Nuova risorsa")
+      setEditCategory(RESOURCE_CATEGORIES[0].label)
+      setEditTags([])
+      editor?.commands.setContent("")
+      setModified(false)
+    })
+  }
+
+  function handleDelete() {
+    if (!selected || !confirm("Eliminare questa risorsa?")) return
+    startTransition(async () => {
+      await deleteResource(selected.id)
+      setResources((prev) => prev.filter((r) => r.id !== selected.id))
+      const remaining = resources.filter((r) => r.id !== selected.id)
+      if (remaining.length > 0) {
+        selectResource(remaining[0].id)
+      } else {
+        setSelectedId(null)
+      }
     })
   }
 
@@ -118,7 +189,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
 
   return (
     <>
-      <div className="grid h-[calc(100vh-52px)] grid-cols-[320px_1fr]">
+      <div className="grid h-[calc(100vh)] grid-cols-[320px_1fr]">
         {/* Left list */}
         <div className="flex flex-col border-r border-border-1 bg-surface">
           <div className="flex items-center gap-2 border-b border-border-1 p-3">
@@ -197,6 +268,12 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
                 Anteprima
               </button>
               <button
+                onClick={handleDelete}
+                className="flex h-8 items-center gap-1.5 rounded-[999px] border border-red-200 px-3 text-[12px] font-medium text-red-500 hover:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              <button
                 onClick={handleSave}
                 disabled={isPending}
                 className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
@@ -207,35 +284,54 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center gap-0.5 border-b border-border-1 px-5 py-1.5">
-              {[
-                { icon: Heading1, action: () => editor?.chain().focus().toggleHeading({ level: 1 }).run(), active: editor?.isActive("heading", { level: 1 }) },
-                { icon: Heading2, action: () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), active: editor?.isActive("heading", { level: 2 }) },
-                null,
-                { icon: Bold, action: () => editor?.chain().focus().toggleBold().run(), active: editor?.isActive("bold") },
-                { icon: Italic, action: () => editor?.chain().focus().toggleItalic().run(), active: editor?.isActive("italic") },
-                { icon: Underline, action: () => editor?.chain().focus().toggleUnderline().run(), active: editor?.isActive("underline") },
-                null,
-                { icon: List, action: () => editor?.chain().focus().toggleBulletList().run(), active: editor?.isActive("bulletList") },
-                { icon: ListOrdered, action: () => editor?.chain().focus().toggleOrderedList().run(), active: editor?.isActive("orderedList") },
-                { icon: Quote, action: () => editor?.chain().focus().toggleBlockquote().run(), active: editor?.isActive("blockquote") },
-              ].map((item, i) =>
-                item === null ? (
-                  <div key={i} className="mx-1 h-5 w-px bg-border-1" />
-                ) : (
-                  <button
-                    key={i}
-                    onClick={item.action}
-                    className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-                    style={{
-                      backgroundColor: item.active ? "#FDF2F8" : "transparent",
-                      color: item.active ? "#EC4899" : "#64748B",
-                    }}
-                  >
-                    <item.icon className="h-4 w-4" />
-                  </button>
-                )
-              )}
+            <div className="flex flex-wrap items-center gap-0.5 border-b border-border-1 px-5 py-1.5">
+              {/* Undo/Redo */}
+              <ToolbarBtn icon={Undo2} action={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} />
+              <ToolbarBtn icon={Redo2} action={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              {/* Headings */}
+              <ToolbarBtn icon={Heading1} action={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} />
+              <ToolbarBtn icon={Heading2} action={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })} />
+              <ToolbarBtn icon={Heading3} action={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive("heading", { level: 3 })} />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              {/* Inline formatting */}
+              <ToolbarBtn icon={Bold} action={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} />
+              <ToolbarBtn icon={Italic} action={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} />
+              <ToolbarBtn icon={Underline} action={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive("underline")} />
+              <ToolbarBtn icon={Strikethrough} action={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive("strike")} />
+              <ToolbarBtn icon={Code} action={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive("code")} />
+              <ToolbarBtn icon={Highlighter} action={() => editor?.chain().focus().toggleHighlight().run()} active={editor?.isActive("highlight")} />
+              <ToolbarBtn icon={RemoveFormatting} action={() => editor?.chain().focus().clearNodes().unsetAllMarks().run()} />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              {/* Alignment */}
+              <ToolbarBtn icon={AlignLeft} action={() => editor?.chain().focus().setTextAlign("left").run()} active={editor?.isActive({ textAlign: "left" })} />
+              <ToolbarBtn icon={AlignCenter} action={() => editor?.chain().focus().setTextAlign("center").run()} active={editor?.isActive({ textAlign: "center" })} />
+              <ToolbarBtn icon={AlignRight} action={() => editor?.chain().focus().setTextAlign("right").run()} active={editor?.isActive({ textAlign: "right" })} />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              {/* Block elements */}
+              <ToolbarBtn icon={List} action={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive("bulletList")} />
+              <ToolbarBtn icon={ListOrdered} action={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive("orderedList")} />
+              <ToolbarBtn icon={Quote} action={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} />
+              <ToolbarBtn icon={Minus} action={() => editor?.chain().focus().setHorizontalRule().run()} />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              {/* Link */}
+              <ToolbarBtn
+                icon={Link2}
+                active={editor?.isActive("link")}
+                action={() => {
+                  if (editor?.isActive("link")) {
+                    editor?.chain().focus().unsetLink().run()
+                  } else {
+                    const url = window.prompt("URL:")
+                    if (url) editor?.chain().focus().setLink({ href: url }).run()
+                  }
+                }}
+              />
+              {/* Table */}
+              <ToolbarBtn
+                icon={TableIcon}
+                action={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+              />
             </div>
 
             {/* Editor content */}
@@ -319,5 +415,31 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         </div>
       )}
     </>
+  )
+}
+
+function ToolbarBtn({
+  icon: Icon,
+  action,
+  active,
+  disabled,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  action: () => void
+  active?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <button
+      onClick={action}
+      disabled={disabled}
+      className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors disabled:opacity-30"
+      style={{
+        backgroundColor: active ? "#FDF2F8" : "transparent",
+        color: active ? "#EC4899" : "#64748B",
+      }}
+    >
+      <Icon className="h-4 w-4" />
+    </button>
   )
 }

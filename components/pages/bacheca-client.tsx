@@ -13,7 +13,7 @@ export function BachecaClient({ news }: { news: News[] }) {
   const selected = news.find((n) => n.id === selectedId)
 
   return (
-    <div className="grid h-[calc(100vh-52px)] grid-cols-[360px_1fr]">
+    <div className="grid h-[calc(100vh)] grid-cols-[360px_1fr]">
       {/* Left list */}
       <div className="flex flex-col border-r border-border-1 bg-surface">
         <div className="border-b border-border-1 p-4">

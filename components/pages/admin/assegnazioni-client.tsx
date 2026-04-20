@@ -5,6 +5,29 @@ import { Search, AlertCircle, Check, MapPin } from "lucide-react"
 import { StageChip } from "@/components/ui/stage-chip"
 import { updateAutoscuola, bulkReassign } from "@/lib/actions/autoscuole"
 
+const REGIONI_PROVINCE: Record<string, string[]> = {
+  "Abruzzo": ["AQ", "CH", "PE", "TE"],
+  "Basilicata": ["MT", "PZ"],
+  "Calabria": ["CZ", "CS", "KR", "RC", "VV"],
+  "Campania": ["AV", "BN", "CE", "NA", "SA"],
+  "Emilia-Romagna": ["BO", "FE", "FC", "MO", "PR", "PC", "RA", "RE", "RN"],
+  "Friuli Venezia Giulia": ["GO", "PN", "TS", "UD"],
+  "Lazio": ["FR", "LT", "RI", "RM", "VT"],
+  "Liguria": ["GE", "IM", "SP", "SV"],
+  "Lombardia": ["BG", "BS", "CO", "CR", "LC", "LO", "MN", "MI", "MB", "PV", "SO", "VA"],
+  "Marche": ["AN", "AP", "FM", "MC", "PU"],
+  "Molise": ["CB", "IS"],
+  "Piemonte": ["AL", "AT", "BI", "CN", "NO", "TO", "VB", "VC"],
+  "Puglia": ["BA", "BT", "BR", "FG", "LE", "TA"],
+  "Sardegna": ["CA", "NU", "OR", "SS", "SU"],
+  "Sicilia": ["AG", "CL", "CT", "EN", "ME", "PA", "RG", "SR", "TP"],
+  "Toscana": ["AR", "FI", "GR", "LI", "LU", "MS", "PI", "PT", "PO", "SI"],
+  "Trentino-Alto Adige": ["BZ", "TN"],
+  "Umbria": ["PG", "TR"],
+  "Valle d'Aosta": ["AO"],
+  "Veneto": ["BL", "PD", "RO", "TV", "VE", "VR", "VI"],
+}
+
 type AutoscuolaRow = {
   id: string
   name: string
@@ -37,9 +60,10 @@ export function AssegnazioniClient({
   const [filterAssignment, setFilterAssignment] = useState<string | null>(null) // "unassigned" | salesId | null
   const [bulkTarget, setBulkTarget] = useState("")
   const [isPending, startTransition] = useTransition()
-  const [showProvinceAssign, setShowProvinceAssign] = useState(false)
-  const [provinceTarget, setProvinceTarget] = useState("")
-  const [provinceSales, setProvinceSales] = useState("")
+  const [showTerritoryAssign, setShowTerritoryAssign] = useState(false)
+  const [territoryMode, setTerritoryMode] = useState<"regione" | "provincia">("regione")
+  const [territoryTarget, setTerritoryTarget] = useState("")
+  const [territorySales, setTerritorySales] = useState("")
 
   const unassignedCount = autoscuole.filter((a) => !a.assignedTo).length
   const provinces = useMemo(() => [...new Set(autoscuole.map((a) => a.province))].sort(), [autoscuole])
@@ -103,24 +127,38 @@ export function AssegnazioniClient({
     setBulkTarget("")
   }
 
-  function handleProvinceAssign() {
-    if (!provinceTarget || !provinceSales) return
+  function handleTerritoryAssign() {
+    if (!territoryTarget || !territorySales) return
+    let matchingProvinces: string[]
+    if (territoryMode === "regione") {
+      matchingProvinces = REGIONI_PROVINCE[territoryTarget] ?? []
+    } else {
+      matchingProvinces = [territoryTarget]
+    }
     const ids = autoscuole
-      .filter((a) => a.province === provinceTarget && !a.assignedTo)
+      .filter((a) => matchingProvinces.includes(a.province) && !a.assignedTo)
       .map((a) => a.id)
     if (ids.length === 0) return
-    const salesName = salesOptions.find((s) => s.id === provinceSales)?.name ?? null
+    const salesName = salesOptions.find((s) => s.id === territorySales)?.name ?? null
     setAutoscuole((prev) =>
       prev.map((a) =>
-        ids.includes(a.id) ? { ...a, assignedTo: provinceSales, salesName } : a
+        ids.includes(a.id) ? { ...a, assignedTo: territorySales, salesName } : a
       )
     )
     startTransition(() => {
-      bulkReassign(ids, provinceSales)
+      bulkReassign(ids, territorySales)
     })
-    setShowProvinceAssign(false)
-    setProvinceTarget("")
-    setProvinceSales("")
+    setShowTerritoryAssign(false)
+    setTerritoryTarget("")
+    setTerritorySales("")
+  }
+
+  // Count unassigned for a set of provinces
+  function countUnassignedForProvinces(provs: string[]) {
+    return autoscuole.filter((a) => provs.includes(a.province) && !a.assignedTo).length
+  }
+  function countTotalForProvinces(provs: string[]) {
+    return autoscuole.filter((a) => provs.includes(a.province)).length
   }
 
   // Province stats
@@ -161,11 +199,11 @@ export function AssegnazioniClient({
         </span>
         <div className="flex-1" />
         <button
-          onClick={() => setShowProvinceAssign(true)}
+          onClick={() => setShowTerritoryAssign(true)}
           className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
         >
           <MapPin className="h-3.5 w-3.5" />
-          Assegna per provincia
+          Assegna per territorio
         </button>
       </div>
 
@@ -341,40 +379,78 @@ export function AssegnazioniClient({
         </table>
       </div>
 
-      {/* Province assign dialog */}
-      {showProvinceAssign && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowProvinceAssign(false)}>
+      {/* Territory assign dialog */}
+      {showTerritoryAssign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowTerritoryAssign(false)}>
           <div className="w-[480px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-1 text-[18px] font-bold text-ink-900">Assegna per provincia</h2>
+            <h2 className="mb-1 text-[18px] font-bold text-ink-900">Assegna per territorio</h2>
             <p className="mb-5 text-[13px] text-ink-500">
-              Assegna tutte le autoscuole non assegnate di una provincia a un sales.
+              Assegna tutte le autoscuole non assegnate di una regione o provincia a un sales.
             </p>
 
             <div className="space-y-3.5">
+              {/* Mode toggle */}
+              <div className="flex rounded-[8px] border border-border-1 p-0.5">
+                <button
+                  onClick={() => { setTerritoryMode("regione"); setTerritoryTarget("") }}
+                  className="flex-1 rounded-[6px] py-1.5 text-[12px] font-semibold transition-colors"
+                  style={{
+                    backgroundColor: territoryMode === "regione" ? "#FDF2F8" : "transparent",
+                    color: territoryMode === "regione" ? "#EC4899" : "#64748B",
+                  }}
+                >
+                  Regione
+                </button>
+                <button
+                  onClick={() => { setTerritoryMode("provincia"); setTerritoryTarget("") }}
+                  className="flex-1 rounded-[6px] py-1.5 text-[12px] font-semibold transition-colors"
+                  style={{
+                    backgroundColor: territoryMode === "provincia" ? "#FDF2F8" : "transparent",
+                    color: territoryMode === "provincia" ? "#EC4899" : "#64748B",
+                  }}
+                >
+                  Provincia
+                </button>
+              </div>
+
               <div>
-                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Provincia</label>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">
+                  {territoryMode === "regione" ? "Regione" : "Provincia"}
+                </label>
                 <select
-                  value={provinceTarget}
-                  onChange={(e) => setProvinceTarget(e.target.value)}
+                  value={territoryTarget}
+                  onChange={(e) => setTerritoryTarget(e.target.value)}
                   className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
                 >
-                  <option value="">Seleziona provincia…</option>
-                  {provinces.map((p) => {
-                    const stat = provinceStats.get(p)
-                    return (
-                      <option key={p} value={p}>
-                        {p} — {stat?.unassigned ?? 0} non assegnate su {stat?.total ?? 0}
-                      </option>
-                    )
-                  })}
+                  <option value="">Seleziona {territoryMode}…</option>
+                  {territoryMode === "regione"
+                    ? Object.keys(REGIONI_PROVINCE).sort().map((r) => {
+                        const provs = REGIONI_PROVINCE[r]
+                        const unassigned = countUnassignedForProvinces(provs)
+                        const total = countTotalForProvinces(provs)
+                        return (
+                          <option key={r} value={r}>
+                            {r} — {unassigned} libere su {total}
+                          </option>
+                        )
+                      })
+                    : provinces.map((p) => {
+                        const stat = provinceStats.get(p)
+                        return (
+                          <option key={p} value={p}>
+                            {p} — {stat?.unassigned ?? 0} libere su {stat?.total ?? 0}
+                          </option>
+                        )
+                      })
+                  }
                 </select>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Assegna a</label>
                 <select
-                  value={provinceSales}
-                  onChange={(e) => setProvinceSales(e.target.value)}
+                  value={territorySales}
+                  onChange={(e) => setTerritorySales(e.target.value)}
                   className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
                 >
                   <option value="">Seleziona sales…</option>
@@ -384,23 +460,29 @@ export function AssegnazioniClient({
                 </select>
               </div>
 
-              {provinceTarget && (
+              {territoryTarget && (
                 <div className="rounded-[10px] bg-surface-2 px-3 py-2 text-[12.5px] text-ink-600">
-                  Verranno assegnate <strong>{provinceStats.get(provinceTarget)?.unassigned ?? 0}</strong> autoscuole della provincia <strong>{provinceTarget}</strong>
+                  Verranno assegnate{" "}
+                  <strong>
+                    {territoryMode === "regione"
+                      ? countUnassignedForProvinces(REGIONI_PROVINCE[territoryTarget] ?? [])
+                      : provinceStats.get(territoryTarget)?.unassigned ?? 0}
+                  </strong>{" "}
+                  autoscuole {territoryMode === "regione" ? `della regione ${territoryTarget}` : `della provincia ${territoryTarget}`}
                 </div>
               )}
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
               <button
-                onClick={() => setShowProvinceAssign(false)}
+                onClick={() => setShowTerritoryAssign(false)}
                 className="h-9 rounded-[999px] border border-border-1 px-4 text-[13px] font-medium text-ink-600 hover:bg-surface-2"
               >
                 Annulla
               </button>
               <button
-                onClick={handleProvinceAssign}
-                disabled={!provinceTarget || !provinceSales || isPending}
+                onClick={handleTerritoryAssign}
+                disabled={!territoryTarget || !territorySales || isPending}
                 className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
               >
                 {isPending ? "Assegnazione..." : "Assegna"}

@@ -80,6 +80,10 @@ export async function upsertResource(data: {
   }
 }
 
+export async function deleteResource(id: number) {
+  await db.delete(resources).where(eq(resources.id, id))
+}
+
 export async function getSalesTeam() {
   return db
     .select({

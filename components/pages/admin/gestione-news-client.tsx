@@ -40,6 +40,7 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
   const [editExcerpt, setEditExcerpt] = useState(selected?.excerpt ?? "")
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [StarterKit, UnderlineExt],
     content: selected?.body ?? "",
     onUpdate: () => setModified(true),
@@ -124,7 +125,7 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
   })
 
   return (
-    <div className="grid h-[calc(100vh-52px)] grid-cols-[320px_1fr]">
+    <div className="grid h-[calc(100vh)] grid-cols-[320px_1fr]">
       {/* Left list */}
       <div className="flex flex-col border-r border-border-1 bg-surface">
         <div className="flex items-center gap-2 border-b border-border-1 p-3">

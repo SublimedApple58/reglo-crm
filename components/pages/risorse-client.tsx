@@ -39,7 +39,7 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
   const selected = resources.find((r) => r.id === selectedId)
 
   return (
-    <div className="grid h-[calc(100vh-52px)] grid-cols-[230px_360px_1fr]">
+    <div className="grid h-[calc(100vh)] grid-cols-[230px_360px_1fr]">
       {/* Categories */}
       <div className="flex flex-col border-r border-border-1 bg-bg p-3">
         <h3 className="mb-3 px-2 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">

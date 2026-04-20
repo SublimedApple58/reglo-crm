@@ -135,7 +135,7 @@ export function AutoscuolaClient({
   ]
 
   return (
-    <div className="grid h-[calc(100vh-52px)] grid-cols-[1fr_340px]">
+    <div className="grid h-[calc(100vh)] grid-cols-[1fr_340px]">
       {/* Main content */}
       <div className="flex flex-col overflow-y-auto">
         {/* Header */}

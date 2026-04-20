@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Search,
   LayoutGrid,
@@ -10,9 +11,12 @@ import {
   Clock,
   Building,
   X,
+  Plus,
 } from "lucide-react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { StageChip } from "@/components/ui/stage-chip"
+import { createAutoscuola } from "@/lib/actions/autoscuole"
+import { STAGES } from "@/lib/constants"
 import { updateAutoscuolaStage } from "@/lib/actions/autoscuole"
 
 type AutoscuolaFlat = {
@@ -58,10 +62,12 @@ export function PipelineClient({
   stages: StageConfig[]
   salesUsers: SalesUser[]
 }) {
+  const router = useRouter()
   const [view, setView] = useState<"kanban" | "list">("kanban")
   const [search, setSearch] = useState("")
   const [autoscuole, setAutoscuole] = useState(initialAutoscuole)
   const [showFilters, setShowFilters] = useState(false)
+  const [showNewOpp, setShowNewOpp] = useState(false)
   const [filters, setFilters] = useState<ActiveFilters>({
     stages: [],
     province: null,
@@ -136,9 +142,9 @@ export function PipelineClient({
   }
 
   return (
-    <div className="flex h-[calc(100vh-52px)] flex-col">
+    <div className="flex h-screen max-w-full flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-2.5 border-b border-border-1 px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-border-1 px-4 py-3 overflow-hidden">
         <div className="flex rounded-[8px] border border-border-1 p-0.5">
           <button
             onClick={() => setView("kanban")}
@@ -250,16 +256,32 @@ export function PipelineClient({
           </div>
         )}
 
-        <div className="ml-auto text-[12px] font-medium text-ink-400">
-          {filtered.length} autoscuole
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-[12px] font-medium text-ink-400">
+            {filtered.length} autoscuole
+          </span>
+          <button
+            onClick={() => setShowNewOpp(true)}
+            className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-pink/90"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nuova opp.
+          </button>
         </div>
       </div>
 
-      {/* Content */}
-      {view === "kanban" ? (
-        <KanbanView autoscuole={filtered} stages={stages} onDragEnd={handleDragEnd} />
-      ) : (
-        <ListView autoscuole={filtered} />
+      {/* Content — isolated scroll container */}
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+        {view === "kanban" ? (
+          <KanbanView autoscuole={filtered} stages={stages} onDragEnd={handleDragEnd} />
+        ) : (
+          <ListView autoscuole={filtered} />
+        )}
+      </div>
+
+      {/* New opportunity dialog */}
+      {showNewOpp && (
+        <NewOppDialog onClose={() => setShowNewOpp(false)} />
       )}
     </div>
   )
@@ -361,9 +383,11 @@ function KanbanView({
 }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex flex-1 gap-3.5 overflow-x-auto bg-surface-2 p-4">
+      <div className="flex h-full gap-3.5 overflow-x-auto overflow-y-auto bg-surface-2 p-4">
         {stages.map((stage) => {
-          const items = autoscuole.filter((a) => a.stageId === stage.id)
+          const allItems = autoscuole.filter((a) => a.stageId === stage.id)
+          const items = allItems.slice(0, 30)
+          const hiddenCount = allItems.length - items.length
           return (
             <div key={stage.id} className="flex w-[292px] shrink-0 flex-col">
               {/* Column header */}
@@ -389,7 +413,7 @@ function KanbanView({
                   className="rounded-full bg-white px-2 py-0.5 font-mono text-[10.5px] font-semibold"
                   style={{ color: stage.color }}
                 >
-                  {items.length}
+                  {allItems.length}
                 </span>
               </div>
 
@@ -399,7 +423,7 @@ function KanbanView({
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="flex flex-1 flex-col gap-2 overflow-y-auto rounded-b-[14px] p-2.5 transition-colors"
+                    className="flex flex-1 flex-col gap-2 rounded-b-[14px] p-2.5 transition-colors"
                     style={{
                       backgroundColor: snapshot.isDraggingOver
                         ? stage.color + "10"
@@ -465,6 +489,11 @@ function KanbanView({
                         )}
                       </Draggable>
                     ))}
+                    {hiddenCount > 0 && (
+                      <p className="py-2 text-center text-[11px] font-medium text-ink-400">
+                        +{hiddenCount} altre · usa la vista lista
+                      </p>
+                    )}
                     {provided.placeholder}
                   </div>
                 )}
@@ -526,6 +555,140 @@ function ListView({ autoscuole }: { autoscuole: AutoscuolaFlat[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function NewOppDialog({ onClose }: { onClose: () => void }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [form, setForm] = useState({
+    name: "",
+    owner: "",
+    province: "",
+    town: "",
+    phone: "",
+    email: "",
+    stageId: "da_chiamare",
+  })
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.name || !form.province || !form.town) return
+    startTransition(async () => {
+      const id = await createAutoscuola(form)
+      onClose()
+      router.push(`/autoscuola/${id}`)
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="w-[520px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-[18px] font-bold text-ink-900">Nuova opportunità</h2>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-400 hover:bg-surface-2">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          <div>
+            <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Nome autoscuola *</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              placeholder="Autoscuola XYZ"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Titolare</label>
+            <input
+              value={form.owner}
+              onChange={(e) => setForm({ ...form, owner: e.target.value })}
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              placeholder="Mario Rossi"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Provincia *</label>
+              <input
+                value={form.province}
+                onChange={(e) => setForm({ ...form, province: e.target.value.toUpperCase().slice(0, 2) })}
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                placeholder="RM"
+                maxLength={2}
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Città *</label>
+              <input
+                value={form.town}
+                onChange={(e) => setForm({ ...form, town: e.target.value })}
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                placeholder="Roma"
+                required
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Telefono</label>
+              <input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                placeholder="+39 06 1234 5678"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Email</label>
+              <input
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                placeholder="info@autoscuola.it"
+                type="email"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Stage iniziale</label>
+            <select
+              value={form.stageId}
+              onChange={(e) => setForm({ ...form, stageId: e.target.value })}
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+            >
+              {STAGES.map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 rounded-[999px] border border-border-1 px-4 text-[13px] font-medium text-ink-600 hover:bg-surface-2"
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            >
+              {isPending ? "Creazione..." : "Crea opportunità"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
