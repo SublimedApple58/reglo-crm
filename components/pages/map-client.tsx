@@ -236,11 +236,18 @@ function MapControls({ bounds }: { bounds: { minLat: number; maxLat: number; min
     if (!map || !bounds || fitted.current) return
     const interval = setInterval(() => {
       if (!map.getDiv()?.clientHeight) return
-      const b = new google.maps.LatLngBounds(
-        { lat: bounds.minLat, lng: bounds.minLng },
-        { lat: bounds.maxLat, lng: bounds.maxLng }
-      )
-      map.fitBounds(b, 40)
+      // Use panTo + setZoom instead of fitBounds to avoid google.maps type issue
+      const centerLat = (bounds.minLat + bounds.maxLat) / 2
+      const centerLng = (bounds.minLng + bounds.maxLng) / 2
+      const span = Math.max(bounds.maxLat - bounds.minLat, bounds.maxLng - bounds.minLng)
+      let zoom = 12
+      if (span > 4) zoom = 7
+      else if (span > 2) zoom = 8
+      else if (span > 1) zoom = 9
+      else if (span > 0.5) zoom = 10
+      else if (span > 0.2) zoom = 11
+      map.panTo({ lat: centerLat, lng: centerLng })
+      map.setZoom(zoom)
       fitted.current = true
       clearInterval(interval)
     }, 100)
