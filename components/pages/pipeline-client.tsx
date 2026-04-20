@@ -360,140 +360,163 @@ function KanbanView({
 }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex h-full gap-3.5 overflow-x-auto overflow-y-auto bg-surface-2 p-4">
-        {stages.map((stage) => {
-          const allItems = autoscuole.filter((a) => a.stageId === stage.id)
-          const items = allItems.slice(0, 30)
-          const hiddenCount = allItems.length - items.length
-          return (
-            <div key={stage.id} className="flex w-[292px] shrink-0 flex-col">
-              {/* Column header */}
-              <div
-                className="flex items-center gap-2 rounded-t-[18px] px-3.5 py-2.5"
-                style={{
-                  backgroundColor: stage.color + "12",
-                  border: `1px solid ${stage.color}28`,
-                  borderBottom: "none",
-                }}
-              >
-                <span
-                  className="inline-block h-[6px] w-[6px] rounded-full"
-                  style={{ backgroundColor: stage.color }}
-                />
-                <span
-                  className="flex-1 text-[12px] font-semibold"
-                  style={{ color: stage.color }}
-                >
-                  {stage.label}
-                </span>
-                <span
-                  className="rounded-full bg-white px-2 py-0.5 font-mono text-[10.5px] font-semibold"
-                  style={{ color: stage.color }}
-                >
-                  {allItems.length}
-                </span>
-                <button
-                  onClick={() => onAddToStage(stage.id)}
-                  className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed transition-colors hover:bg-white"
-                  style={{ borderColor: stage.color + "80", color: stage.color }}
-                  title={`Aggiungi a ${stage.label}`}
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
-
-              {/* Droppable area */}
-              <Droppable droppableId={stage.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="flex flex-1 flex-col gap-2 rounded-b-[14px] p-2.5 transition-colors"
-                    style={{
-                      backgroundColor: snapshot.isDraggingOver
-                        ? stage.color + "10"
-                        : stage.color + "06",
-                      border: snapshot.isDraggingOver
-                        ? `2px dashed ${stage.color}80`
-                        : "2px dashed transparent",
-                      minHeight: 100,
-                    }}
-                  >
-                    {items.map((item, index) => (
-                      <Draggable key={item.id} draggableId={item.id} index={index}>
-                        {(provided, snapshot) => (
-                          <Link
-                            href={`/autoscuola/${item.id}`}
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className="rounded-[14px] border bg-white transition-all"
-                            style={{
-                              ...provided.draggableProps.style,
-                              borderLeft: `4px solid ${stage.color}`,
-                              borderColor: `#E2E8F0`,
-                              borderLeftColor: stage.color,
-                              padding: "12px 14px",
-                              transform: snapshot.isDragging
-                                ? provided.draggableProps.style?.transform
-                                : provided.draggableProps.style?.transform,
-                              boxShadow: snapshot.isDragging
-                                ? "0 4px 14px rgba(15,23,42,0.12)"
-                                : undefined,
-                            }}
-                          >
-                            <p className="mb-1 text-[13px] font-semibold leading-tight text-ink-900">
-                              {item.name.replace("Autoscuola ", "")}
-                            </p>
-                            <p className="mb-2 flex items-center gap-[5px] text-[11.5px] text-ink-500">
-                              <Building className="h-3 w-3" />
-                              {item.town}, {item.province}
-                            </p>
-                            {isAdmin && item.salesName && (
-                              <p className="mb-1.5 flex items-center gap-1 text-[10.5px] text-ink-400">
-                                <Users className="h-3 w-3" />
-                                {item.salesName}
-                              </p>
-                            )}
-                            <div className="flex items-center justify-between">
-                              {item.pipelineValue ? (
-                                <span
-                                  className="rounded-[999px] px-2 py-0.5 font-mono text-[10.5px] font-semibold"
-                                  style={{
-                                    color: stage.color,
-                                    backgroundColor: stage.color + "15",
-                                  }}
-                                >
-                                  €{item.pipelineValue.toLocaleString("it-IT")}
-                                </span>
-                              ) : (
-                                <span />
-                              )}
-                              {item.lastContact !== null && (
-                                <span className="flex items-center gap-1 text-[10.5px] text-ink-400">
-                                  <Clock className="h-3 w-3" />
-                                  {item.lastContact}g
-                                </span>
-                              )}
-                            </div>
-                          </Link>
-                        )}
-                      </Draggable>
-                    ))}
-                    {hiddenCount > 0 && (
-                      <p className="py-2 text-center text-[11px] font-medium text-ink-400">
-                        +{hiddenCount} altre
-                      </p>
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-          )
-        })}
+      <div className="flex h-full gap-3.5 overflow-x-auto bg-surface-2 p-4">
+        {stages.map((stage) => (
+          <KanbanColumn
+            key={stage.id}
+            stage={stage}
+            autoscuole={autoscuole.filter((a) => a.stageId === stage.id)}
+            onAddToStage={onAddToStage}
+            isAdmin={isAdmin}
+          />
+        ))}
       </div>
     </DragDropContext>
+  )
+}
+
+const INITIAL_VISIBLE = 30
+const LOAD_MORE_COUNT = 50
+
+function KanbanColumn({
+  stage,
+  autoscuole,
+  onAddToStage,
+  isAdmin,
+}: {
+  stage: StageConfig
+  autoscuole: AutoscuolaFlat[]
+  onAddToStage: (stageId: string) => void
+  isAdmin: boolean
+}) {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
+  const items = autoscuole.slice(0, visibleCount)
+  const hiddenCount = autoscuole.length - visibleCount
+
+  return (
+    <div className="flex w-[292px] shrink-0 flex-col" style={{ maxHeight: "100%" }}>
+      {/* Column header */}
+      <div
+        className="flex items-center gap-2 rounded-t-[18px] px-3.5 py-2.5"
+        style={{
+          backgroundColor: stage.color + "12",
+          border: `1px solid ${stage.color}28`,
+          borderBottom: "none",
+        }}
+      >
+        <span
+          className="inline-block h-[6px] w-[6px] rounded-full"
+          style={{ backgroundColor: stage.color }}
+        />
+        <span
+          className="flex-1 text-[12px] font-semibold"
+          style={{ color: stage.color }}
+        >
+          {stage.label}
+        </span>
+        <span
+          className="rounded-full bg-white px-2 py-0.5 text-[10.5px] font-semibold"
+          style={{ color: stage.color }}
+        >
+          {autoscuole.length}
+        </span>
+        <button
+          onClick={() => onAddToStage(stage.id)}
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed transition-colors hover:bg-white"
+          style={{ borderColor: stage.color + "80", color: stage.color }}
+          title={`Aggiungi a ${stage.label}`}
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+      </div>
+
+      {/* Droppable area — scrollable */}
+      <Droppable droppableId={stage.id}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-b-[14px] p-2.5 transition-colors"
+            style={{
+              backgroundColor: snapshot.isDraggingOver
+                ? stage.color + "10"
+                : stage.color + "06",
+              border: snapshot.isDraggingOver
+                ? `2px dashed ${stage.color}80`
+                : "2px dashed transparent",
+            }}
+          >
+            {items.map((item, index) => (
+              <Draggable key={item.id} draggableId={item.id} index={index}>
+                {(provided, snapshot) => (
+                  <Link
+                    href={`/autoscuola/${item.id}`}
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}
+                    className="shrink-0 rounded-[14px] border bg-white transition-all"
+                    style={{
+                      ...provided.draggableProps.style,
+                      borderColor: `#E2E8F0`,
+                      borderLeftColor: stage.color,
+                      borderLeftWidth: 4,
+                      padding: "12px 14px",
+                      boxShadow: snapshot.isDragging
+                        ? "0 4px 14px rgba(15,23,42,0.12)"
+                        : undefined,
+                    }}
+                  >
+                    <p className="mb-1 text-[13px] font-semibold leading-tight text-ink-900">
+                      {item.name.replace("Autoscuola ", "")}
+                    </p>
+                    <p className="mb-2 flex items-center gap-[5px] text-[11.5px] text-ink-500">
+                      <Building className="h-3 w-3" />
+                      {item.town}, {item.province}
+                    </p>
+                    {isAdmin && item.salesName && (
+                      <p className="mb-1.5 flex items-center gap-1 text-[10.5px] text-ink-400">
+                        <Users className="h-3 w-3" />
+                        {item.salesName}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      {item.pipelineValue ? (
+                        <span
+                          className="rounded-[999px] px-2 py-0.5 text-[10.5px] font-semibold"
+                          style={{
+                            color: stage.color,
+                            backgroundColor: stage.color + "15",
+                          }}
+                        >
+                          €{item.pipelineValue.toLocaleString("it-IT")}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      {item.lastContact !== null && (
+                        <span className="flex items-center gap-1 text-[10.5px] text-ink-400">
+                          <Clock className="h-3 w-3" />
+                          {item.lastContact}g
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                )}
+              </Draggable>
+            ))}
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setVisibleCount((c) => c + LOAD_MORE_COUNT)}
+                className="shrink-0 rounded-[10px] border border-dashed border-border-1 py-2 text-center text-[11px] font-medium text-ink-400 transition-colors hover:border-ink-300 hover:text-ink-600"
+              >
+                +{hiddenCount} altre — mostra di più
+              </button>
+            )}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+    </div>
   )
 }
 
