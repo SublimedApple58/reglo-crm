@@ -381,9 +381,9 @@ export function MapClient({ autoscuole, isAdmin = false }: { autoscuole: MapAuto
   const hasGoogleMaps = !!GOOGLE_MAPS_API_KEY
 
   return (
-    <div className="grid h-[calc(100vh)] grid-cols-[320px_1fr]">
+    <div className="grid h-screen grid-cols-[320px_1fr] overflow-hidden">
       {/* Left panel */}
-      <div className="flex flex-col border-r border-border-1 bg-surface">
+      <div className="flex min-h-0 flex-col border-r border-border-1 bg-surface">
         <div className="border-b border-border-1 p-4">
           <h2 className="mb-1 text-[16px] font-bold text-ink-900">Mappa territorio</h2>
           <p className="mb-3 text-[12.5px] text-ink-500">

@@ -142,9 +142,9 @@ export function PipelineClient({
   }
 
   return (
-    <div className="flex h-screen max-w-full flex-col overflow-hidden">
+    <div className="flex h-screen max-w-full flex-col">
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center gap-2.5 border-b border-border-1 px-4 py-3 overflow-hidden">
+      <div className="relative z-20 flex shrink-0 items-center gap-2.5 border-b border-border-1 bg-surface px-4 py-3">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
           <input
