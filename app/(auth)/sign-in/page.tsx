@@ -35,9 +35,7 @@ export default function SignInPage() {
     <div className="w-full max-w-[400px] px-6">
       <div className="mb-8 text-center">
         <div className="mb-2 flex items-center justify-center gap-1">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-ink-900 text-[15px] font-bold text-white">
-            R
-          </div>
+          <img src="/reglo-logo.png" alt="Reglo" className="h-9 w-9 rounded-[10px]" />
           <span className="text-[22px] font-bold tracking-tight text-ink-900">
             reglo<span className="text-pink">.</span>
           </span>

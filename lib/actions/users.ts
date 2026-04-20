@@ -23,6 +23,8 @@ export async function createUser(data: {
   const hashedPassword = await bcrypt.hash(data.password, 10)
   const id = `u_${Date.now()}`
 
+  const avatar = data.role === "sales" ? "/papera-gialla.jpg" : "/papera-rosa.jpg"
+
   await db.insert(users).values({
     id,
     name: data.name,
@@ -32,6 +34,7 @@ export async function createUser(data: {
     role: data.role,
     territory: data.territory ?? null,
     color: data.color,
+    avatar,
     active: true,
     quota: data.quota ?? 5000,
   })

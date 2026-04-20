@@ -1,36 +1,80 @@
 "use client"
 
+import { useMemo } from "react"
 import Link from "next/link"
+import { ArrowUpRight } from "lucide-react"
 import {
-  Map,
-  ArrowUpRight,
-} from "lucide-react"
+  APIProvider,
+  Map as GoogleMap,
+  AdvancedMarker,
+  Polygon,
+} from "@vis.gl/react-google-maps"
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
 const SHORTCUTS = [
-  { label: "Script Chiamate", emoji: "📞", href: "/risorse" },
-  { label: "Template Email", emoji: "✉️", href: "/risorse" },
-  { label: "Gestione Obiezioni", emoji: "🛡️", href: "/risorse" },
-  { label: "Listino Prezzi", emoji: "💰", href: "/risorse" },
+  { label: "Script Chiamate", emoji: "📞", href: "/risorse?cat=Script+chiamate" },
+  { label: "Template Email", emoji: "✉️", href: "/risorse?cat=Template+email" },
+  { label: "Gestione Obiezioni", emoji: "🛡️", href: "/risorse?cat=Gestione+obiezioni" },
+  { label: "Listino Prezzi", emoji: "💰", href: "/risorse?cat=Listino" },
 ]
+
+type MapMarker = { lat: number; lng: number; color: string }
+
+// Convex hull for territory outline
+function convexHull(points: { lat: number; lng: number }[]) {
+  if (points.length < 3) return points
+  const pts = [...points].sort((a, b) => a.lng - b.lng || a.lat - b.lat)
+  function cross(o: { lat: number; lng: number }, a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+    return (a.lng - o.lng) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lng - o.lng)
+  }
+  const lower: { lat: number; lng: number }[] = []
+  for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p) }
+  const upper: { lat: number; lng: number }[] = []
+  for (const p of pts.reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p) }
+  lower.pop(); upper.pop()
+  return lower.concat(upper)
+}
+
+function padHull(hull: { lat: number; lng: number }[], pad: number) {
+  if (hull.length < 3) return hull
+  const cx = hull.reduce((s, p) => s + p.lng, 0) / hull.length
+  const cy = hull.reduce((s, p) => s + p.lat, 0) / hull.length
+  return hull.map((p) => {
+    const dx = p.lng - cx, dy = p.lat - cy
+    const d = Math.sqrt(dx * dx + dy * dy) || 1
+    return { lat: p.lat + (dy / d) * pad, lng: p.lng + (dx / d) * pad }
+  })
+}
 
 export function HomeClient({
   userName,
+  mapMarkers = [],
+  isAdmin = false,
 }: {
   userName: string
   stagesWithCounts: { id: string; label: string; color: string; count: number }[]
   previewByStage: unknown[]
+  mapMarkers?: MapMarker[]
+  isAdmin?: boolean
 }) {
   const firstName = userName.split(" ")[0]
+
+  const territoryHull = useMemo(() => {
+    if (isAdmin || mapMarkers.length < 3) return null
+    return padHull(convexHull(mapMarkers), 0.04)
+  }, [mapMarkers, isAdmin])
 
   return (
     <div className="mx-auto max-w-[1320px] px-9 pt-7 pb-[60px]">
       {/* Hero */}
       <h1 className="mb-1 text-[32px] font-bold leading-tight tracking-[-0.8px] text-ink-900">
-        Ciao {firstName} 👋
+        BENVENUTI SALES! 🦈
       </h1>
       <p className="mb-8 max-w-[640px] text-[14px] leading-relaxed text-ink-500">
-        Ecco la tua dashboard. Gestisci la pipeline, monitora le commissioni e accedi alle risorse
-        del team.
+        In questo Crm troverete tutto quello di cui avete realmente bisogno, tutto in un unico posto,<br />
+        pensato da noi per voi, se avete delle modifiche da richiedere scrivete a:{" "}
+        <a href="mailto:gabriele.ruzzu@reglo.it" className="font-medium text-pink hover:underline">gabriele.ruzzu@reglo.it</a>
       </p>
 
       {/* Shortcuts */}
@@ -50,37 +94,55 @@ export function HomeClient({
       {/* Map Teaser — full width */}
       <Link
         href="/pipeline/mappa"
-        className="group relative mb-6 flex h-[300px] w-full items-end overflow-hidden rounded-[22px]"
+        className="group relative mb-6 block h-[300px] w-full overflow-hidden rounded-[22px]"
       >
-        {/* Dark map background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
-          }}
-        />
-        {/* Decorative map grid */}
-        <div className="absolute inset-0 opacity-[0.08]" style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
-          `,
-          backgroundSize: "60px 60px",
-        }} />
-        {/* Italy silhouette placeholder */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Map className="h-32 w-32 text-white/[0.06]" />
-        </div>
-        {/* Territory label */}
-        <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2">
-          <span className="rounded-[6px] bg-[#3B82F6]/80 px-3 py-1 text-[10px] font-bold tracking-[1px] text-white uppercase backdrop-blur-sm">
-            Territorio attivo
-          </span>
-          {/* Dashed border box */}
-          <div className="mt-2 h-[120px] w-[160px] -translate-x-[10px] rounded-[4px] border-2 border-dashed border-[#3B82F6]/40" />
-        </div>
-        {/* Bottom-right expand icon */}
-        <div className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-[8px] bg-white/10 text-white/60 backdrop-blur-sm transition-colors group-hover:bg-white/20">
+        {GOOGLE_MAPS_API_KEY ? (
+          <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+            <GoogleMap
+              defaultCenter={{ lat: 42.0, lng: 12.5 }}
+              defaultZoom={isAdmin ? 5.5 : 6}
+              gestureHandling="none"
+              disableDefaultUI={true}
+              mapId="reglo-home-map"
+              style={{ width: "100%", height: "100%" }}
+              clickableIcons={false}
+            >
+              {territoryHull && (
+                <Polygon
+                  paths={territoryHull}
+                  strokeColor="#EC4899"
+                  strokeOpacity={0.7}
+                  strokeWeight={2}
+                  fillColor="#EC4899"
+                  fillOpacity={0.08}
+                />
+              )}
+              {mapMarkers.slice(0, 200).map((m, i) => (
+                <AdvancedMarker key={i} position={{ lat: m.lat, lng: m.lng }}>
+                  <div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      backgroundColor: m.color,
+                      border: "1px solid white",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                </AdvancedMarker>
+              ))}
+            </GoogleMap>
+          </APIProvider>
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)" }}
+          >
+            <p className="text-[14px] text-white/40">Mappa territorio</p>
+          </div>
+        )}
+        {/* Overlay expand icon */}
+        <div className="pointer-events-none absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-[8px] bg-white/80 text-ink-600 shadow-sm transition-colors group-hover:bg-white">
           <ArrowUpRight className="h-4 w-4" />
         </div>
       </Link>

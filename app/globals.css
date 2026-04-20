@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains);
+  --font-mono: var(--font-inter);
   --font-heading: var(--font-inter);
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -122,8 +122,8 @@
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+  html, body, * {
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   }
 }
 
@@ -141,4 +141,32 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* Internal links (href starts with /) */
+.reglo-links a[href^="/"] {
+  color: #EC4899;
+  text-decoration: underline;
+  text-decoration-color: rgba(236, 72, 153, 0.3);
+  text-underline-offset: 2px;
+  background-color: rgba(236, 72, 153, 0.08);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.reglo-links a[href^="/"]:hover {
+  background-color: rgba(236, 72, 153, 0.15);
+}
+
+/* External links */
+.reglo-links a:not([href^="/"]) {
+  color: #3B82F6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.reglo-links a:not([href^="/"]):hover {
+  color: #2563EB;
 }

@@ -7,7 +7,12 @@ export default async function MapPage() {
   const session = await auth()
   if (!session?.user) redirect("/sign-in")
 
-  const results = await getAutoscuole()
+  const u = session.user as Record<string, unknown>
+  const role = u.role as string
+  const isAdmin = role === "admin" || role === "both"
+
+  const filters = isAdmin ? undefined : { assignedTo: u.id as string }
+  const results = await getAutoscuole(filters)
 
   const autoscuoleFlat = results.map((r) => ({
     id: r.autoscuola.id,
@@ -21,7 +26,10 @@ export default async function MapPage() {
     stageLabel: r.stage.label,
     pipelineValue: r.autoscuola.pipelineValue,
     students: r.autoscuola.students,
+    salesName: r.salesUser?.name ?? null,
+    salesId: r.salesUser?.id ?? null,
+    salesColor: r.salesUser?.color ?? null,
   }))
 
-  return <MapClient autoscuole={autoscuoleFlat} />
+  return <MapClient autoscuole={autoscuoleFlat} isAdmin={isAdmin} />
 }

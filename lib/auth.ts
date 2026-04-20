@@ -32,6 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.role,
           territory: user.territory,
+          avatar: user.avatar,
         } as Record<string, unknown> as import("next-auth").User
       },
     }),

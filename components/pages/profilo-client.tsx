@@ -10,6 +10,7 @@ type UserInfo = {
   email: string
   role: string
   territory: string
+  avatar: string | null
 }
 
 export function ProfiloClient({ user }: { user: UserInfo }) {
@@ -61,9 +62,13 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
 
       {/* Avatar + Name */}
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink text-[18px] font-bold text-white">
-          {initials}
-        </div>
+        {user.avatar ? (
+          <img src={user.avatar} alt="" className="h-16 w-16 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink text-[18px] font-bold text-white">
+            {initials}
+          </div>
+        )}
         <div>
           <h2 className="text-[18px] font-bold text-ink-900">{user.name}</h2>
           <p className="text-[13px] text-ink-500">{user.email}</p>

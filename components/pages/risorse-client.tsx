@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Phone,
   Mail,
@@ -10,6 +11,8 @@ import {
   Search,
   Pin,
   Calendar,
+  Maximize2,
+  Minimize2,
 } from "lucide-react"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
 import type { Resource } from "@/lib/db/schema"
@@ -23,9 +26,34 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 export function RisorseClient({ resources }: { resources: Resource[] }) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const router = useRouter()
+
+  const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.target as HTMLElement
+    const anchor = el.tagName === "A" ? el as HTMLAnchorElement : el.closest("a")
+    if (!anchor) return
+    const href = anchor.getAttribute("href")
+    if (!href) return
+    e.preventDefault()
+    e.stopPropagation()
+    // Internal resource link: /risorse#ID
+    if (href.startsWith("/risorse#")) {
+      const id = parseInt(href.split("#")[1])
+      if (!isNaN(id)) setSelectedId(id)
+      return
+    }
+    if (href.startsWith("/")) {
+      router.push(href)
+    } else {
+      window.open(href, "_blank", "noopener,noreferrer")
+    }
+  }, [router])
+  const searchParams = useSearchParams()
+  const initialCat = searchParams.get("cat")
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCat)
   const [selectedId, setSelectedId] = useState<number | null>(resources[0]?.id ?? null)
   const [search, setSearch] = useState("")
+  const [fullscreen, setFullscreen] = useState(false)
 
   const filteredDocs = resources.filter((r) => {
     if (selectedCategory && r.category !== selectedCategory) return false
@@ -39,9 +67,9 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
   const selected = resources.find((r) => r.id === selectedId)
 
   return (
-    <div className="grid h-[calc(100vh)] grid-cols-[230px_360px_1fr]">
+    <div className={`grid h-[calc(100vh)] ${fullscreen ? "grid-cols-[1fr]" : "grid-cols-[230px_360px_1fr]"}`}>
       {/* Categories */}
-      <div className="flex flex-col border-r border-border-1 bg-bg p-3">
+      {!fullscreen && <div className="flex flex-col border-r border-border-1 bg-bg p-3">
         <h3 className="mb-3 px-2 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
           Categorie
         </h3>
@@ -68,10 +96,10 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
             </button>
           )
         })}
-      </div>
+      </div>}
 
       {/* Docs list */}
-      <div className="flex flex-col border-r border-border-1 bg-surface">
+      {!fullscreen && <div className="flex flex-col border-r border-border-1 bg-surface">
         <div className="border-b border-border-1 p-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
@@ -131,15 +159,24 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
             )
           })}
         </div>
-      </div>
+      </div>}
 
       {/* Reader */}
       <div className="flex-1 overflow-y-auto bg-surface p-8">
         {selected ? (
-          <div className="mx-auto max-w-[640px]">
-            <h1 className="mb-2 text-[22px] font-bold tracking-tight text-ink-900">
-              {selected.title}
-            </h1>
+          <div className={`mx-auto ${fullscreen ? "max-w-[800px]" : "max-w-[640px]"}`}>
+            <div className="mb-2 flex items-start gap-3">
+              <button
+                onClick={() => setFullscreen(!fullscreen)}
+                className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-ink-400 transition-colors hover:bg-surface-2 hover:text-ink-600"
+                title={fullscreen ? "Riduci" : "Espandi"}
+              >
+                {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+              <h1 className="text-[22px] font-bold tracking-tight text-ink-900">
+                {selected.title}
+              </h1>
+            </div>
             <p className="mb-6 text-[12.5px] text-ink-400">
               <Calendar className="mr-1 inline h-3 w-3" />
               {selected.updatedAt
@@ -153,7 +190,8 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
 
             {selected.html && (
               <div
-                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_li]:mb-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
+                onClick={handleContentClick}
+                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 reglo-links [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_li]:mb-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
                 dangerouslySetInnerHTML={{ __html: selected.html }}
               />
             )}

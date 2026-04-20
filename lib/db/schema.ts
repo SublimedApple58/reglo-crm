@@ -7,6 +7,7 @@ import {
   timestamp,
   real,
   serial,
+  jsonb,
 } from "drizzle-orm/pg-core"
 
 export const users = pgTable("users", {
@@ -18,6 +19,7 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["sales", "admin", "both"] }).notNull().default("sales"),
   territory: text("territory"),
   color: text("color").notNull().default("#EC4899"),
+  avatar: text("avatar"),
   active: boolean("active").notNull().default(true),
   quota: real("quota").default(5750),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -52,6 +54,7 @@ export const autoscuole = pgTable("autoscuole", {
   closeProbability: real("close_probability"), // 0-100
   commissionRate: real("commission_rate"), // 0-1
   expectedCloseDate: timestamp("expected_close_date"),
+  info: jsonb("info").$type<Record<string, string>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

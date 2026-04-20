@@ -31,6 +31,10 @@ export default async function AutoscuolaPage(props: {
       .slice(0, 2),
   }))
 
+  const u = session.user as Record<string, unknown>
+  const role = u.role as string
+  const isAdmin = role === "admin" || role === "both"
+
   return (
     <AutoscuolaClient
       autoscuola={result.autoscuola}
@@ -39,6 +43,7 @@ export default async function AutoscuolaPage(props: {
       activities={activitiesFlat}
       stages={[...STAGES]}
       documents={documentsResult}
+      isAdmin={isAdmin}
     />
   )
 }

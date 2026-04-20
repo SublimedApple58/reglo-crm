@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { documents } from "@/lib/db/schema"
-import { generatePresignedUploadUrl, generateFileKey } from "@/lib/storage/r2"
+import { generateFileKey, uploadToR2 } from "@/lib/storage/r2"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -10,35 +10,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { autoscuolaId, filename, contentType, size } = body as {
-    autoscuolaId: string
-    filename: string
-    contentType: string
-    size: number
-  }
+  const formData = await request.formData()
+  const file = formData.get("file") as File | null
+  const autoscuolaId = formData.get("autoscuolaId") as string | null
 
-  if (!autoscuolaId || !filename || !contentType || !size) {
+  if (!file || !autoscuolaId) {
     return NextResponse.json(
       { error: "Campi obbligatori mancanti" },
       { status: 400 }
     )
   }
 
-  const key = generateFileKey(autoscuolaId, filename)
-  const uploadUrl = await generatePresignedUploadUrl(key, contentType)
+  const key = generateFileKey(autoscuolaId, file.name)
 
+  // Upload to R2 server-side
+  const buffer = Buffer.from(await file.arrayBuffer())
+  await uploadToR2(key, buffer, file.type)
+
+  // Create DB record only after successful upload
   const [document] = await db
     .insert(documents)
     .values({
       autoscuolaId,
       userId: session.user.id,
-      name: filename,
+      name: file.name,
       key,
-      size,
-      contentType,
+      size: file.size,
+      contentType: file.type,
     })
     .returning()
 
-  return NextResponse.json({ uploadUrl, document })
+  return NextResponse.json({ document })
 }

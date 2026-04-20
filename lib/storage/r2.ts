@@ -20,16 +20,18 @@ const r2 = new S3Client({
   },
 })
 
-export async function generatePresignedUploadUrl(
+export async function uploadToR2(
   key: string,
+  body: Buffer,
   contentType: string
-): Promise<string> {
+): Promise<void> {
   const command = new PutObjectCommand({
     Bucket: R2_BUCKET_NAME,
     Key: key,
+    Body: body,
     ContentType: contentType,
   })
-  return getSignedUrl(r2, command, { expiresIn: 600 }) // 10 minutes
+  await r2.send(command)
 }
 
 export async function generatePresignedDownloadUrl(

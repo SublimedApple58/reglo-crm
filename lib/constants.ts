@@ -39,10 +39,33 @@ export const NEWS_CATEGORIES = [
 ] as const
 
 export const COMMISSION_TIERS = [
-  { tier: "Base", rate: 0.15, desc: "Fino a 5 contratti/mese – commissione standard del 15% sul valore contratto" },
-  { tier: "Premium", rate: 0.25, desc: "Da 6 a 10 contratti/mese – commissione maggiorata al 25%", highlight: true },
-  { tier: "Bonus acceleratore", rate: 0.05, desc: "Oltre 10 contratti/mese – bonus aggiuntivo del 5% su tutti i contratti del mese" },
+  { tier: "Setter", rate: 0.30, desc: "Commissione del 30% sul valore del contratto quando si agisce come setter" },
+  { tier: "Close", rate: 0.10, desc: "Commissione del 10% sul valore del contratto in fase di chiusura" },
+  { tier: "In solitaria", rate: 0.40, desc: "Commissione del 40% sul valore del contratto quando si gestisce l'intero ciclo di vendita", highlight: true },
 ] as const
+
+export const REGIONI_PROVINCE: Record<string, string[]> = {
+  "Abruzzo": ["AQ", "CH", "PE", "TE"],
+  "Basilicata": ["MT", "PZ"],
+  "Calabria": ["CZ", "CS", "KR", "RC", "VV"],
+  "Campania": ["AV", "BN", "CE", "NA", "SA"],
+  "Emilia-Romagna": ["BO", "FE", "FC", "MO", "PR", "PC", "RA", "RE", "RN"],
+  "Friuli Venezia Giulia": ["GO", "PN", "TS", "UD"],
+  "Lazio": ["FR", "LT", "RI", "RM", "VT"],
+  "Liguria": ["GE", "IM", "SP", "SV"],
+  "Lombardia": ["BG", "BS", "CO", "CR", "LC", "LO", "MN", "MI", "MB", "PV", "SO", "VA"],
+  "Marche": ["AN", "AP", "FM", "MC", "PU"],
+  "Molise": ["CB", "IS"],
+  "Piemonte": ["AL", "AT", "BI", "CN", "NO", "TO", "VB", "VC"],
+  "Puglia": ["BA", "BT", "BR", "FG", "LE", "TA"],
+  "Sardegna": ["CA", "NU", "OR", "SS", "SU"],
+  "Sicilia": ["AG", "CL", "CT", "EN", "ME", "PA", "RG", "SR", "TP"],
+  "Toscana": ["AR", "FI", "GR", "LI", "LU", "MS", "PI", "PT", "PO", "SI"],
+  "Trentino-Alto Adige": ["BZ", "TN"],
+  "Umbria": ["PG", "TR"],
+  "Valle d'Aosta": ["AO"],
+  "Veneto": ["BL", "PD", "RO", "TV", "VE", "VR", "VI"],
+}
 
 export const SALES_COLORS = [
   "#EC4899", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",

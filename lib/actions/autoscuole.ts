@@ -103,6 +103,14 @@ export async function updateAutoscuola(
   revalidatePath("/admin/assegnazioni")
 }
 
+export async function updateAutoscuolaInfo(id: string, info: Record<string, string>) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  await db.update(autoscuole).set({ info }).where(eq(autoscuole.id, id))
+  revalidatePath(`/autoscuola/${id}`)
+}
+
 export async function createAutoscuola(data: {
   name: string
   owner?: string

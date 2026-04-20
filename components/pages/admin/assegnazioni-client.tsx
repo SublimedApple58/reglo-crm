@@ -3,30 +3,8 @@
 import { useState, useTransition, useMemo } from "react"
 import { Search, AlertCircle, Check, MapPin } from "lucide-react"
 import { StageChip } from "@/components/ui/stage-chip"
+import { REGIONI_PROVINCE } from "@/lib/constants"
 import { updateAutoscuola, bulkReassign } from "@/lib/actions/autoscuole"
-
-const REGIONI_PROVINCE: Record<string, string[]> = {
-  "Abruzzo": ["AQ", "CH", "PE", "TE"],
-  "Basilicata": ["MT", "PZ"],
-  "Calabria": ["CZ", "CS", "KR", "RC", "VV"],
-  "Campania": ["AV", "BN", "CE", "NA", "SA"],
-  "Emilia-Romagna": ["BO", "FE", "FC", "MO", "PR", "PC", "RA", "RE", "RN"],
-  "Friuli Venezia Giulia": ["GO", "PN", "TS", "UD"],
-  "Lazio": ["FR", "LT", "RI", "RM", "VT"],
-  "Liguria": ["GE", "IM", "SP", "SV"],
-  "Lombardia": ["BG", "BS", "CO", "CR", "LC", "LO", "MN", "MI", "MB", "PV", "SO", "VA"],
-  "Marche": ["AN", "AP", "FM", "MC", "PU"],
-  "Molise": ["CB", "IS"],
-  "Piemonte": ["AL", "AT", "BI", "CN", "NO", "TO", "VB", "VC"],
-  "Puglia": ["BA", "BT", "BR", "FG", "LE", "TA"],
-  "Sardegna": ["CA", "NU", "OR", "SS", "SU"],
-  "Sicilia": ["AG", "CL", "CT", "EN", "ME", "PA", "RG", "SR", "TP"],
-  "Toscana": ["AR", "FI", "GR", "LI", "LU", "MS", "PI", "PT", "PO", "SI"],
-  "Trentino-Alto Adige": ["BZ", "TN"],
-  "Umbria": ["PG", "TR"],
-  "Valle d'Aosta": ["AO"],
-  "Veneto": ["BL", "PD", "RO", "TV", "VE", "VR", "VI"],
-}
 
 type AutoscuolaRow = {
   id: string

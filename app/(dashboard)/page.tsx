@@ -8,8 +8,13 @@ export default async function HomePage() {
   const session = await auth()
   if (!session?.user) redirect("/sign-in")
 
+  const u = session.user as Record<string, unknown>
+  const role = u.role as string
+  const isAdmin = role === "admin" || role === "both"
+
   const counts = await getPipelineCounts()
-  const allAutoscuole = await getAutoscuole({ assignedTo: session.user.id })
+  const filters = isAdmin ? undefined : { assignedTo: u.id as string }
+  const allAutoscuole = await getAutoscuole(filters)
 
   const stagesWithCounts = STAGES.map((s) => ({
     ...s,
@@ -26,11 +31,22 @@ export default async function HomePage() {
       .map((a) => a.autoscuola),
   }))
 
+  // Map markers for preview
+  const mapMarkers = allAutoscuole
+    .filter((r) => r.autoscuola.lat && r.autoscuola.lng)
+    .map((r) => ({
+      lat: r.autoscuola.lat!,
+      lng: r.autoscuola.lng!,
+      color: r.stage.color,
+    }))
+
   return (
     <HomeClient
-      userName={session.user.name}
+      userName={session.user.name ?? ""}
       stagesWithCounts={stagesWithCounts}
       previewByStage={previewByStage}
+      mapMarkers={mapMarkers}
+      isAdmin={isAdmin}
     />
   )
 }

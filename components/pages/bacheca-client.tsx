@@ -1,11 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Pin, Calendar } from "lucide-react"
 import { NEWS_CATEGORIES } from "@/lib/constants"
 import type { News } from "@/lib/db/schema"
 
 export function BachecaClient({ news }: { news: News[] }) {
+  const router = useRouter()
+
+  const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = e.target as HTMLElement
+    const anchor = el.tagName === "A" ? el as HTMLAnchorElement : el.closest("a")
+    if (!anchor) return
+    const href = anchor.getAttribute("href")
+    if (!href) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (href.startsWith("/")) {
+      router.push(href)
+    } else {
+      window.open(href, "_blank", "noopener,noreferrer")
+    }
+  }, [router])
   const [selectedId, setSelectedId] = useState<number | null>(news[0]?.id ?? null)
   const [filter, setFilter] = useState<string | null>(null)
 
@@ -126,7 +143,8 @@ export function BachecaClient({ news }: { news: News[] }) {
 
             {selected.body && (
               <div
-                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_li]:mb-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink-900 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
+                onClick={handleContentClick}
+                className="reglo-links prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_li]:mb-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink-900 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
                 dangerouslySetInnerHTML={{ __html: selected.body }}
               />
             )}

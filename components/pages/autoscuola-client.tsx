@@ -17,7 +17,6 @@ import {
   Sparkles,
   FileText,
   StickyNote,
-  Lightbulb,
   ExternalLink,
   Download,
   Trash2,
@@ -25,7 +24,7 @@ import {
   File,
 } from "lucide-react"
 import { STAGES } from "@/lib/constants"
-import { updateAutoscuolaStage, updateAutoscuola, createActivity, deleteAutoscuola } from "@/lib/actions/autoscuole"
+import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, deleteAutoscuola } from "@/lib/actions/autoscuole"
 import { deleteDocument } from "@/lib/actions/documents"
 import type { Autoscuola, PipelineStage, User, Activity, Document } from "@/lib/db/schema"
 
@@ -71,6 +70,7 @@ export function AutoscuolaClient({
   activities,
   stages,
   documents,
+  isAdmin = false,
 }: {
   autoscuola: Autoscuola
   stage: PipelineStage
@@ -78,6 +78,7 @@ export function AutoscuolaClient({
   activities: ActivityFlat[]
   stages: typeof STAGES extends readonly (infer T)[] ? T[] : never
   documents: DocumentWithUser[]
+  isAdmin?: boolean
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("attivita")
@@ -128,6 +129,7 @@ export function AutoscuolaClient({
 
   const tabs = [
     { id: "attivita", label: "Attività" },
+    { id: "informazioni", label: "Informazioni" },
     { id: "anagrafica", label: "Anagrafica" },
     { id: "documenti", label: "Documenti" },
     { id: "contratto", label: "Contratto" },
@@ -189,7 +191,7 @@ export function AutoscuolaClient({
                   Email
                 </button>
               )}
-              <a href="https://cal.com" target="_blank" rel="noopener noreferrer" className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90">
+              <a href="https://cal.com/reglo?redirect=false" target="_blank" rel="noopener noreferrer" className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90">
                 <Calendar className="h-3.5 w-3.5" />
                 Fissa meeting
                 <ExternalLink className="h-3 w-3 opacity-70" />
@@ -347,6 +349,10 @@ export function AutoscuolaClient({
             </div>
           )}
 
+          {activeTab === "informazioni" && (
+            <InformazioniTab autoscuola={autoscuola} />
+          )}
+
           {activeTab === "anagrafica" && (
             <AnagraficaTab
               autoscuola={autoscuola}
@@ -409,27 +415,32 @@ export function AutoscuolaClient({
           </div>
         </div>
 
-        {/* Sales owner */}
-        {salesUser && (
+        {/* Sales owner — visible only to admins */}
+        {isAdmin && (
           <div className="border-b border-border-1 p-5">
             <h3 className="mb-3 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
-              Sales Owner
+              Assegnata a
             </h3>
-            <div className="flex items-center gap-2.5">
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                style={{ backgroundColor: salesUser.color }}
-              >
-                {salesUser.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+            {salesUser ? (
+              <div className="flex items-center gap-2.5">
+                {salesUser.avatar ? (
+                  <img src={salesUser.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                    style={{ backgroundColor: salesUser.color }}
+                  >
+                    {salesUser.name.split(" ").map((n) => n[0]).join("")}
+                  </div>
+                )}
+                <div>
+                  <p className="text-[13px] font-semibold text-ink-900">{salesUser.name}</p>
+                  <p className="text-[11.5px] text-ink-400">{salesUser.territory}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[13px] font-semibold text-ink-900">{salesUser.name}</p>
-                <p className="text-[11.5px] text-ink-400">{salesUser.territory}</p>
-              </div>
-            </div>
+            ) : (
+              <p className="text-[12.5px] text-ink-400">Non assegnata</p>
+            )}
           </div>
         )}
 
@@ -478,21 +489,6 @@ export function AutoscuolaClient({
           </div>
         </div>
 
-        {/* Script suggerito */}
-        <div className="p-5">
-          <div className="rounded-[12px] border border-[#FDE68A] bg-yellow-50 p-3.5">
-            <div className="mb-2 flex items-center gap-1.5">
-              <Lightbulb className="h-3.5 w-3.5 text-[#B45309]" />
-              <span className="text-[10px] font-bold tracking-wider text-[#B45309] uppercase">
-                Script suggerito
-              </span>
-            </div>
-            <p className="text-[11.5px] leading-[1.5] text-[#7C2D12]">
-              Per lo stage &quot;{stage.label}&quot;, usa lo script di follow-up. Menziona il
-              risparmio di 15 ore/settimana e chiedi disponibilità per una demo.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Delete confirmation */}
@@ -587,6 +583,7 @@ function DocumentiTab({
   documents: DocumentWithUser[]
   autoscuolaId: string
 }) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -604,33 +601,23 @@ function DocumentiTab({
             continue
           }
 
+          const formData = new FormData()
+          formData.append("file", file)
+          formData.append("autoscuolaId", autoscuolaId)
+
           const res = await fetch("/api/upload", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              autoscuolaId,
-              filename: file.name,
-              contentType: file.type,
-              size: file.size,
-            }),
+            body: formData,
           })
 
           if (!res.ok) {
             alert(`Errore durante il caricamento di ${file.name}`)
             continue
           }
-
-          const { uploadUrl } = await res.json()
-
-          await fetch(uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type },
-            body: file,
-          })
         }
 
         startTransition(() => {
-          window.location.reload()
+          router.refresh()
         })
       } catch {
         alert("Errore durante il caricamento")
@@ -813,6 +800,99 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
       >
         Salva note
       </button>
+    </div>
+  )
+}
+
+const INFO_FIELDS = [
+  { key: "sedi_totali", label: "Sedi totali" },
+  { key: "istruttori", label: "Istruttori (Full / Part-time)" },
+  { key: "veicoli_totali", label: "Veicoli totali" },
+  { key: "costo_guida_30", label: "Costo Guida (30 minuti)" },
+  { key: "costo_guida_60", label: "Costo Guida (60 minuti)" },
+  { key: "allievi_attivi", label: "Allievi attivi (Circa)" },
+  { key: "guide_medie_giorno", label: "Guide medie al giorno" },
+  { key: "metodo_prenotazione", label: "Metodo attuale di prenotazione" },
+  { key: "gestione_chiamate", label: "Gestione chiamate (Chi risponde?)" },
+  { key: "chiamate_perse", label: "Chiamate perse o fuori orario" },
+  { key: "frequenza_noshow", label: "Frequenza No-Show" },
+  { key: "penale_noshow", label: "Penale per No-Show" },
+  { key: "sistema_promemoria", label: "Sistema di promemoria attuale" },
+  { key: "metodo_pagamento", label: "Metodo e momento di pagamento" },
+  { key: "note_prospect", label: "Note principali del prospect" },
+]
+
+function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
+  const [isPending, startTransition] = useTransition()
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    const saved = (autoscuola.info as Record<string, string>) ?? {}
+    return INFO_FIELDS.reduce((acc, f) => {
+      acc[f.key] = saved[f.key] ?? ""
+      return acc
+    }, {} as Record<string, string>)
+  })
+  const [saved, setSaved] = useState(false)
+
+  function handleChange(key: string, value: string) {
+    setValues((prev) => ({ ...prev, [key]: value }))
+    setSaved(false)
+  }
+
+  function handleSave() {
+    startTransition(async () => {
+      await updateAutoscuolaInfo(autoscuola.id, values)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    })
+  }
+
+  return (
+    <div className="p-6">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="border border-border-1 bg-surface-2 px-4 py-2.5 text-left text-[12px] font-semibold tracking-wider text-ink-500 uppercase">
+              Parametro
+            </th>
+            <th className="border border-border-1 bg-surface-2 px-4 py-2.5 text-left text-[12px] font-semibold tracking-wider text-ink-500 uppercase">
+              Dati Raccolti
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {INFO_FIELDS.map((field) => (
+            <tr key={field.key}>
+              <td className="border border-border-1 px-4 py-2.5 text-[13px] font-medium text-ink-900 align-top" style={{ width: "45%" }}>
+                {field.label}
+              </td>
+              <td className="border border-border-1 p-0">
+                <input
+                  value={values[field.key]}
+                  onChange={(e) => handleChange(field.key, e.target.value)}
+                  placeholder="Non specificato."
+                  className="w-full bg-transparent px-4 py-2.5 text-[13px] text-ink-700 outline-none placeholder:text-ink-400 focus:bg-pink-50/30"
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={isPending}
+          className="rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+        >
+          {isPending ? "Salvataggio..." : "Salva informazioni"}
+        </button>
+        {saved && (
+          <span className="flex items-center gap-1 text-[12px] font-medium text-green">
+            <Check className="h-3.5 w-3.5" />
+            Salvato
+          </span>
+        )}
+      </div>
     </div>
   )
 }

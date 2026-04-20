@@ -5,13 +5,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   Search,
-  LayoutGrid,
-  List,
   Filter,
   Clock,
   Building,
   X,
   Plus,
+  Users,
 } from "lucide-react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { StageChip } from "@/components/ui/stage-chip"
@@ -57,17 +56,18 @@ export function PipelineClient({
   autoscuole: initialAutoscuole,
   stages,
   salesUsers,
+  isAdmin = false,
 }: {
   autoscuole: AutoscuolaFlat[]
   stages: StageConfig[]
   salesUsers: SalesUser[]
+  isAdmin?: boolean
 }) {
   const router = useRouter()
-  const [view, setView] = useState<"kanban" | "list">("kanban")
   const [search, setSearch] = useState("")
   const [autoscuole, setAutoscuole] = useState(initialAutoscuole)
   const [showFilters, setShowFilters] = useState(false)
-  const [showNewOpp, setShowNewOpp] = useState(false)
+  const [newOppStage, setNewOppStage] = useState<string | null>(null)
   const [filters, setFilters] = useState<ActiveFilters>({
     stages: [],
     province: null,
@@ -145,29 +145,6 @@ export function PipelineClient({
     <div className="flex h-screen max-w-full flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="flex shrink-0 items-center gap-2.5 border-b border-border-1 px-4 py-3 overflow-hidden">
-        <div className="flex rounded-[8px] border border-border-1 p-0.5">
-          <button
-            onClick={() => setView("kanban")}
-            className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-            style={{
-              backgroundColor: view === "kanban" ? "#FDF2F8" : "transparent",
-              color: view === "kanban" ? "#EC4899" : "#64748B",
-            }}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => setView("list")}
-            className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-            style={{
-              backgroundColor: view === "list" ? "#FDF2F8" : "transparent",
-              color: view === "list" ? "#EC4899" : "#64748B",
-            }}
-          >
-            <List className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
           <input
@@ -261,7 +238,7 @@ export function PipelineClient({
             {filtered.length} autoscuole
           </span>
           <button
-            onClick={() => setShowNewOpp(true)}
+            onClick={() => setNewOppStage("da_chiamare")}
             className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-pink/90"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -272,16 +249,12 @@ export function PipelineClient({
 
       {/* Content — isolated scroll container */}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-        {view === "kanban" ? (
-          <KanbanView autoscuole={filtered} stages={stages} onDragEnd={handleDragEnd} />
-        ) : (
-          <ListView autoscuole={filtered} />
-        )}
+        <KanbanView autoscuole={filtered} stages={stages} onDragEnd={handleDragEnd} onAddToStage={(stageId) => setNewOppStage(stageId)} isAdmin={isAdmin} />
       </div>
 
       {/* New opportunity dialog */}
-      {showNewOpp && (
-        <NewOppDialog onClose={() => setShowNewOpp(false)} />
+      {newOppStage && (
+        <NewOppDialog defaultStage={newOppStage} onClose={() => setNewOppStage(null)} />
       )}
     </div>
   )
@@ -376,10 +349,14 @@ function KanbanView({
   autoscuole,
   stages,
   onDragEnd,
+  onAddToStage,
+  isAdmin = false,
 }: {
   autoscuole: AutoscuolaFlat[]
   stages: StageConfig[]
   onDragEnd: (result: DropResult) => void
+  onAddToStage: (stageId: string) => void
+  isAdmin?: boolean
 }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -415,6 +392,14 @@ function KanbanView({
                 >
                   {allItems.length}
                 </span>
+                <button
+                  onClick={() => onAddToStage(stage.id)}
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed transition-colors hover:bg-white"
+                  style={{ borderColor: stage.color + "80", color: stage.color }}
+                  title={`Aggiungi a ${stage.label}`}
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
               </div>
 
               {/* Droppable area */}
@@ -464,6 +449,12 @@ function KanbanView({
                               <Building className="h-3 w-3" />
                               {item.town}, {item.province}
                             </p>
+                            {isAdmin && item.salesName && (
+                              <p className="mb-1.5 flex items-center gap-1 text-[10.5px] text-ink-400">
+                                <Users className="h-3 w-3" />
+                                {item.salesName}
+                              </p>
+                            )}
                             <div className="flex items-center justify-between">
                               {item.pipelineValue ? (
                                 <span
@@ -491,7 +482,7 @@ function KanbanView({
                     ))}
                     {hiddenCount > 0 && (
                       <p className="py-2 text-center text-[11px] font-medium text-ink-400">
-                        +{hiddenCount} altre · usa la vista lista
+                        +{hiddenCount} altre
                       </p>
                     )}
                     {provided.placeholder}
@@ -506,60 +497,7 @@ function KanbanView({
   )
 }
 
-function ListView({ autoscuole }: { autoscuole: AutoscuolaFlat[] }) {
-  return (
-    <div className="flex-1 overflow-auto p-4">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-border-1">
-            <th className="px-3 py-2.5 text-left text-[11.5px] font-semibold text-ink-400 uppercase">
-              Autoscuola
-            </th>
-            <th className="px-3 py-2.5 text-left text-[11.5px] font-semibold text-ink-400 uppercase">
-              Città
-            </th>
-            <th className="px-3 py-2.5 text-left text-[11.5px] font-semibold text-ink-400 uppercase">
-              Prov.
-            </th>
-            <th className="px-3 py-2.5 text-left text-[11.5px] font-semibold text-ink-400 uppercase">
-              Stage
-            </th>
-            <th className="px-3 py-2.5 text-right text-[11.5px] font-semibold text-ink-400 uppercase">
-              Valore
-            </th>
-            <th className="px-3 py-2.5 text-right text-[11.5px] font-semibold text-ink-400 uppercase">
-              Ultimo contatto
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {autoscuole.slice(0, 100).map((a) => (
-            <tr key={a.id} className="border-b border-border-2 transition-colors hover:bg-surface-2">
-              <td className="px-3 py-2.5">
-                <Link href={`/autoscuola/${a.id}`} className="text-[13px] font-semibold text-ink-900 hover:text-pink">
-                  {a.name}
-                </Link>
-              </td>
-              <td className="px-3 py-2.5 text-[13px] text-ink-600">{a.town}</td>
-              <td className="px-3 py-2.5 text-[13px] font-medium text-ink-500">{a.province}</td>
-              <td className="px-3 py-2.5">
-                <StageChip stageId={a.stageId} size="sm" />
-              </td>
-              <td className="px-3 py-2.5 text-right font-mono text-[13px] font-medium text-ink-900">
-                {a.pipelineValue ? `€${a.pipelineValue.toLocaleString("it-IT")}` : "–"}
-              </td>
-              <td className="px-3 py-2.5 text-right text-[13px] text-ink-500">
-                {a.lastContact !== null ? `${a.lastContact}g fa` : "–"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function NewOppDialog({ onClose }: { onClose: () => void }) {
+function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose: () => void }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({
@@ -569,7 +507,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
     town: "",
     phone: "",
     email: "",
-    stageId: "da_chiamare",
+    stageId: defaultStage,
   })
 
   function handleSubmit(e: React.FormEvent) {
