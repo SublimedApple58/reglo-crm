@@ -994,6 +994,20 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
     }
   }, [showPicker, date])
 
+  // If picker is showing but no date is set, detect when the calendar dropdown closes
+  // (click outside) and reset showPicker back to false
+  useEffect(() => {
+    if (!showPicker || date) return
+    function checkClosed() {
+      const dropdown = pickerBtnRef.current?.querySelector(".absolute")
+      if (!dropdown) setShowPicker(false)
+    }
+    // Poll briefly after interactions to detect the dropdown disappearing
+    function handleClick() { setTimeout(checkClosed, 100) }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [showPicker, date])
+
   if (!date && !showPicker) {
     return (
       <button
