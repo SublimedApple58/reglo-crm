@@ -11,6 +11,7 @@ import {
   Map,
   DollarSign,
   BookOpen,
+  Calendar,
   Users,
   ArrowLeftRight,
   FileEdit,
@@ -18,17 +19,21 @@ import {
   MoreHorizontal,
   LogOut,
   Megaphone,
+  LayoutGrid,
+  FileSignature,
 } from "lucide-react"
 import { getPipelineCounts } from "@/lib/actions/autoscuole"
-import { getAdminStats } from "@/lib/actions/data"
+import { getAdminStats, getUnreadNewsCount } from "@/lib/actions/data"
+import { getPendingContractRequestsCount } from "@/lib/actions/contracts"
 
 const navItems = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Bacheca news", href: "/bacheca", icon: Newspaper },
+  { label: "Bacheca news", href: "/bacheca", icon: Newspaper, badgeKey: "unreadNews" as const },
   { label: "Pipeline", href: "/pipeline", icon: Kanban, badgeKey: "pipeline" as const },
   { label: "Mappa territorio", href: "/pipeline/mappa", icon: Map },
   { label: "Commissioni", href: "/commissioni", icon: DollarSign },
   { label: "Risorse", href: "/risorse", icon: BookOpen },
+  { label: "Calendario", href: "/calendario", icon: Calendar },
   { label: "Profilo", href: "/profilo", icon: User },
 ]
 
@@ -37,18 +42,22 @@ const adminItems = [
   { label: "Assegnazioni", href: "/admin/assegnazioni", icon: ArrowLeftRight, badgeKey: "unassigned" as const },
   { label: "Gestione risorse", href: "/admin/gestione-risorse", icon: FileEdit },
   { label: "Gestione news", href: "/admin/gestione-news", icon: Megaphone },
+  { label: "Gestione home", href: "/admin/gestione-home", icon: LayoutGrid },
+  { label: "Contratti", href: "/admin/gestione-contratti", icon: FileSignature, badgeKey: "pendingContracts" as const },
 ]
 
 type BadgeCounts = {
   pipeline: number
   unassigned: number
+  unreadNews: number
+  pendingContracts: number
 }
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [badges, setBadges] = useState<BadgeCounts>({ pipeline: 0, unassigned: 0 })
+  const [badges, setBadges] = useState<BadgeCounts>({ pipeline: 0, unassigned: 0, unreadNews: 0, pendingContracts: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
 
   const role = (session?.user as Record<string, unknown>)?.role as string | undefined
@@ -61,9 +70,9 @@ export function AppSidebar() {
   useEffect(() => {
     async function loadBadges() {
       try {
-        const [counts, stats] = await Promise.all([getPipelineCounts(), getAdminStats()])
+        const [counts, stats, unread, pendingContracts] = await Promise.all([getPipelineCounts(), getAdminStats(), getUnreadNewsCount(), getPendingContractRequestsCount()])
         const total = counts.reduce((sum, c) => sum + c.count, 0)
-        setBadges({ pipeline: total, unassigned: stats.unassigned })
+        setBadges({ pipeline: total, unassigned: stats.unassigned, unreadNews: unread, pendingContracts })
       } catch {
         // ignore
       }
@@ -88,7 +97,7 @@ export function AppSidebar() {
     return pathname.startsWith(href)
   }
 
-  function getBadgeValue(key: "pipeline" | "unassigned") {
+  function getBadgeValue(key: "pipeline" | "unassigned" | "unreadNews" | "pendingContracts") {
     return badges[key] || 0
   }
 
@@ -100,7 +109,7 @@ export function AppSidebar() {
           <img src="/reglo-logo.png" alt="Reglo" className="h-8 w-8 rounded-[8px]" />
           <div>
             <div className="text-[16px] font-bold leading-none tracking-tight text-ink-900">
-              reglo<span className="text-pink">.</span>
+              REGLO<span className="text-pink">.</span>
             </div>
             <div className="text-[10.5px] font-medium tracking-[0.5px] text-ink-400 uppercase">
               CRM Sales
@@ -116,6 +125,7 @@ export function AppSidebar() {
               item={item}
               isActive={isActive(item.href)}
               badgeValue={"badgeKey" in item && item.badgeKey ? getBadgeValue(item.badgeKey) : undefined}
+              badgeDot={"badgeKey" in item && item.badgeKey === "unreadNews"}
             />
           ))}
 
@@ -188,6 +198,7 @@ function NavRow({
   item,
   isActive,
   badgeValue,
+  badgeDot,
 }: {
   item: {
     label: string
@@ -197,6 +208,7 @@ function NavRow({
   }
   isActive: boolean
   badgeValue?: number
+  badgeDot?: boolean
 }) {
   const Icon = item.icon
   const depth = item.depth ?? 0
@@ -216,9 +228,13 @@ function NavRow({
       <Icon className="h-[16px] w-[16px] shrink-0" />
       <span className="flex-1">{item.label}</span>
       {badgeValue !== undefined && badgeValue > 0 && (
-        <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-2 px-1 font-mono text-[10px] text-ink-400">
-          {badgeValue}
-        </span>
+        badgeDot ? (
+          <span className="h-2 w-2 rounded-full bg-red-500" />
+        ) : (
+          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-2 px-1 font-mono text-[10px] text-ink-400">
+            {badgeValue}
+          </span>
+        )
       )}
     </Link>
   )

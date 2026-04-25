@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { getAutoscuola, getActivities } from "@/lib/actions/autoscuole"
 import { getDocuments } from "@/lib/actions/documents"
+import { getContractRequest } from "@/lib/actions/contracts"
+import { hasGoogleConnected } from "@/lib/actions/calendar"
 import { AutoscuolaClient } from "@/components/pages/autoscuola-client"
 import { STAGES } from "@/lib/constants"
 
@@ -13,11 +15,15 @@ export default async function AutoscuolaPage(props: {
 
   const { id } = await props.params
 
-  const result = await getAutoscuola(id)
-  if (!result) notFound()
+  const [result, activitiesResult, documentsResult, contractResult, googleConnected] = await Promise.all([
+    getAutoscuola(id),
+    getActivities(id),
+    getDocuments(id),
+    getContractRequest(id),
+    hasGoogleConnected(),
+  ])
 
-  const activitiesResult = await getActivities(id)
-  const documentsResult = await getDocuments(id)
+  if (!result) notFound()
 
   const activitiesFlat = activitiesResult.map((a) => ({
     ...a.activity,
@@ -43,7 +49,9 @@ export default async function AutoscuolaPage(props: {
       activities={activitiesFlat}
       stages={[...STAGES]}
       documents={documentsResult}
+      contractRequest={contractResult}
       isAdmin={isAdmin}
+      googleConnected={googleConnected}
     />
   )
 }

@@ -21,14 +21,16 @@ import {
   Trash2,
   Upload,
   File,
+  DollarSign,
 } from "lucide-react"
 import { STAGES } from "@/lib/constants"
 import { formatProvince } from "@/lib/utils"
 import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, deleteAutoscuola, setFollowUp } from "@/lib/actions/autoscuole"
 import { deleteDocument } from "@/lib/actions/documents"
+import { createContractRequest, updateContractRequest } from "@/lib/actions/contracts"
 import { MeetingDialog } from "@/components/meeting-dialog"
 import { DateTimePicker } from "@/components/date-time-picker"
-import type { Autoscuola, PipelineStage, User, Activity, Document } from "@/lib/db/schema"
+import type { Autoscuola, PipelineStage, User, Activity, Document, ContractRequest } from "@/lib/db/schema"
 
 type ActivityFlat = Activity & {
   userName: string
@@ -42,6 +44,12 @@ type DocumentWithUser = {
   document: Document
   user: { id: string; name: string }
 }
+
+type ContractRequestWithRelations = {
+  request: ContractRequest
+  user: { id: string; name: string }
+  autoscuola: { id: string; name: string }
+} | null
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -74,6 +82,7 @@ export function AutoscuolaClient({
   activities,
   stages,
   documents,
+  contractRequest,
   isAdmin = false,
   googleConnected = false,
 }: {
@@ -83,6 +92,7 @@ export function AutoscuolaClient({
   activities: ActivityFlat[]
   stages: typeof STAGES extends readonly (infer T)[] ? T[] : never
   documents: DocumentWithUser[]
+  contractRequest: ContractRequestWithRelations
   isAdmin?: boolean
   googleConnected?: boolean
 }) {
@@ -424,13 +434,10 @@ export function AutoscuolaClient({
           )}
 
           {activeTab === "contratto" && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <FileText className="mb-3 h-12 w-12 text-ink-300" />
-              <p className="text-[14px] font-medium text-ink-500">Nessun contratto attivo</p>
-              <p className="text-[12.5px] text-ink-400">
-                Il contratto apparirà qui quando lo stage sarà &quot;Cliente&quot;
-              </p>
-            </div>
+            <ContrattoTab
+              autoscuolaId={autoscuola.id}
+              contractRequest={contractRequest}
+            />
           )}
 
           {activeTab === "note" && (
@@ -969,6 +976,322 @@ function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
           </span>
         )}
       </div>
+    </div>
+  )
+}
+
+const CONTRACT_SECTIONS = [
+  {
+    title: "Dati aziendali",
+    icon: Building,
+    fields: [
+      { key: "ragioneSociale", label: "Ragione sociale", span: 2 },
+      { key: "partitaIva", label: "Partita IVA", span: 1 },
+      { key: "codiceFiscale", label: "Codice fiscale", span: 1 },
+      { key: "pecEmail", label: "PEC", span: 1 },
+      { key: "codiceSDI", label: "Codice SDI", span: 1 },
+    ],
+  },
+  {
+    title: "Indirizzo di fatturazione",
+    icon: MapPin,
+    cols: 3,
+    fields: [
+      { key: "indirizzoFatturazione", label: "Via e civico", span: 3 },
+      { key: "cittaFatturazione", label: "Città", span: 1 },
+      { key: "capFatturazione", label: "CAP", span: 1 },
+      { key: "provinciaFatturazione", label: "Provincia", span: 1 },
+    ],
+  },
+] as const
+
+const ALL_CONTRACT_KEYS = CONTRACT_SECTIONS.flatMap((s) => s.fields.map((f) => f.key))
+
+type ContractFormData = Record<(typeof ALL_CONTRACT_KEYS)[number], string>
+
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
+  pending: { label: "In attesa", color: "#F59E0B", bg: "#FEF3C7", icon: Clock },
+  in_progress: { label: "In lavorazione", color: "#3B82F6", bg: "#DBEAFE", icon: Clock },
+  done: { label: "Completato", color: "#10B981", bg: "#D1FAE5", icon: Check },
+}
+
+function ContrattoTab({
+  autoscuolaId,
+  contractRequest,
+}: {
+  autoscuolaId: string
+  contractRequest: ContractRequestWithRelations
+}) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState<ContractFormData & { notes: string }>(() => {
+    const r = contractRequest?.request
+    return {
+      ragioneSociale: r?.ragioneSociale ?? "",
+      partitaIva: r?.partitaIva ?? "",
+      codiceFiscale: r?.codiceFiscale ?? "",
+      pecEmail: r?.pecEmail ?? "",
+      codiceSDI: r?.codiceSDI ?? "",
+      indirizzoFatturazione: r?.indirizzoFatturazione ?? "",
+      capFatturazione: r?.capFatturazione ?? "",
+      cittaFatturazione: r?.cittaFatturazione ?? "",
+      provinciaFatturazione: r?.provinciaFatturazione ?? "",
+      notes: r?.notes ?? "",
+    }
+  })
+
+  function handleSubmit() {
+    startTransition(async () => {
+      if (contractRequest) {
+        await updateContractRequest(contractRequest.request.id, form)
+        setEditing(false)
+      } else {
+        await createContractRequest({ autoscuolaId, ...form })
+      }
+      router.refresh()
+    })
+  }
+
+  // State: no request yet OR editing → show form
+  if (!contractRequest || editing) {
+    return (
+      <div>
+        {editing && (
+          <button
+            onClick={() => setEditing(false)}
+            className="mb-4 flex items-center gap-1 text-[12.5px] font-medium text-ink-500 transition-colors hover:text-ink-700"
+          >
+            <span className="text-[14px]">&larr;</span> Torna al riepilogo
+          </button>
+        )}
+
+        <div className="mb-6">
+          <div className="mb-1 flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-pink/10">
+              <FileText className="h-4 w-4 text-pink" />
+            </div>
+            <h3 className="text-[17px] font-bold text-ink-900">
+              {editing ? "Correggi dati fiscali" : "Richiesta contratto"}
+            </h3>
+          </div>
+          <p className="ml-[42px] text-[13px] text-ink-500">
+            Compila i dati fiscali dell&apos;autoscuola per richiedere la generazione del contratto.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          {CONTRACT_SECTIONS.map((section) => {
+            const SectionIcon = section.icon
+            return (
+              <div key={section.title} className="rounded-[14px] border border-border-1 bg-surface p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <SectionIcon className="h-4 w-4 text-ink-400" />
+                  <h4 className="text-[12.5px] font-semibold tracking-wide text-ink-500 uppercase">
+                    {section.title}
+                  </h4>
+                </div>
+                <div className={`grid gap-3 ${("cols" in section && section.cols === 3) ? "grid-cols-3" : "grid-cols-2"}`}>
+                  {section.fields.map((field) => (
+                    <div key={field.key} className={field.span >= 3 ? "col-span-3" : field.span === 2 ? "col-span-2" : ""}>
+                      <label className="mb-1.5 block text-[12px] font-medium text-ink-600">
+                        {field.label}
+                      </label>
+                      <input
+                        value={form[field.key as keyof ContractFormData]}
+                        onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+                        className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface-2/50 px-3 text-[13px] text-ink-900 outline-none transition-colors focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Notes */}
+          <div className="rounded-[14px] border border-border-1 bg-surface p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-ink-400" />
+              <h4 className="text-[12.5px] font-semibold tracking-wide text-ink-500 uppercase">
+                Note aggiuntive
+              </h4>
+            </div>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Note per l'admin (facoltativo)..."
+              className="w-full resize-none rounded-[10px] border border-border-1 bg-surface-2/50 p-3 text-[13px] text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center gap-3">
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="flex items-center gap-2 rounded-[999px] bg-pink px-6 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+          >
+            <Send className="h-3.5 w-3.5" />
+            {isPending
+              ? "Invio in corso..."
+              : editing
+              ? "Salva modifiche"
+              : "Invia richiesta"}
+          </button>
+          {editing && (
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-[999px] border border-border-1 px-5 py-2.5 text-[13px] font-medium text-ink-600 transition-colors hover:bg-surface-2"
+            >
+              Annulla
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // State: request exists → show status + summary
+  const req = contractRequest.request
+  const statusInfo = STATUS_LABELS[req.status] ?? STATUS_LABELS.pending
+
+  if (req.status === "done") {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="relative mb-5">
+          <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-green-200">
+            <Check className="h-8 w-8 text-green-600" />
+          </div>
+          <div className="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 shadow-sm">
+            <Check className="h-3 w-3 text-white" />
+          </div>
+        </div>
+        <h3 className="mb-1.5 text-[18px] font-bold text-ink-900">Contratto completato</h3>
+        <p className="max-w-[320px] text-[13px] leading-relaxed text-ink-500">
+          La richiesta contratto è stata elaborata con successo dall&apos;admin.
+        </p>
+        <p className="mt-3 text-[12px] text-ink-400">
+          Completato il{" "}
+          {new Date(req.updatedAt).toLocaleDateString("it-IT", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
+      </div>
+    )
+  }
+
+  // Pending / In progress → summary view
+  return (
+    <div>
+      {/* Status header */}
+      <div className="mb-6 flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-pink/10">
+            <FileText className="h-5 w-5 text-pink" />
+          </div>
+          <div>
+            <h3 className="text-[17px] font-bold text-ink-900">Richiesta contratto</h3>
+            <p className="text-[12px] text-ink-400">
+              Inviata il{" "}
+              {new Date(req.createdAt).toLocaleDateString("it-IT", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              {contractRequest.user ? ` da ${contractRequest.user.name}` : ""}
+            </p>
+          </div>
+        </div>
+        <span
+          className="flex items-center gap-1.5 rounded-[999px] px-3 py-1.5 text-[11.5px] font-semibold"
+          style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
+        >
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: statusInfo.color }}
+          />
+          {statusInfo.label}
+        </span>
+      </div>
+
+      {/* Status progress bar */}
+      <div className="mb-6 flex gap-1.5">
+        {(["pending", "in_progress", "done"] as const).map((step) => {
+          const stepOrder = { pending: 0, in_progress: 1, done: 2 }
+          const currentOrder = stepOrder[req.status as keyof typeof stepOrder] ?? 0
+          const thisOrder = stepOrder[step]
+          const isActive = thisOrder <= currentOrder
+          const info = STATUS_LABELS[step]
+          return (
+            <div key={step} className="flex-1">
+              <div
+                className="mb-1.5 h-[3px] rounded-full transition-colors"
+                style={{ backgroundColor: isActive ? info.color : "#E2E8F0" }}
+              />
+              <p className="text-[10.5px] font-medium" style={{ color: isActive ? info.color : "#94A3B8" }}>
+                {info.label}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Fiscal data sections */}
+      <div className="space-y-4">
+        {CONTRACT_SECTIONS.map((section) => {
+          const SectionIcon = section.icon
+          const hasData = section.fields.some((f) => req[f.key as keyof typeof req])
+          if (!hasData) return null
+          return (
+            <div key={section.title} className="rounded-[14px] border border-border-1 bg-surface-2/30 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <SectionIcon className="h-3.5 w-3.5 text-ink-400" />
+                <h4 className="text-[11.5px] font-semibold tracking-wider text-ink-400 uppercase">
+                  {section.title}
+                </h4>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                {section.fields.map((field) => {
+                  const value = req[field.key as keyof typeof req] as string | null
+                  if (!value) return null
+                  return (
+                    <div key={field.key} className={`flex justify-between py-1 text-[13px] ${field.span === 2 ? "col-span-2" : ""}`}>
+                      <span className="text-ink-500">{field.label}</span>
+                      <span className="font-medium text-ink-900">{value}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+
+        {req.notes && (
+          <div className="rounded-[14px] border border-border-1 bg-surface-2/30 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <StickyNote className="h-3.5 w-3.5 text-ink-400" />
+              <h4 className="text-[11.5px] font-semibold tracking-wider text-ink-400 uppercase">
+                Note
+              </h4>
+            </div>
+            <p className="text-[13px] leading-relaxed text-ink-700">{req.notes}</p>
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={() => setEditing(true)}
+        className="mt-5 flex items-center gap-2 rounded-[999px] border border-border-1 px-5 py-2 text-[13px] font-medium text-ink-600 transition-colors hover:border-pink hover:bg-pink/5 hover:text-pink"
+      >
+        <FileText className="h-3.5 w-3.5" />
+        Correggi dati
+      </button>
     </div>
   )
 }

@@ -191,6 +191,32 @@ export const oauthTokens = pgTable("oauth_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 
+// Contract requests (Sales → Admin)
+export const contractRequests = pgTable("contract_requests", {
+  id: serial("id").primaryKey(),
+  autoscuolaId: text("autoscuola_id").notNull().references(() => autoscuole.id),
+  requestedBy: text("requested_by").notNull().references(() => users.id),
+  status: text("status", { enum: ["pending", "in_progress", "done"] }).notNull().default("pending"),
+  ragioneSociale: text("ragione_sociale"),
+  partitaIva: text("partita_iva"),
+  codiceFiscale: text("codice_fiscale"),
+  pecEmail: text("pec_email"),
+  codiceSDI: text("codice_sdi"),
+  indirizzoFatturazione: text("indirizzo_fatturazione"),
+  capFatturazione: text("cap_fatturazione"),
+  cittaFatturazione: text("citta_fatturazione"),
+  provinciaFatturazione: text("provincia_fatturazione"),
+  nomeLegale: text("nome_legale"),
+  cognomeLegale: text("cognome_legale"),
+  telefonoLegale: text("telefono_legale"),
+  emailLegale: text("email_legale"),
+  iban: text("iban"),
+  notes: text("notes"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
 // Type exports
 export type User = typeof users.$inferSelect
 export type Autoscuola = typeof autoscuole.$inferSelect
@@ -208,3 +234,4 @@ export type Comment = typeof comments.$inferSelect
 export type HomeCard = typeof homeCards.$inferSelect
 export type OAuthToken = typeof oauthTokens.$inferSelect
 export type SalesTerritory = typeof salesTerritories.$inferSelect
+export type ContractRequest = typeof contractRequests.$inferSelect
