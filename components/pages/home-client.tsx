@@ -2,24 +2,31 @@
 
 import { useMemo } from "react"
 import Link from "next/link"
-import { ArrowUpRight } from "lucide-react"
+import { signIn } from "next-auth/react"
+import { ArrowUpRight, Video, Calendar, ChevronRight } from "lucide-react"
 import {
   APIProvider,
   Map as GoogleMap,
   AdvancedMarker,
   Polygon,
 } from "@vis.gl/react-google-maps"
+import { REGIONI_PROVINCE } from "@/lib/constants"
+
+const PROVINCE_TO_REGIONE: Record<string, string> = {}
+for (const [regione, provs] of Object.entries(REGIONI_PROVINCE)) {
+  for (const p of provs) PROVINCE_TO_REGIONE[p] = regione
+}
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
 
-const SHORTCUTS = [
+const DEFAULT_SHORTCUTS = [
   { label: "Script Chiamate", emoji: "📞", href: "/risorse?cat=Script+chiamate" },
   { label: "Template Email", emoji: "✉️", href: "/risorse?cat=Template+email" },
   { label: "Gestione Obiezioni", emoji: "🛡️", href: "/risorse?cat=Gestione+obiezioni" },
   { label: "Listino Prezzi", emoji: "💰", href: "/risorse?cat=Listino" },
 ]
 
-type MapMarker = { lat: number; lng: number; color: string }
+type MapMarker = { lat: number; lng: number; color: string; province?: string }
 
 // Convex hull for territory outline
 function convexHull(points: { lat: number; lng: number }[]) {
@@ -47,22 +54,43 @@ function padHull(hull: { lat: number; lng: number }[], pad: number) {
   })
 }
 
+type HomeCardData = { title: string; icon: string | null; link: string | null }
+type UpcomingEvent = { title: string; start: string; meetLink: string | null }
+
 export function HomeClient({
   userName,
   mapMarkers = [],
   isAdmin = false,
+  homeCards,
+  googleConnected = false,
+  upcomingEvents = [],
 }: {
   userName: string
   stagesWithCounts: { id: string; label: string; color: string; count: number }[]
   previewByStage: unknown[]
   mapMarkers?: MapMarker[]
   isAdmin?: boolean
+  homeCards?: HomeCardData[]
+  googleConnected?: boolean
+  upcomingEvents?: UpcomingEvent[]
 }) {
   const firstName = userName.split(" ")[0]
+  const shortcuts = homeCards && homeCards.length > 0
+    ? homeCards.map((c) => ({ label: c.title, emoji: c.icon ?? "📋", href: c.link ?? "#" }))
+    : DEFAULT_SHORTCUTS
 
-  const territoryHull = useMemo(() => {
-    if (isAdmin || mapMarkers.length < 3) return null
-    return padHull(convexHull(mapMarkers), 0.04)
+  const territoryHulls = useMemo(() => {
+    if (isAdmin || mapMarkers.length < 3) return []
+    // Group by region to avoid one giant polygon across Italy
+    const byRegion: Record<string, { lat: number; lng: number }[]> = {}
+    for (const m of mapMarkers) {
+      const region = m.province ? (PROVINCE_TO_REGIONE[m.province] ?? "other") : "other"
+      if (!byRegion[region]) byRegion[region] = []
+      byRegion[region].push({ lat: m.lat, lng: m.lng })
+    }
+    return Object.values(byRegion)
+      .filter((pts) => pts.length >= 3)
+      .map((pts) => padHull(convexHull(pts), 0.015))
   }, [mapMarkers, isAdmin])
 
   return (
@@ -79,14 +107,14 @@ export function HomeClient({
 
       {/* Shortcuts */}
       <div className="mb-6 grid grid-cols-4 gap-3">
-        {SHORTCUTS.map((s) => (
+        {shortcuts.map((s) => (
           <Link
             key={s.label}
             href={s.href}
             className="group flex items-center justify-center gap-2.5 rounded-[14px] border border-border-1 bg-surface px-4 py-4 text-center transition-all hover:-translate-y-px hover:border-ink-300 hover:shadow-[var(--shadow)]"
           >
-            <span className="text-[20px]">{s.emoji}</span>
-            <span className="text-[13px] font-semibold text-ink-800">{s.label}</span>
+            <span className="text-[22px]">{s.emoji}</span>
+            <span className="text-[15px] font-semibold text-ink-800">{s.label}</span>
           </Link>
         ))}
       </div>
@@ -107,16 +135,17 @@ export function HomeClient({
               style={{ width: "100%", height: "100%" }}
               clickableIcons={false}
             >
-              {territoryHull && (
+              {territoryHulls.map((hull, i) => (
                 <Polygon
-                  paths={territoryHull}
+                  key={i}
+                  paths={hull}
                   strokeColor="#EC4899"
                   strokeOpacity={0.7}
                   strokeWeight={2}
                   fillColor="#EC4899"
                   fillOpacity={0.08}
                 />
-              )}
+              ))}
               {mapMarkers.slice(0, 200).map((m, i) => (
                 <AdvancedMarker key={i} position={{ lat: m.lat, lng: m.lng }}>
                   <div
@@ -147,40 +176,91 @@ export function HomeClient({
         </div>
       </Link>
 
-      {/* Cal.com + Grain — two cards side by side */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Cal.com */}
-        <a
-          href="https://cal.com/reglo?redirect=false"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex overflow-hidden rounded-[18px] border border-border-1 bg-[#1a1a2e] transition-all hover:-translate-y-px hover:shadow-lg"
-        >
-          <div className="flex flex-1 flex-col justify-center px-6 py-5">
-            <h4 className="mb-1.5 text-[16px] font-bold text-white">
-              Reglo | Cal.com
-            </h4>
-            <p className="mb-3 text-[12.5px] leading-[1.6] text-white/50">
-              Cal è l&apos;organizzatore N*1 per prenotare appuntamenti, non lasciartene scappare nessuno.
-            </p>
-            <div className="flex items-center gap-2">
-              <img src="/cal-logo.png" alt="Cal" className="h-5 w-5 rounded-[4px]" />
-              <span className="text-[12px] text-white/40 underline decoration-white/20 underline-offset-2">
-                https://cal.com/reglo?redirect=false
-              </span>
+      {/* Upcoming Meetings + Grain — two cards side by side */}
+      <div className="grid grid-cols-[1fr_auto] gap-4">
+        {/* Upcoming Meetings */}
+        {googleConnected ? (
+          <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
+            <div className="flex items-center justify-between border-b border-border-1 px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-pink" />
+                <h4 className="text-[14px] font-bold text-ink-900">Prossimi meeting</h4>
+              </div>
+              <Link
+                href="/calendario"
+                className="flex items-center gap-1 text-[12px] font-medium text-pink hover:underline"
+              >
+                Vedi tutto
+                <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="flex-1 px-5 py-3">
+              {upcomingEvents.length > 0 ? (
+                <div className="space-y-2.5">
+                  {upcomingEvents.map((event, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-ink-900">
+                          {event.title}
+                        </p>
+                        <p className="text-[11.5px] text-ink-400">
+                          {new Date(event.start).toLocaleDateString("it-IT", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}{" "}
+                          ·{" "}
+                          {new Date(event.start).toLocaleTimeString("it-IT", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      {event.meetLink && (
+                        <a
+                          href={event.meetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex h-7 items-center gap-1 rounded-[999px] bg-pink/10 px-2.5 text-[11px] font-semibold text-pink hover:bg-pink/20"
+                        >
+                          <Video className="h-3 w-3" />
+                          Meet
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Calendar className="mb-2 h-8 w-8 text-ink-300" />
+                  <p className="text-[13px] font-medium text-ink-500">Nessun meeting in programma</p>
+                  <p className="text-[12px] text-ink-400">I prossimi 7 giorni sono liberi</p>
+                </div>
+              )}
             </div>
           </div>
-          <div className="w-[170px] shrink-0 self-stretch overflow-hidden">
-            <img src="/cal-papero.png" alt="" className="h-[115%] w-full object-cover -mt-[5%]" />
+        ) : (
+          <div className="flex flex-col items-center justify-center overflow-hidden rounded-[18px] border border-border-1 bg-surface px-6 py-8 text-center">
+            <Calendar className="mb-3 h-10 w-10 text-ink-300" />
+            <h4 className="mb-1.5 text-[15px] font-bold text-ink-900">Collega Google Calendar</h4>
+            <p className="mb-4 text-[12.5px] leading-relaxed text-ink-500">
+              Visualizza i tuoi meeting e crea appuntamenti con Google Meet direttamente dal CRM.
+            </p>
+            <button
+              onClick={() => signIn("google", { callbackUrl: "/" })}
+              className="flex h-[34px] items-center gap-2 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
+            >
+              Collega Google
+            </button>
           </div>
-        </a>
+        )}
 
         {/* Grain */}
         <a
           href="https://grain.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex overflow-hidden rounded-[18px] border border-border-1 bg-[#1a1a2e] transition-all hover:-translate-y-px hover:shadow-lg"
+          className="group flex w-[340px] overflow-hidden rounded-[18px] border border-border-1 bg-[#0A0A0A] transition-all hover:-translate-y-px hover:shadow-lg"
         >
           <div className="flex flex-1 flex-col justify-center px-6 py-5">
             <h4 className="mb-1.5 text-[16px] font-bold text-white">

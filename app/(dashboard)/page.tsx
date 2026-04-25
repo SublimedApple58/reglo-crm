@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { HomeClient } from "@/components/pages/home-client"
 import { getPipelineCounts, getAutoscuole } from "@/lib/actions/autoscuole"
+import { getHomeCards } from "@/lib/actions/data"
+import { hasGoogleConnected, getCalendarEvents } from "@/lib/actions/calendar"
 import { STAGES } from "@/lib/constants"
 
 export default async function HomePage() {
@@ -12,9 +14,27 @@ export default async function HomePage() {
   const role = u.role as string
   const isAdmin = role === "admin" || role === "both"
 
-  const counts = await getPipelineCounts()
+  const [counts, homeCards, googleConnected] = await Promise.all([
+    getPipelineCounts(),
+    getHomeCards(),
+    hasGoogleConnected(),
+  ])
   const filters = isAdmin ? undefined : { assignedTo: u.id as string }
   const allAutoscuole = await getAutoscuole(filters)
+
+  // Fetch upcoming events if Google connected
+  let upcomingEvents: { title: string; start: string; meetLink: string | null }[] = []
+  if (googleConnected) {
+    const now = new Date()
+    const endOfDay = new Date(now)
+    endOfDay.setDate(endOfDay.getDate() + 7) // next 7 days
+    const events = await getCalendarEvents(now.toISOString(), endOfDay.toISOString())
+    upcomingEvents = events.filter((e) => !e.allDay).slice(0, 5).map((e) => ({
+      title: e.title,
+      start: e.start,
+      meetLink: e.meetLink,
+    }))
+  }
 
   const stagesWithCounts = STAGES.map((s) => ({
     ...s,
@@ -38,6 +58,7 @@ export default async function HomePage() {
       lat: r.autoscuola.lat!,
       lng: r.autoscuola.lng!,
       color: r.stage.color,
+      province: r.autoscuola.province,
     }))
 
   return (
@@ -47,6 +68,9 @@ export default async function HomePage() {
       previewByStage={previewByStage}
       mapMarkers={mapMarkers}
       isAdmin={isAdmin}
+      homeCards={homeCards}
+      googleConnected={googleConnected}
+      upcomingEvents={upcomingEvents}
     />
   )
 }
