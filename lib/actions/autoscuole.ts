@@ -328,6 +328,33 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
     .set({ followUpAt: followUpAt ? new Date(followUpAt) : null })
     .where(eq(autoscuole.id, autoscuolaId))
 
+  // Create a calendar event + activity when setting a follow-up date
+  if (followUpAt) {
+    const { createCalendarEvent } = await import("@/lib/actions/calendar")
+    const [autoscuola] = await db
+      .select({ name: autoscuole.name, email: autoscuole.email })
+      .from(autoscuole)
+      .where(eq(autoscuole.id, autoscuolaId))
+      .limit(1)
+
+    if (autoscuola) {
+      try {
+        const start = new Date(followUpAt)
+        const end = new Date(start.getTime() + 30 * 60 * 1000) // 30 min
+        await createCalendarEvent({
+          title: `Follow-up con ${autoscuola.name}`,
+          startDateTime: start.toISOString(),
+          endDateTime: end.toISOString(),
+          guests: autoscuola.email ? [autoscuola.email] : [],
+          addMeetLink: true,
+          autoscuolaId,
+        })
+      } catch {
+        // Calendar not connected — still save the follow-up date
+      }
+    }
+  }
+
   revalidatePath(`/autoscuola/${autoscuolaId}`)
   revalidatePath("/pipeline")
 }

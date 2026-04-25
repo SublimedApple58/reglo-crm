@@ -317,18 +317,26 @@ export function AutoscuolaClient({
               {/* Timeline */}
               <div className="relative pl-7">
                 <div className="absolute left-[11px] top-0 bottom-0 w-px bg-border-1" />
-                {activities.map((a) => (
-                  <div key={a.id} className="relative mb-5 pl-5">
+                {activities.map((a) => {
+                  const isFuture = a.scheduledAt && new Date(a.scheduledAt) > new Date()
+                  const isCancelled = a.status === "cancelled"
+                  const displayDate = a.scheduledAt ?? a.createdAt
+
+                  return (
+                  <div key={a.id} className={`relative mb-5 pl-5 ${isFuture && !isCancelled ? "opacity-100" : ""}`}>
                     <div
-                      className="absolute left-[-16px] top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full border bg-white"
-                      style={{ borderColor: a.userColor + "40" }}
+                      className={`absolute left-[-16px] top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full border ${isFuture && !isCancelled ? "border-dashed" : ""}`}
+                      style={{
+                        borderColor: isFuture && !isCancelled ? "#3B82F6" + "60" : a.userColor + "40",
+                        backgroundColor: isFuture && !isCancelled ? "#EFF6FF" : "white",
+                      }}
                     >
                       {a.type === "call" ? (
-                        <Phone className="h-3 w-3" style={{ color: a.userColor }} />
+                        <Phone className="h-3 w-3" style={{ color: isFuture && !isCancelled ? "#3B82F6" : a.userColor }} />
                       ) : a.type === "email" ? (
-                        <Mail className="h-3 w-3" style={{ color: a.userColor }} />
+                        <Mail className="h-3 w-3" style={{ color: isFuture && !isCancelled ? "#3B82F6" : a.userColor }} />
                       ) : a.type === "meeting" ? (
-                        <Video className="h-3 w-3" style={{ color: a.userColor }} />
+                        <Video className="h-3 w-3" style={{ color: isFuture && !isCancelled ? "#3B82F6" : a.userColor }} />
                       ) : a.type === "stage_change" ? (
                         <Sparkles className="h-3 w-3" style={{ color: a.userColor }} />
                       ) : (
@@ -337,8 +345,8 @@ export function AutoscuolaClient({
                     </div>
                     <p className="mb-0.5 text-[11.5px] text-ink-400">
                       {a.userName} ·{" "}
-                      {a.createdAt
-                        ? new Date(a.createdAt).toLocaleDateString("it-IT", {
+                      {displayDate
+                        ? new Date(displayDate).toLocaleDateString("it-IT", {
                             day: "numeric",
                             month: "short",
                             hour: "2-digit",
@@ -346,21 +354,21 @@ export function AutoscuolaClient({
                           })
                         : ""}
                     </p>
-                    <p className={`text-[13px] font-semibold ${a.status === "cancelled" ? "text-ink-400 line-through" : "text-ink-900"}`}>
+                    <p className={`text-[13px] font-semibold ${isCancelled ? "text-ink-400 line-through" : isFuture ? "text-blue-600" : "text-ink-900"}`}>
                       {a.title}
-                      {a.status === "cancelled" && (
+                      {isCancelled && (
                         <span className="ml-2 inline-block rounded-[4px] bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-400 no-underline" style={{ textDecoration: "none" }}>
                           Annullato
                         </span>
                       )}
-                      {a.status === "scheduled" && a.scheduledAt && new Date(a.scheduledAt) > new Date() && (
-                        <span className="ml-2 inline-block rounded-[4px] bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-500 no-underline">
+                      {isFuture && !isCancelled && (
+                        <span className="ml-2 inline-block rounded-[4px] bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-500">
                           Programmato
                         </span>
                       )}
                     </p>
                     {a.body && (
-                      <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-600">
+                      <p className={`mt-0.5 text-[12.5px] leading-relaxed ${isFuture ? "text-ink-400" : "text-ink-600"}`}>
                         {a.body}
                       </p>
                     )}
@@ -369,14 +377,19 @@ export function AutoscuolaClient({
                         href={a.meetLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 inline-flex items-center gap-1.5 rounded-[999px] bg-pink/10 px-3 py-1 text-[11.5px] font-semibold text-pink hover:bg-pink/20"
+                        className={`mt-1.5 inline-flex items-center gap-1.5 rounded-[999px] px-3 py-1 text-[11.5px] font-semibold ${
+                          isFuture
+                            ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                            : "bg-pink/10 text-pink hover:bg-pink/20"
+                        }`}
                       >
                         <Video className="h-3 w-3" />
                         Partecipa al meeting
                       </a>
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
