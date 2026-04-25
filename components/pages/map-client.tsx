@@ -66,18 +66,17 @@ function AutoscuolaMarker({
         zIndex={isHovered ? 20 : 1}
         style={{ cursor: "pointer" }}
       >
-        {/* 12x12 colored circle pin */}
         <div
           style={{
-            width: 12,
-            height: 12,
+            width: 16,
+            height: 16,
             borderRadius: "50%",
             backgroundColor: a.stageColor,
-            border: "2px solid white",
+            border: "2.5px solid white",
             boxShadow: isHovered
-              ? `0 0 8px ${a.stageColor}80`
-              : "0 1px 3px rgba(0,0,0,0.2)",
-            transform: isHovered ? "scale(1.35)" : "scale(1)",
+              ? `0 0 0 3px ${a.stageColor}50, 0 0 10px ${a.stageColor}60`
+              : `0 0 0 1px ${a.stageColor}40, 0 1px 4px rgba(0,0,0,0.25)`,
+            transform: isHovered ? "scale(1.4)" : "scale(1)",
             transition: "transform 150ms ease, box-shadow 150ms ease",
           }}
         />
