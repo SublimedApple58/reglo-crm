@@ -320,7 +320,6 @@ export function AutoscuolaClient({
                 {activities.map((a) => {
                   const isFuture = a.scheduledAt && new Date(a.scheduledAt) > new Date()
                   const isCancelled = a.status === "cancelled"
-                  const displayDate = a.scheduledAt ?? a.createdAt
 
                   return (
                   <div key={a.id} className={`relative mb-5 pl-5 ${isFuture && !isCancelled ? "opacity-100" : ""}`}>
@@ -345,8 +344,8 @@ export function AutoscuolaClient({
                     </div>
                     <p className="mb-0.5 text-[11.5px] text-ink-400">
                       {a.userName} ·{" "}
-                      {displayDate
-                        ? new Date(displayDate).toLocaleDateString("it-IT", {
+                      {a.createdAt
+                        ? new Date(a.createdAt).toLocaleDateString("it-IT", {
                             day: "numeric",
                             month: "short",
                             hour: "2-digit",
@@ -367,6 +366,18 @@ export function AutoscuolaClient({
                         </span>
                       )}
                     </p>
+                    {a.scheduledAt && (
+                      <p className={`mt-0.5 flex items-center gap-1 text-[11.5px] ${isFuture && !isCancelled ? "text-blue-500" : "text-ink-400"}`}>
+                        <Clock className="h-3 w-3" />
+                        {new Date(a.scheduledAt).toLocaleDateString("it-IT", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    )}
                     {a.body && (
                       <p className={`mt-0.5 text-[12.5px] leading-relaxed ${isFuture ? "text-ink-400" : "text-ink-600"}`}>
                         {a.body}
