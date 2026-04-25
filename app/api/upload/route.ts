@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { documents } from "@/lib/db/schema"
-import { generateFileKey, uploadToR2 } from "@/lib/storage/r2"
+import { generateFileKey, uploadToR2, generatePresignedDownloadUrl } from "@/lib/storage/r2"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -14,11 +14,21 @@ export async function POST(request: Request) {
   const file = formData.get("file") as File | null
   const autoscuolaId = formData.get("autoscuolaId") as string | null
 
-  if (!file || !autoscuolaId) {
+  if (!file) {
     return NextResponse.json(
-      { error: "Campi obbligatori mancanti" },
+      { error: "File mancante" },
       { status: 400 }
     )
+  }
+
+  // Editor image upload (no autoscuolaId) — upload to R2 and return presigned URL
+  if (!autoscuolaId) {
+    const timestamp = Date.now()
+    const key = `editor/${timestamp}-${file.name}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+    await uploadToR2(key, buffer, file.type)
+    const url = await generatePresignedDownloadUrl(key)
+    return NextResponse.json({ url })
   }
 
   const key = generateFileKey(autoscuolaId, file.name)

@@ -8,6 +8,20 @@
       "when": 1776603525329,
       "tag": "0000_colossal_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776979054772,
+      "tag": "0001_light_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777071438713,
+      "tag": "0002_furry_sheva_callister",
+      "breakpoints": true
     }
   ]
 }

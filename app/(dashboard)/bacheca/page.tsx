@@ -8,5 +8,5 @@ export default async function BachecaPage() {
   if (!session?.user) redirect("/sign-in")
 
   const newsItems = await getNews()
-  return <BachecaClient news={newsItems} />
+  return <BachecaClient news={newsItems} userId={session.user.id} />
 }

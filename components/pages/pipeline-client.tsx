@@ -16,6 +16,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-p
 import { StageChip } from "@/components/ui/stage-chip"
 import { createAutoscuola } from "@/lib/actions/autoscuole"
 import { STAGES } from "@/lib/constants"
+import { formatProvince } from "@/lib/utils"
 import { updateAutoscuolaStage } from "@/lib/actions/autoscuole"
 
 type AutoscuolaFlat = {
@@ -27,6 +28,7 @@ type AutoscuolaFlat = {
   stageId: string
   pipelineValue: number | null
   lastContact: number | null
+  followUpAt: Date | null
   stageName: string
   stageColor: string
   salesName: string | null
@@ -314,7 +316,7 @@ function FilterPopover({
         >
           <option value="">Tutte</option>
           {provinces.map((p) => (
-            <option key={p} value={p}>{p}</option>
+            <option key={p} value={p}>{formatProvince(p)}</option>
           ))}
         </select>
       </div>
@@ -471,7 +473,7 @@ function KanbanColumn({
                     </p>
                     <p className="mb-2 flex items-center gap-[5px] text-[11.5px] text-ink-500">
                       <Building className="h-3 w-3" />
-                      {item.town}, {item.province}
+                      {item.town}, {formatProvince(item.province)}
                     </p>
                     {isAdmin && item.salesName && (
                       <p className="mb-1.5 flex items-center gap-1 text-[10.5px] text-ink-400">
@@ -493,12 +495,23 @@ function KanbanColumn({
                       ) : (
                         <span />
                       )}
-                      {item.lastContact !== null && (
+                      {item.followUpAt ? (() => {
+                        const fu = new Date(item.followUpAt)
+                        const now = new Date()
+                        const diffDays = Math.ceil((fu.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                        const isExpired = diffDays < 0
+                        return (
+                          <span className="flex items-center gap-1 text-[10.5px]" style={{ color: isExpired ? "#EF4444" : "#10B981" }}>
+                            <Clock className="h-3 w-3" />
+                            {isExpired ? `−${Math.abs(diffDays)}g` : `${diffDays}g`}
+                          </span>
+                        )
+                      })() : item.lastContact !== null ? (
                         <span className="flex items-center gap-1 text-[10.5px] text-ink-400">
                           <Clock className="h-3 w-3" />
                           {item.lastContact}g
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </Link>
                 )}

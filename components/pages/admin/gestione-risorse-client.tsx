@@ -32,13 +32,18 @@ import {
   Table as TableIcon,
   Tag,
   FileText,
-  RemoveFormatting,
   LinkIcon,
   Building,
   BookOpen,
   Kanban,
   DollarSign,
   Users,
+  Palette,
+  Smile,
+  ImageIcon,
+  RowsIcon,
+  ColumnsIcon,
+  Trash,
 } from "lucide-react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
@@ -91,6 +96,7 @@ import { Table } from "@tiptap/extension-table"
 import TableRow from "@tiptap/extension-table-row"
 import TableCell from "@tiptap/extension-table-cell"
 import TableHeader from "@tiptap/extension-table-header"
+import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
 import { upsertResource, deleteResource, getResources } from "@/lib/actions/data"
@@ -141,6 +147,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       TableRow,
       TableCell,
       TableHeader,
+      Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: "Inizia a scrivere..." }),
     ],
     content: selected?.html ?? "",
@@ -148,7 +155,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[20px] [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:mb-2 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:mb-2 [&_p]:mb-2 [&_a]:text-pink [&_a]:underline [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1",
+          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
       },
     },
   })
@@ -346,8 +353,8 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-0.5 border-b border-border-1 px-5 py-1.5">
               {/* Undo/Redo */}
-              <ToolbarBtn icon={Undo2} action={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} />
-              <ToolbarBtn icon={Redo2} action={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} />
+              <ToolbarBtn icon={Undo2} action={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} title="Annulla" />
+              <ToolbarBtn icon={Redo2} action={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} title="Ripeti" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Font size */}
               <select
@@ -373,34 +380,35 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
               </select>
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Headings */}
-              <ToolbarBtn icon={Heading1} action={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} />
-              <ToolbarBtn icon={Heading2} action={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })} />
-              <ToolbarBtn icon={Heading3} action={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive("heading", { level: 3 })} />
+              <ToolbarBtn icon={Heading1} action={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} title="Titolo 1" />
+              <ToolbarBtn icon={Heading2} action={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })} title="Titolo 2" />
+              <ToolbarBtn icon={Heading3} action={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive("heading", { level: 3 })} title="Titolo 3" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Inline formatting */}
-              <ToolbarBtn icon={Bold} action={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} />
-              <ToolbarBtn icon={Italic} action={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} />
-              <ToolbarBtn icon={Underline} action={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive("underline")} />
-              <ToolbarBtn icon={Strikethrough} action={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive("strike")} />
-              <ToolbarBtn icon={Code} action={() => editor?.chain().focus().toggleCode().run()} active={editor?.isActive("code")} />
-              <ToolbarBtn icon={Highlighter} action={() => editor?.chain().focus().toggleHighlight().run()} active={editor?.isActive("highlight")} />
-              <ToolbarBtn icon={RemoveFormatting} action={() => editor?.chain().focus().clearNodes().unsetAllMarks().run()} />
+              <ToolbarBtn icon={Bold} action={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} title="Grassetto" />
+              <ToolbarBtn icon={Italic} action={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} title="Corsivo" />
+              <ToolbarBtn icon={Underline} action={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive("underline")} title="Sottolineato" />
+              <ToolbarBtn icon={Strikethrough} action={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive("strike")} title="Barrato" />
+              <ToolbarBtn icon={Highlighter} action={() => editor?.chain().focus().toggleHighlight().run()} active={editor?.isActive("highlight")} title="Evidenzia" />
+              {/* Color picker */}
+              <ColorPickerBtn editor={editor} />
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Alignment */}
-              <ToolbarBtn icon={AlignLeft} action={() => editor?.chain().focus().setTextAlign("left").run()} active={editor?.isActive({ textAlign: "left" })} />
-              <ToolbarBtn icon={AlignCenter} action={() => editor?.chain().focus().setTextAlign("center").run()} active={editor?.isActive({ textAlign: "center" })} />
-              <ToolbarBtn icon={AlignRight} action={() => editor?.chain().focus().setTextAlign("right").run()} active={editor?.isActive({ textAlign: "right" })} />
+              <ToolbarBtn icon={AlignLeft} action={() => editor?.chain().focus().setTextAlign("left").run()} active={editor?.isActive({ textAlign: "left" })} title="Allinea a sinistra" />
+              <ToolbarBtn icon={AlignCenter} action={() => editor?.chain().focus().setTextAlign("center").run()} active={editor?.isActive({ textAlign: "center" })} title="Allinea al centro" />
+              <ToolbarBtn icon={AlignRight} action={() => editor?.chain().focus().setTextAlign("right").run()} active={editor?.isActive({ textAlign: "right" })} title="Allinea a destra" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Block elements */}
-              <ToolbarBtn icon={List} action={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive("bulletList")} />
-              <ToolbarBtn icon={ListOrdered} action={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive("orderedList")} />
-              <ToolbarBtn icon={Quote} action={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} />
-              <ToolbarBtn icon={Minus} action={() => editor?.chain().focus().setHorizontalRule().run()} />
+              <ToolbarBtn icon={List} action={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive("bulletList")} title="Elenco puntato" />
+              <ToolbarBtn icon={ListOrdered} action={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive("orderedList")} title="Elenco numerato" />
+              <ToolbarBtn icon={Quote} action={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} title="Citazione" />
+              <ToolbarBtn icon={Minus} action={() => editor?.chain().focus().setHorizontalRule().run()} title="Linea orizzontale" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Link */}
               <ToolbarBtn
                 icon={Link2}
                 active={editor?.isActive("link")}
+                title="Link esterno"
                 action={() => {
                   if (editor?.isActive("link")) {
                     editor?.chain().focus().unsetLink().run()
@@ -411,16 +419,15 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
                 }}
               />
               {/* Internal link */}
-              <ToolbarBtn
-                icon={LinkIcon}
-                action={() => setShowInternalLink(true)}
-              />
+              <ToolbarBtn icon={LinkIcon} action={() => setShowInternalLink(true)} title="Link interno" />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              {/* Image upload */}
+              <ImageUploadBtn editor={editor} onModified={() => setModified(true)} />
+              {/* Emoji picker */}
+              <EmojiPickerBtn editor={editor} />
               <div className="mx-1 h-5 w-px bg-border-1" />
               {/* Table */}
-              <ToolbarBtn
-                icon={TableIcon}
-                action={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-              />
+              <TableMenuBtn editor={editor} />
             </div>
 
             {/* Editor content */}
@@ -510,7 +517,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
               </button>
             </div>
             <div
-              className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_li]:mb-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
+              className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_hr]:my-4 [&_hr]:border-border-1 [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
               dangerouslySetInnerHTML={{ __html: editor?.getHTML() ?? "" }}
             />
           </div>
@@ -525,16 +532,19 @@ function ToolbarBtn({
   action,
   active,
   disabled,
+  title,
 }: {
   icon: React.ComponentType<{ className?: string }>
   action: () => void
   active?: boolean
   disabled?: boolean
+  title?: string
 }) {
   return (
     <button
       onClick={action}
       disabled={disabled}
+      title={title}
       className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors disabled:opacity-30"
       style={{
         backgroundColor: active ? "#FDF2F8" : "transparent",
@@ -543,6 +553,218 @@ function ToolbarBtn({
     >
       <Icon className="h-4 w-4" />
     </button>
+  )
+}
+
+const COLOR_PALETTE = [
+  { label: "Nero", hex: "#000000" },
+  { label: "Grigio", hex: "#64748B" },
+  { label: "Rosso", hex: "#EF4444" },
+  { label: "Blu", hex: "#3B82F6" },
+  { label: "Verde", hex: "#10B981" },
+  { label: "Arancione", hex: "#F97316" },
+  { label: "Viola", hex: "#8B5CF6" },
+  { label: "Rosa", hex: "#EC4899" },
+]
+
+function ColorPickerBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        title="Colore testo"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
+        style={{ color: "#64748B" }}
+      >
+        <Palette className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 grid grid-cols-4 gap-1 rounded-[10px] border border-border-1 bg-surface p-2 shadow-lg" onMouseDown={(e) => e.preventDefault()}>
+          {COLOR_PALETTE.map((c) => (
+            <button
+              key={c.hex}
+              title={c.label}
+              onClick={() => { editor?.chain().focus().setColor(c.hex).run(); setOpen(false) }}
+              className="h-6 w-6 rounded-full border border-border-1 transition-transform hover:scale-110"
+              style={{ backgroundColor: c.hex }}
+            />
+          ))}
+          <button
+            title="Rimuovi colore"
+            onClick={() => { editor?.chain().focus().unsetColor().run(); setOpen(false) }}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-border-1 text-[10px] text-ink-400 hover:bg-surface-2"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const EMOJI_LIST = [
+  "😀", "😂", "🥲", "😍", "🤩", "😎", "🤔", "😉",
+  "👍", "👎", "👏", "🙌", "💪", "🤝", "✌️", "🫡",
+  "❤️", "🔥", "⭐", "✅", "❌", "⚠️", "💡", "🎯",
+  "📞", "✉️", "📋", "📊", "💰", "🏆", "🚀", "🦈",
+  "🎉", "💯", "👀", "🙏", "📌", "🔗", "📆", "⏰",
+]
+
+function EmojiPickerBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        title="Emoji"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
+      >
+        <Smile className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 grid w-[220px] grid-cols-8 gap-0.5 rounded-[10px] border border-border-1 bg-surface p-2 shadow-lg" onMouseDown={(e) => e.preventDefault()}>
+          {EMOJI_LIST.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => { editor?.chain().focus().insertContent(emoji).run(); setOpen(false) }}
+              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[16px] transition-colors hover:bg-surface-2"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ImageUploadBtn({ editor, onModified }: { editor: ReturnType<typeof useEditor> | null; onModified: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) return
+    const formData = new FormData()
+    formData.append("file", file)
+    const res = await fetch("/api/upload", { method: "POST", body: formData })
+    if (!res.ok) { alert("Errore caricamento immagine"); return }
+    const { url } = await res.json()
+    editor?.chain().focus().setImage({ src: url }).run()
+    onModified()
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        title="Inserisci immagine"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
+      >
+        <ImageIcon className="h-4 w-4" />
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = "" }}
+      />
+    </>
+  )
+}
+
+function TableMenuBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+  const [open, setOpen] = useState(false)
+  const [rows, setRows] = useState(3)
+  const [cols, setCols] = useState(3)
+  const ref = useRef<HTMLDivElement>(null)
+  const isInTable = editor?.isActive("table")
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        title="Tabella"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
+        style={{
+          backgroundColor: isInTable ? "#FDF2F8" : "transparent",
+          color: isInTable ? "#EC4899" : "#64748B",
+        }}
+      >
+        <TableIcon className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-[200px] rounded-[10px] border border-border-1 bg-surface p-3 shadow-lg">
+          {!isInTable ? (
+            <>
+              <p className="mb-2 text-[11px] font-semibold text-ink-500">Nuova tabella</p>
+              <div className="mb-2 flex items-center gap-2">
+                <label className="text-[11px] text-ink-500">Righe</label>
+                <input type="number" min={1} max={20} value={rows} onChange={(e) => setRows(+e.target.value)} className="h-6 w-14 rounded border border-border-1 px-1.5 text-[11px] outline-none" />
+              </div>
+              <div className="mb-3 flex items-center gap-2">
+                <label className="text-[11px] text-ink-500">Colonne</label>
+                <input type="number" min={1} max={10} value={cols} onChange={(e) => setCols(+e.target.value)} className="h-6 w-14 rounded border border-border-1 px-1.5 text-[11px] outline-none" />
+              </div>
+              <button
+                onClick={() => { editor?.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(); setOpen(false) }}
+                className="w-full rounded-[6px] bg-pink py-1.5 text-[11px] font-semibold text-white hover:bg-pink/90"
+              >
+                Inserisci tabella
+              </button>
+            </>
+          ) : (
+            <div className="space-y-1">
+              <p className="mb-2 text-[11px] font-semibold text-ink-500">Modifica tabella</p>
+              <button onClick={() => { editor?.chain().focus().addRowAfter().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
+                <RowsIcon className="h-3.5 w-3.5" /> Aggiungi riga
+              </button>
+              <button onClick={() => { editor?.chain().focus().addColumnAfter().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
+                <ColumnsIcon className="h-3.5 w-3.5" /> Aggiungi colonna
+              </button>
+              <button onClick={() => { editor?.chain().focus().deleteRow().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
+                <Minus className="h-3.5 w-3.5" /> Rimuovi riga
+              </button>
+              <button onClick={() => { editor?.chain().focus().deleteColumn().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
+                <Minus className="h-3.5 w-3.5" /> Rimuovi colonna
+              </button>
+              <div className="my-1 h-px bg-border-1" />
+              <button onClick={() => { editor?.chain().focus().deleteTable().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-red-500 hover:bg-red-50">
+                <Trash className="h-3.5 w-3.5" /> Elimina tabella
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

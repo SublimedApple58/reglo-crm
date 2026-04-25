@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useTransition, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Phone,
@@ -13,8 +13,11 @@ import {
   Calendar,
   Maximize2,
   Minimize2,
+  Send,
+  Trash2,
 } from "lucide-react"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
+import { getComments, createComment, deleteComment } from "@/lib/actions/data"
 import type { Resource } from "@/lib/db/schema"
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -25,7 +28,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   "book-open": BookOpen,
 }
 
-export function RisorseClient({ resources }: { resources: Resource[] }) {
+export function RisorseClient({ resources, userId }: { resources: Resource[]; userId?: string }) {
   const router = useRouter()
 
   const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -39,7 +42,11 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
     // Internal resource link: /risorse#ID
     if (href.startsWith("/risorse#")) {
       const id = parseInt(href.split("#")[1])
-      if (!isNaN(id)) setSelectedId(id)
+      if (!isNaN(id)) {
+        const target = resources.find((r) => r.id === id)
+        if (target) setSelectedCategory(target.category)
+        setSelectedId(id)
+      }
       return
     }
     if (href.startsWith("/")) {
@@ -191,10 +198,13 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
             {selected.html && (
               <div
                 onClick={handleContentClick}
-                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 reglo-links [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[18px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_li]:mb-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5"
+                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 reglo-links [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_hr]:my-4 [&_hr]:border-border-1 [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
                 dangerouslySetInnerHTML={{ __html: selected.html }}
               />
             )}
+
+            {/* Comments */}
+            <RisorseCommentsSection targetId={selected.id} userId={userId} />
 
           </div>
         ) : (
@@ -202,6 +212,94 @@ export function RisorseClient({ resources }: { resources: Resource[] }) {
             Seleziona una risorsa dalla lista
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+type CommentItem = {
+  comment: { id: number; body: string; createdAt: Date; userId: string }
+  user: { id: string; name: string; color: string; avatar: string | null }
+}
+
+function RisorseCommentsSection({ targetId, userId }: { targetId: number; userId?: string }) {
+  const [commentsList, setCommentsList] = useState<CommentItem[]>([])
+  const [body, setBody] = useState("")
+  const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    getComments("resource", targetId).then(setCommentsList)
+  }, [targetId])
+
+  function handleSubmit() {
+    if (!body.trim()) return
+    startTransition(async () => {
+      await createComment({ targetType: "resource", targetId, body: body.trim() })
+      setBody("")
+      const updated = await getComments("resource", targetId)
+      setCommentsList(updated)
+    })
+  }
+
+  function handleDelete(id: number) {
+    startTransition(async () => {
+      await deleteComment(id)
+      setCommentsList((prev) => prev.filter((c) => c.comment.id !== id))
+    })
+  }
+
+  return (
+    <div className="mt-8 border-t border-border-1 pt-6">
+      <h3 className="mb-4 text-[14px] font-semibold text-ink-900">
+        Commenti ({commentsList.length})
+      </h3>
+
+      {commentsList.map(({ comment, user }) => (
+        <div key={comment.id} className="mb-3 flex items-start gap-3">
+          {user.avatar ? (
+            <img src={user.avatar} alt="" className="h-7 w-7 rounded-full object-cover" />
+          ) : (
+            <div
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ backgroundColor: user.color }}
+            >
+              {user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[12.5px] font-semibold text-ink-900">{user.name}</span>
+              <span className="text-[11px] text-ink-400">
+                {comment.createdAt
+                  ? new Date(comment.createdAt).toLocaleDateString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                  : ""}
+              </span>
+              {userId === comment.userId && (
+                <button onClick={() => handleDelete(comment.id)} className="ml-auto text-ink-400 hover:text-red-500">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <p className="text-[13px] leading-relaxed text-ink-700">{comment.body}</p>
+          </div>
+        </div>
+      ))}
+
+      <div className="mt-4 flex gap-2">
+        <input
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          placeholder="Scrivi un commento…"
+          className="h-9 flex-1 rounded-[999px] border border-border-1 bg-surface px-4 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!body.trim() || isPending}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-pink text-white hover:bg-pink/90 disabled:opacity-50"
+        >
+          <Send className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   )

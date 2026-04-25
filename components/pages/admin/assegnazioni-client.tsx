@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useTransition, useMemo } from "react"
+import Link from "next/link"
 import { Search, AlertCircle, Check, MapPin } from "lucide-react"
 import { StageChip } from "@/components/ui/stage-chip"
 import { REGIONI_PROVINCE } from "@/lib/constants"
-import { updateAutoscuola, bulkReassign } from "@/lib/actions/autoscuole"
+import { formatProvince } from "@/lib/utils"
+import { updateAutoscuola, bulkReassign, assignRegion } from "@/lib/actions/autoscuole"
 
 type AutoscuolaRow = {
   id: string
@@ -116,15 +118,22 @@ export function AssegnazioniClient({
     const ids = autoscuole
       .filter((a) => matchingProvinces.includes(a.province) && !a.assignedTo)
       .map((a) => a.id)
-    if (ids.length === 0) return
     const salesName = salesOptions.find((s) => s.id === territorySales)?.name ?? null
-    setAutoscuole((prev) =>
-      prev.map((a) =>
-        ids.includes(a.id) ? { ...a, assignedTo: territorySales, salesName } : a
+    if (ids.length > 0) {
+      setAutoscuole((prev) =>
+        prev.map((a) =>
+          ids.includes(a.id) ? { ...a, assignedTo: territorySales, salesName } : a
+        )
       )
-    )
-    startTransition(() => {
-      bulkReassign(ids, territorySales)
+    }
+    startTransition(async () => {
+      // Assign the region to the sales (persistent territory)
+      if (territoryMode === "regione") {
+        await assignRegion(territorySales, territoryTarget)
+      } else {
+        // Province-level: just bulk reassign
+        if (ids.length > 0) await bulkReassign(ids, territorySales)
+      }
     })
     setShowTerritoryAssign(false)
     setTerritoryTarget("")
@@ -188,9 +197,10 @@ export function AssegnazioniClient({
       {/* Sales summary strip */}
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         {salesOptions.map((s) => (
-          <div
+          <Link
             key={s.id}
-            className="w-[180px] shrink-0 rounded-[12px] border border-border-1 bg-surface p-3"
+            href={`/admin/assegnazioni/${s.id}`}
+            className="w-[180px] shrink-0 cursor-pointer rounded-[12px] border border-border-1 bg-surface p-3 transition-all hover:-translate-y-px hover:border-pink/30 hover:shadow-sm"
           >
             <div className="flex items-center gap-2">
               <div
@@ -205,7 +215,7 @@ export function AssegnazioniClient({
               <span>{s.territory}</span>
               <span className="font-mono font-semibold text-ink-600">{s.count}</span>
             </div>
-          </div>
+          </Link>
         ))}
         {unassignedCount > 0 && (
           <div className="w-[180px] shrink-0 rounded-[12px] border-2 border-dashed border-red/30 bg-red-50 p-3">
@@ -236,7 +246,7 @@ export function AssegnazioniClient({
             const stat = provinceStats.get(p)
             return (
               <option key={p} value={p}>
-                {p} ({stat?.total ?? 0} · {stat?.unassigned ?? 0} libere)
+                {formatProvince(p)} ({stat?.total ?? 0} · {stat?.unassigned ?? 0} libere)
               </option>
             )
           })}
@@ -331,7 +341,7 @@ export function AssegnazioniClient({
                 </td>
                 <td className="px-4 py-2.5 text-[13px] font-semibold text-ink-900">{a.name}</td>
                 <td className="px-4 py-2.5 text-[13px] text-ink-600">{a.town}</td>
-                <td className="px-4 py-2.5 text-[13px] font-medium text-ink-500">{a.province}</td>
+                <td className="px-4 py-2.5 text-[13px] font-medium text-ink-500">{formatProvince(a.province)}</td>
                 <td className="px-4 py-2.5">
                   <StageChip stageId={a.stageId} size="sm" />
                 </td>

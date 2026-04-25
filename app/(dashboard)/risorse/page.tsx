@@ -8,5 +8,5 @@ export default async function RisorsePage() {
   if (!session?.user) redirect("/sign-in")
 
   const resources = await getResources()
-  return <RisorseClient resources={resources} />
+  return <RisorseClient resources={resources} userId={session.user.id} />
 }

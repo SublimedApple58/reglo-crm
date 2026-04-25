@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { getNews } from "@/lib/actions/data"
+import { getNews, getNewsCategories } from "@/lib/actions/data"
 import { GestioneNewsClient } from "@/components/pages/admin/gestione-news-client"
 
 export default async function GestioneNewsPage() {
@@ -10,7 +10,7 @@ export default async function GestioneNewsPage() {
   const role = (session.user as Record<string, unknown>).role as string
   if (role !== "admin" && role !== "both") redirect("/")
 
-  const news = await getNews()
+  const [news, newsCategories] = await Promise.all([getNews(), getNewsCategories()])
 
-  return <GestioneNewsClient news={news} userId={session.user.id} />
+  return <GestioneNewsClient news={news} userId={session.user.id} initialCategories={newsCategories} />
 }

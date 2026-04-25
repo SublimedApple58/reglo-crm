@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Search,
@@ -17,21 +17,32 @@ import {
   ListOrdered,
   Quote,
   FileText,
+  Smile,
+  ImageIcon,
+  Link2,
 } from "lucide-react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import UnderlineExt from "@tiptap/extension-underline"
+import LinkExt from "@tiptap/extension-link"
+import Image from "@tiptap/extension-image"
 import { NEWS_CATEGORIES } from "@/lib/constants"
-import { createNews, updateNews, deleteNews, toggleNewsPin } from "@/lib/actions/data"
-import type { News } from "@/lib/db/schema"
+import { createNews, updateNews, deleteNews, toggleNewsPin, getNewsCategories, upsertNewsCategory, deleteNewsCategory } from "@/lib/actions/data"
+import type { News, NewsCategory } from "@/lib/db/schema"
 
-export function GestioneNewsClient({ news: initial, userId }: { news: News[]; userId: string }) {
+export function GestioneNewsClient({ news: initial, userId, initialCategories }: { news: News[]; userId: string; initialCategories?: NewsCategory[] }) {
   const router = useRouter()
   const [newsList, setNewsList] = useState(initial)
   const [selectedId, setSelectedId] = useState<number | null>(initial[0]?.id ?? null)
   const [search, setSearch] = useState("")
   const [modified, setModified] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [categories, setCategories] = useState<{ id: string; color: string }[]>(
+    initialCategories && initialCategories.length > 0
+      ? initialCategories.map((c) => ({ id: c.label, color: c.color ?? "#64748B" }))
+      : [...NEWS_CATEGORIES]
+  )
 
   const selected = newsList.find((n) => n.id === selectedId)
 
@@ -41,13 +52,18 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit, UnderlineExt],
+    extensions: [
+      StarterKit,
+      UnderlineExt,
+      LinkExt.configure({ openOnClick: false, autolink: true, defaultProtocol: "https" }),
+      Image.configure({ inline: false, allowBase64: false }),
+    ],
     content: selected?.body ?? "",
     onUpdate: () => setModified(true),
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[20px] [&_h1]:font-bold [&_h1]:mb-3 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:mb-2 [&_p]:mb-2",
+          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
       },
     },
   })
@@ -94,7 +110,23 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
         pinned: false,
         authorId: userId,
       })
-      router.refresh()
+      const newItem: News = {
+        id: result.id,
+        category: NEWS_CATEGORIES[0].id,
+        title: "Nuovo articolo",
+        excerpt: "",
+        body: "",
+        pinned: false,
+        authorId: userId,
+        createdAt: new Date(),
+      }
+      setNewsList((prev) => [newItem, ...prev])
+      setSelectedId(result.id)
+      setEditTitle("Nuovo articolo")
+      setEditCategory(NEWS_CATEGORIES[0].id)
+      setEditExcerpt("")
+      editor?.commands.setContent("")
+      setModified(false)
     })
   }
 
@@ -148,7 +180,7 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
 
         <div className="flex-1 overflow-y-auto">
           {filtered.map((item) => {
-            const catColor = NEWS_CATEGORIES.find((c) => c.id === item.category)?.color ?? "#64748B"
+            const catColor = categories.find((c) => c.id === item.category)?.color ?? "#64748B"
             return (
               <button
                 key={item.id}
@@ -225,16 +257,18 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
           {/* Toolbar */}
           <div className="flex items-center gap-0.5 border-b border-border-1 px-5 py-1.5">
             {[
-              { icon: Heading1, action: () => editor?.chain().focus().toggleHeading({ level: 1 }).run(), active: editor?.isActive("heading", { level: 1 }) },
-              { icon: Heading2, action: () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), active: editor?.isActive("heading", { level: 2 }) },
+              { icon: Heading1, action: () => editor?.chain().focus().toggleHeading({ level: 1 }).run(), active: editor?.isActive("heading", { level: 1 }), title: "Titolo 1" },
+              { icon: Heading2, action: () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), active: editor?.isActive("heading", { level: 2 }), title: "Titolo 2" },
               null,
-              { icon: Bold, action: () => editor?.chain().focus().toggleBold().run(), active: editor?.isActive("bold") },
-              { icon: Italic, action: () => editor?.chain().focus().toggleItalic().run(), active: editor?.isActive("italic") },
-              { icon: Underline, action: () => editor?.chain().focus().toggleUnderline().run(), active: editor?.isActive("underline") },
+              { icon: Bold, action: () => editor?.chain().focus().toggleBold().run(), active: editor?.isActive("bold"), title: "Grassetto" },
+              { icon: Italic, action: () => editor?.chain().focus().toggleItalic().run(), active: editor?.isActive("italic"), title: "Corsivo" },
+              { icon: Underline, action: () => editor?.chain().focus().toggleUnderline().run(), active: editor?.isActive("underline"), title: "Sottolineato" },
               null,
-              { icon: List, action: () => editor?.chain().focus().toggleBulletList().run(), active: editor?.isActive("bulletList") },
-              { icon: ListOrdered, action: () => editor?.chain().focus().toggleOrderedList().run(), active: editor?.isActive("orderedList") },
-              { icon: Quote, action: () => editor?.chain().focus().toggleBlockquote().run(), active: editor?.isActive("blockquote") },
+              { icon: List, action: () => editor?.chain().focus().toggleBulletList().run(), active: editor?.isActive("bulletList"), title: "Elenco puntato" },
+              { icon: ListOrdered, action: () => editor?.chain().focus().toggleOrderedList().run(), active: editor?.isActive("orderedList"), title: "Elenco numerato" },
+              { icon: Quote, action: () => editor?.chain().focus().toggleBlockquote().run(), active: editor?.isActive("blockquote"), title: "Citazione" },
+              null,
+              { icon: Link2, action: () => { if (editor?.isActive("link")) { editor?.chain().focus().unsetLink().run() } else { const url = window.prompt("URL:"); if (url) editor?.chain().focus().setLink({ href: url }).run() } }, active: editor?.isActive("link"), title: "Link" },
             ].map((item, i) =>
               item === null ? (
                 <div key={i} className="mx-1 h-5 w-px bg-border-1" />
@@ -242,6 +276,7 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
                 <button
                   key={i}
                   onClick={item.action}
+                  title={item.title}
                   className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
                   style={{
                     backgroundColor: item.active ? "#FDF2F8" : "transparent",
@@ -252,6 +287,9 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
                 </button>
               )
             )}
+            <div className="mx-1 h-5 w-px bg-border-1" />
+            <NewsImageBtn editor={editor} onModified={() => setModified(true)} />
+            <NewsEmojiBtn editor={editor} />
           </div>
 
           {/* Excerpt */}
@@ -276,12 +314,18 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
               onChange={(e) => { setEditCategory(e.target.value); setModified(true) }}
               className="h-7 rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none"
             >
-              {NEWS_CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.id}
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setShowCategoryManager(true)}
+              className="text-[11px] font-medium text-pink hover:underline"
+            >
+              Gestisci etichette
+            </button>
           </div>
         </div>
       ) : (
@@ -289,6 +333,187 @@ export function GestioneNewsClient({ news: initial, userId }: { news: News[]; us
           Seleziona un articolo da modificare
         </div>
       )}
+
+      {/* Category manager dialog */}
+      {showCategoryManager && (
+        <CategoryManagerDialog
+          categories={categories}
+          onUpdate={setCategories}
+          onClose={() => setShowCategoryManager(false)}
+        />
+      )}
     </div>
+  )
+}
+
+function CategoryManagerDialog({
+  categories,
+  onUpdate,
+  onClose,
+}: {
+  categories: { id: string; color: string }[]
+  onUpdate: (cats: { id: string; color: string }[]) => void
+  onClose: () => void
+}) {
+  const [items, setItems] = useState(categories)
+  const [newLabel, setNewLabel] = useState("")
+  const [newColor, setNewColor] = useState("#64748B")
+  const [isPending, startTransition] = useTransition()
+
+  function handleAdd() {
+    if (!newLabel.trim()) return
+    const label = newLabel.trim().toUpperCase()
+    if (items.some((c) => c.id === label)) return
+    startTransition(async () => {
+      await upsertNewsCategory({ label, color: newColor })
+      const updated = [...items, { id: label, color: newColor }]
+      setItems(updated)
+      onUpdate(updated)
+      setNewLabel("")
+    })
+  }
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const dbCats = await getNewsCategories()
+      const cat = dbCats.find((c) => c.label === id)
+      if (cat) await deleteNewsCategory(cat.id)
+      const updated = items.filter((c) => c.id !== id)
+      setItems(updated)
+      onUpdate(updated)
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-[400px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-4 text-[18px] font-bold text-ink-900">Gestisci etichette</h2>
+
+        <div className="mb-4 space-y-2">
+          {items.map((cat) => (
+            <div key={cat.id} className="flex items-center gap-3 rounded-[10px] border border-border-1 px-3 py-2">
+              <span className="h-4 w-4 rounded-full" style={{ backgroundColor: cat.color }} />
+              <span className="flex-1 text-[13px] font-medium text-ink-900">{cat.id}</span>
+              <button
+                onClick={() => handleDelete(cat.id)}
+                disabled={isPending}
+                className="text-[11px] text-red-500 hover:underline disabled:opacity-50"
+              >
+                Elimina
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder="Nuova etichetta…"
+            className="h-8 flex-1 rounded-[8px] border border-border-1 px-3 text-[13px] outline-none focus:border-pink"
+          />
+          <input
+            type="color"
+            value={newColor}
+            onChange={(e) => setNewColor(e.target.value)}
+            className="h-8 w-8 cursor-pointer rounded-[6px] border border-border-1"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newLabel.trim() || isPending}
+            className="h-8 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+          >
+            Aggiungi
+          </button>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button onClick={onClose} className="h-8 rounded-[999px] border border-border-1 px-4 text-[13px] font-medium text-ink-600 hover:bg-surface-2">
+            Chiudi
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const NEWS_EMOJI_LIST = [
+  "😀", "😂", "🥲", "😍", "🤩", "😎", "🤔", "😉",
+  "👍", "👎", "👏", "🙌", "💪", "🤝", "✌️", "🫡",
+  "❤️", "🔥", "⭐", "✅", "❌", "⚠️", "💡", "🎯",
+  "📞", "✉️", "📋", "📊", "💰", "🏆", "🚀", "🦈",
+  "🎉", "💯", "👀", "🙏", "📌", "🔗", "📆", "⏰",
+]
+
+function NewsEmojiBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        title="Emoji"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
+      >
+        <Smile className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 grid w-[220px] grid-cols-8 gap-0.5 rounded-[10px] border border-border-1 bg-surface p-2 shadow-lg" onMouseDown={(e) => e.preventDefault()}>
+          {NEWS_EMOJI_LIST.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => { editor?.chain().focus().insertContent(emoji).run(); setOpen(false) }}
+              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[16px] transition-colors hover:bg-surface-2"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NewsImageBtn({ editor, onModified }: { editor: ReturnType<typeof useEditor> | null; onModified: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) return
+    const formData = new FormData()
+    formData.append("file", file)
+    const res = await fetch("/api/upload", { method: "POST", body: formData })
+    if (!res.ok) { alert("Errore caricamento immagine"); return }
+    const { url } = await res.json()
+    editor?.chain().focus().setImage({ src: url }).run()
+    onModified()
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        title="Inserisci immagine"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
+      >
+        <ImageIcon className="h-4 w-4" />
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = "" }}
+      />
+    </>
   )
 }

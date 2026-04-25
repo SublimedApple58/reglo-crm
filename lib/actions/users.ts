@@ -102,6 +102,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
   const [user] = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1)
   if (!user) throw new Error("Utente non trovato")
+  if (!user.password) throw new Error("Questo account usa Google SSO. Non puoi cambiare la password da qui.")
 
   const valid = await bcrypt.compare(currentPassword, user.password)
   if (!valid) throw new Error("Password corrente non valida")

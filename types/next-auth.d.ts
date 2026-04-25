@@ -8,6 +8,7 @@ declare module "next-auth" {
       email: string
       role: "sales" | "admin" | "both"
       territory: string
+      avatar: string | null
     }
   }
 }

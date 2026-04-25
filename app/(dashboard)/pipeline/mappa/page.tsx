@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { getAutoscuole } from "@/lib/actions/autoscuole"
+import { getAutoscuole, getAllSalesTerritories, getSalesTerritories } from "@/lib/actions/autoscuole"
 import { MapClient } from "@/components/pages/map-client"
 
 export default async function MapPage() {
@@ -12,7 +12,10 @@ export default async function MapPage() {
   const isAdmin = role === "admin" || role === "both"
 
   const filters = isAdmin ? undefined : { assignedTo: u.id as string }
-  const results = await getAutoscuole(filters)
+  const [results, territories] = await Promise.all([
+    getAutoscuole(filters),
+    isAdmin ? getAllSalesTerritories() : getSalesTerritories(u.id as string),
+  ])
 
   const autoscuoleFlat = results.map((r) => ({
     id: r.autoscuola.id,
@@ -31,5 +34,19 @@ export default async function MapPage() {
     salesColor: r.salesUser?.color ?? null,
   }))
 
-  return <MapClient autoscuole={autoscuoleFlat} isAdmin={isAdmin} />
+  const salesTerritoryList = isAdmin
+    ? (territories as { territory: { userId: string; region: string }; user: { id: string; name: string } }[]).map((t) => ({
+        userId: t.territory.userId,
+        region: t.territory.region,
+        salesName: t.user.name,
+        salesColor: autoscuoleFlat.find((a) => a.salesId === t.territory.userId)?.salesColor ?? "#94A3B8",
+      }))
+    : (territories as { userId: string; region: string }[]).map((t) => ({
+        userId: t.userId,
+        region: t.region,
+        salesName: session.user.name ?? "",
+        salesColor: "#EC4899",
+      }))
+
+  return <MapClient autoscuole={autoscuoleFlat} isAdmin={isAdmin} salesTerritories={salesTerritoryList} />
 }
