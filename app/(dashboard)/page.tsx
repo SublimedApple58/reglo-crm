@@ -23,17 +23,31 @@ export default async function HomePage() {
   const allAutoscuole = await getAutoscuole(filters)
 
   // Fetch upcoming events if Google connected
-  let upcomingEvents: { title: string; start: string; meetLink: string | null }[] = []
+  let upcomingEvents: { title: string; start: string; meetLink: string | null; location: string | null }[] = []
   if (googleConnected) {
     const now = new Date()
     const endOfDay = new Date(now)
     endOfDay.setDate(endOfDay.getDate() + 7) // next 7 days
     const events = await getCalendarEvents(now.toISOString(), endOfDay.toISOString())
-    upcomingEvents = events.filter((e) => !e.allDay).slice(0, 5).map((e) => ({
-      title: e.title,
-      start: e.start,
-      meetLink: e.meetLink,
-    }))
+
+    // Build day→location map from all-day events (working location like "Casa", "Ufficio")
+    const locationByDay: Record<string, string> = {}
+    for (const e of events) {
+      if (e.allDay) {
+        const day = e.start.split("T")[0]
+        locationByDay[day] = e.title
+      }
+    }
+
+    upcomingEvents = events.filter((e) => !e.allDay).slice(0, 5).map((e) => {
+      const day = e.start.split("T")[0]
+      return {
+        title: e.title,
+        start: e.start,
+        meetLink: e.meetLink,
+        location: locationByDay[day] ?? null,
+      }
+    })
   }
 
   const stagesWithCounts = STAGES.map((s) => ({

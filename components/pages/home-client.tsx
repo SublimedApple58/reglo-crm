@@ -55,7 +55,7 @@ function padHull(hull: { lat: number; lng: number }[], pad: number) {
 }
 
 type HomeCardData = { title: string; icon: string | null; link: string | null }
-type UpcomingEvent = { title: string; start: string; meetLink: string | null }
+type UpcomingEvent = { title: string; start: string; meetLink: string | null; location: string | null }
 
 export function HomeClient({
   userName,
@@ -214,6 +214,9 @@ export function HomeClient({
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
+                          {event.location && (
+                            <span className="ml-1 text-ink-300">· {event.location}</span>
+                          )}
                         </p>
                       </div>
                       {event.meetLink && (
