@@ -135,7 +135,7 @@ export function CalendarioClient({
     }
 
     setDraftPopoverPos({
-      top: Math.max(8, rect.top),
+      top: Math.min(Math.max(8, rect.top), window.innerHeight - 200),
       left,
     })
     setDragOffset(null)
@@ -215,13 +215,12 @@ export function CalendarioClient({
     setDraftPreset(presetId)
     setDraftMeetLink(preset.meet)
 
-    // Update duration
+    // Update duration — don't reposition popover (preserve user's drag)
     if (currentDraft) {
       const newEnd = new Date(new Date(currentDraft.start).getTime() + preset.duration * 60 * 1000).toISOString()
       setDraft({ ...currentDraft, end: newEnd })
-      setTimeout(updateDraftPopoverPos, 30)
     }
-  }, [updateDraftPopoverPos])
+  }, [])
 
   // Handle autoscuola selection from dropdown
   const handleSelectAutoscuola = useCallback((result: AutoscuolaResult) => {
@@ -1141,16 +1140,14 @@ export function CalendarioClient({
       {draft && draftPopoverPos && (
         <div
           ref={draftPopoverRef}
-          className="fixed z-50 w-[400px] rounded-[20px] border border-border-1 bg-surface shadow-xl"
+          className="fixed z-50 w-[400px] overflow-y-auto rounded-[20px] border border-border-1 bg-surface shadow-xl"
           style={{
-            top: Math.max(8, Math.min(
-              (dragOffset?.y ?? 0) + draftPopoverPos.top,
-              window.innerHeight - 640
-            )),
+            top: Math.max(8, (dragOffset?.y ?? 0) + draftPopoverPos.top),
             left: Math.max(8, Math.min(
               (dragOffset?.x ?? 0) + draftPopoverPos.left,
               window.innerWidth - 420
             )),
+            maxHeight: "calc(100vh - 16px)",
           }}
         >
           {/* Drag handle bar */}
