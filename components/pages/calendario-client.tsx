@@ -136,7 +136,7 @@ export function CalendarioClient({
 
     // Clamp top so popover always has room — prefer aligning to event top,
     // but slide up if the event is in the bottom half of the screen
-    const maxTop = Math.max(8, window.innerHeight * 0.35)
+    const maxTop = Math.max(8, window.innerHeight * 0.2)
     setDraftPopoverPos({
       top: Math.min(Math.max(8, rect.top), maxTop),
       left,
