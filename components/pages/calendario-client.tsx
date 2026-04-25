@@ -1255,8 +1255,8 @@ export function CalendarioClient({
               )}
             </div>
 
-            {/* Title — auto-generated for presets, manual only for "custom" */}
-            {draftPreset === "custom" ? (
+            {/* Title — only shown for "custom" preset */}
+            {draftPreset === "custom" && (
               <div>
                 <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Titolo</label>
                 <input
@@ -1268,14 +1268,7 @@ export function CalendarioClient({
                   className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
                 />
               </div>
-            ) : computedTitle ? (
-              <div>
-                <label className="mb-1 block text-[12.5px] font-medium text-ink-700">Titolo</label>
-                <p className="rounded-[8px] bg-surface-2 px-3 py-2 text-[13px] font-medium text-ink-700">
-                  {computedTitle}
-                </p>
-              </div>
-            ) : null}
+            )}
 
             {/* Date/time */}
             <div className="grid grid-cols-2 gap-3">
