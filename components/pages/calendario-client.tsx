@@ -90,6 +90,10 @@ export function CalendarioClient({
   // RSVP state
   const [isRsvpPending, startRsvpTransition] = useTransition()
 
+  // "Nuovo evento" button menu
+  const [showNewEventMenu, setShowNewEventMenu] = useState(false)
+  const newEventBtnRef = useRef<HTMLDivElement>(null)
+
   const calRef = useRef<FullCalendar>(null)
 
   const clearDraft = useCallback(() => {
@@ -193,6 +197,18 @@ export function CalendarioClient({
     }
   }, [draftAutoscuolaText, draftAutoscuola])
 
+  // Close new event menu on outside click
+  useEffect(() => {
+    if (!showNewEventMenu) return
+    function handleClick(e: MouseEvent) {
+      if (newEventBtnRef.current && !newEventBtnRef.current.contains(e.target as Node)) {
+        setShowNewEventMenu(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [showNewEventMenu])
+
   // Close autoscuola dropdown on outside click
   useEffect(() => {
     if (!showAutoscuolaDropdown) return
@@ -250,6 +266,32 @@ export function CalendarioClient({
     }
     setDraftAutoscuolaText(text)
   }, [draftAutoscuola])
+
+  // Create a new draft from the "Nuovo evento" button with a specific preset
+  const createDraftWithPreset = useCallback((presetId: EventPresetId) => {
+    clearDraft()
+    setSelectedEvent(null)
+    setPopoverPos(null)
+    setShowNewEventMenu(false)
+
+    const preset = EVENT_PRESETS.find((p) => p.id === presetId)!
+    const now = new Date()
+    now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0)
+    const end = new Date(now.getTime() + preset.duration * 60 * 1000)
+
+    const api = calRef.current?.getApi()
+    api?.scrollToTime({ hours: now.getHours(), minutes: now.getMinutes() })
+
+    setDraft({
+      start: now.toISOString(),
+      end: end.toISOString(),
+      title: "(Senza titolo)",
+    })
+    setDraftTitle("")
+    setDraftPreset(presetId)
+    setDraftMeetLink(preset.meet)
+    setTimeout(updateDraftPopoverPos, 120)
+  }, [clearDraft, updateDraftPopoverPos])
 
   const refreshEvents = useCallback(() => {
     const api = calRef.current?.getApi()
@@ -476,31 +518,28 @@ export function CalendarioClient({
             <p className="text-[12.5px] text-ink-400">I tuoi appuntamenti e meeting</p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            clearDraft()
-            setSelectedEvent(null)
-            setPopoverPos(null)
-            // Create draft at next rounded 15-min slot
-            const now = new Date()
-            now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0)
-            const end = new Date(now.getTime() + 60 * 60 * 1000)
-            // Scroll to the time
-            const api = calRef.current?.getApi()
-            api?.scrollToTime({ hours: now.getHours(), minutes: now.getMinutes() })
-            setDraft({
-              start: now.toISOString(),
-              end: end.toISOString(),
-              title: "(Senza titolo)",
-            })
-            setDraftTitle("")
-            setTimeout(updateDraftPopoverPos, 120)
-          }}
-          className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90"
-        >
-          <Plus className="h-4 w-4" />
-          Nuovo evento
-        </button>
+        <div ref={newEventBtnRef} className="relative">
+          <button
+            onClick={() => setShowNewEventMenu(!showNewEventMenu)}
+            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90"
+          >
+            <Plus className="h-4 w-4" />
+            Nuovo evento
+          </button>
+          {showNewEventMenu && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-[200px] rounded-[14px] border border-border-1 bg-surface py-1.5 shadow-xl">
+              {EVENT_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => createDraftWithPreset(preset.id)}
+                  className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-[13px] font-medium text-ink-700 transition-colors hover:bg-surface-2"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Calendar */}
