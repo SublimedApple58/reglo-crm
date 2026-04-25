@@ -965,6 +965,7 @@ function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
 function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; initialDate: Date | null }) {
   const [isPending, startTransition] = useTransition()
   const [date, setDate] = useState(initialDate ? new Date(initialDate).toISOString().slice(0, 16) : "")
+  const [showPicker, setShowPicker] = useState(false)
 
   const followUpDate = date ? new Date(date) : null
   const now = new Date()
@@ -974,9 +975,22 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
 
   function handleChange(value: string) {
     setDate(value)
+    setShowPicker(false)
     startTransition(() => {
       setFollowUp(autoscuolaId, value || null)
     })
+  }
+
+  if (!date && !showPicker) {
+    return (
+      <button
+        onClick={() => setShowPicker(true)}
+        className="flex h-[38px] w-full cursor-pointer items-center gap-2 rounded-[10px] border border-dashed border-border-2 bg-surface-2/50 px-3 text-[13px] text-ink-400 transition-colors hover:border-pink hover:text-pink"
+      >
+        <Calendar className="h-3.5 w-3.5" />
+        Programma un follow-up
+      </button>
+    )
   }
 
   return (
