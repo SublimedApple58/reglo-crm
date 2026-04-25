@@ -6,6 +6,7 @@ import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { Video, ExternalLink, X, Plus, Users, Calendar, Clock, Trash2, Pencil, Search, Building } from "lucide-react"
+import Link from "next/link"
 import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, rsvpCalendarEvent } from "@/lib/actions/calendar"
 import { searchAutoscuole } from "@/lib/actions/autoscuole"
 import { EVENT_PRESETS } from "@/lib/constants"
@@ -25,6 +26,7 @@ type CalendarEvent = {
   htmlLink: string | null
   attendees: { email: string; name: string | null; status: string | null; self: boolean }[]
   description: string | null
+  autoscuola: { id: string; name: string } | null
 }
 
 type DraftEvent = {
@@ -77,9 +79,9 @@ export function CalendarioClient({
   // Preset state
   const [draftPreset, setDraftPreset] = useState<EventPresetId>("custom")
 
-  // Autoscuola selector state
+  // Autoscuola combobox state (free text + optional record selection)
+  const [draftAutoscuolaText, setDraftAutoscuolaText] = useState("")
   const [draftAutoscuola, setDraftAutoscuola] = useState<AutoscuolaResult | null>(null)
-  const [autoscuolaQuery, setAutoscuolaQuery] = useState("")
   const [autoscuolaResults, setAutoscuolaResults] = useState<AutoscuolaResult[]>([])
   const [showAutoscuolaDropdown, setShowAutoscuolaDropdown] = useState(false)
   const autoscuolaSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -100,8 +102,8 @@ export function CalendarioClient({
     setDraftNotes("")
     setDragOffset(null)
     setDraftPreset("custom")
+    setDraftAutoscuolaText("")
     setDraftAutoscuola(null)
-    setAutoscuolaQuery("")
     setAutoscuolaResults([])
     setShowAutoscuolaDropdown(false)
   }, [])
@@ -170,23 +172,23 @@ export function CalendarioClient({
     }
   }, [draft, draftPopoverPos])
 
-  // Autoscuola search debounce
+  // Autoscuola search debounce — only search when no record is selected (free text mode)
   useEffect(() => {
     if (autoscuolaSearchTimeout.current) clearTimeout(autoscuolaSearchTimeout.current)
-    if (autoscuolaQuery.length < 2) {
+    if (draftAutoscuola || draftAutoscuolaText.length < 2) {
       setAutoscuolaResults([])
       setShowAutoscuolaDropdown(false)
       return
     }
     autoscuolaSearchTimeout.current = setTimeout(async () => {
-      const results = await searchAutoscuole(autoscuolaQuery)
+      const results = await searchAutoscuole(draftAutoscuolaText)
       setAutoscuolaResults(results)
       setShowAutoscuolaDropdown(results.length > 0)
     }, 300)
     return () => {
       if (autoscuolaSearchTimeout.current) clearTimeout(autoscuolaSearchTimeout.current)
     }
-  }, [autoscuolaQuery])
+  }, [draftAutoscuolaText, draftAutoscuola])
 
   // Close autoscuola dropdown on outside click
   useEffect(() => {
@@ -200,8 +202,15 @@ export function CalendarioClient({
     return () => document.removeEventListener("mousedown", handleClick)
   }, [showAutoscuolaDropdown])
 
+  // Compute auto-generated title for non-custom presets
+  const computedTitle = (() => {
+    if (draftPreset === "custom") return null
+    const preset = EVENT_PRESETS.find((p) => p.id === draftPreset)!
+    return preset.titleTemplate.replace("{autoscuola}", draftAutoscuolaText.trim())
+  })()
+
   // Helper: apply preset to draft
-  const applyPreset = useCallback((presetId: EventPresetId, autoscuola: AutoscuolaResult | null, currentDraft: DraftEvent | null) => {
+  const applyPreset = useCallback((presetId: EventPresetId, currentDraft: DraftEvent | null) => {
     const preset = EVENT_PRESETS.find((p) => p.id === presetId)!
     setDraftPreset(presetId)
     setDraftMeetLink(preset.meet)
@@ -212,18 +221,12 @@ export function CalendarioClient({
       setDraft({ ...currentDraft, end: newEnd })
       setTimeout(updateDraftPopoverPos, 30)
     }
-
-    // Update title if template exists
-    if (preset.titleTemplate && presetId !== "custom") {
-      const name = autoscuola?.name ?? ""
-      setDraftTitle(preset.titleTemplate.replace("{autoscuola}", name))
-    }
   }, [updateDraftPopoverPos])
 
-  // Handle autoscuola selection
+  // Handle autoscuola selection from dropdown
   const handleSelectAutoscuola = useCallback((result: AutoscuolaResult) => {
     setDraftAutoscuola(result)
-    setAutoscuolaQuery("")
+    setDraftAutoscuolaText(result.name)
     setAutoscuolaResults([])
     setShowAutoscuolaDropdown(false)
 
@@ -231,27 +234,20 @@ export function CalendarioClient({
     if (result.email && !draftGuests.includes(result.email)) {
       setDraftGuests((prev) => [...prev, result.email!])
     }
+  }, [draftGuests])
 
-    // Update title from preset template
-    const preset = EVENT_PRESETS.find((p) => p.id === draftPreset)!
-    if (preset.titleTemplate && draftPreset !== "custom") {
-      setDraftTitle(preset.titleTemplate.replace("{autoscuola}", result.name))
+  // Handle free text change in autoscuola field — clears record selection
+  const handleAutoscuolaTextChange = useCallback((text: string) => {
+    // If user edits text after selecting a record, clear the selection
+    if (draftAutoscuola && text !== draftAutoscuola.name) {
+      // Remove the autoscuola's email from guests
+      if (draftAutoscuola.email) {
+        setDraftGuests((prev) => prev.filter((g) => g !== draftAutoscuola.email))
+      }
+      setDraftAutoscuola(null)
     }
-  }, [draftGuests, draftPreset])
-
-  const handleDeselectAutoscuola = useCallback(() => {
-    const oldEmail = draftAutoscuola?.email
-    setDraftAutoscuola(null)
-    // Remove autoscuola email from guests
-    if (oldEmail) {
-      setDraftGuests((prev) => prev.filter((g) => g !== oldEmail))
-    }
-    // Clear title if it was auto-generated from preset
-    const preset = EVENT_PRESETS.find((p) => p.id === draftPreset)!
-    if (preset.titleTemplate && draftPreset !== "custom") {
-      setDraftTitle(preset.titleTemplate.replace("{autoscuola}", ""))
-    }
-  }, [draftAutoscuola, draftPreset])
+    setDraftAutoscuolaText(text)
+  }, [draftAutoscuola])
 
   const refreshEvents = useCallback(() => {
     const api = calRef.current?.getApi()
@@ -364,6 +360,7 @@ export function CalendarioClient({
     })
     setDraftTitle("")
     setDraftPreset("custom")
+    setDraftAutoscuolaText("")
     setDraftAutoscuola(null)
 
     // Wait for draft event to render, then position popover
@@ -389,7 +386,10 @@ export function CalendarioClient({
   // Create event from draft popover
   const handleDraftSubmit = useCallback(() => {
     if (!draft) return
-    const title = draftTitle.trim() || "Nuovo evento"
+    // For non-custom presets, use the auto-generated title; for custom, use the manual title
+    const title = draftPreset !== "custom"
+      ? (computedTitle?.trim() || "Nuovo evento")
+      : (draftTitle.trim() || "Nuovo evento")
 
     startTransition(async () => {
       try {
@@ -408,7 +408,7 @@ export function CalendarioClient({
         // ignore
       }
     })
-  }, [draft, draftTitle, draftNotes, draftGuests, draftMeetLink, draftAutoscuola, refreshEvents, clearDraft])
+  }, [draft, draftPreset, computedTitle, draftTitle, draftNotes, draftGuests, draftMeetLink, draftAutoscuola, refreshEvents, clearDraft])
 
   // RSVP handler
   const handleRsvp = useCallback((eventId: string, status: "accepted" | "declined" | "tentative") => {
@@ -440,7 +440,7 @@ export function CalendarioClient({
     // Draft event
     ...(draft ? [{
       id: DRAFT_ID,
-      title: draftTitle || "(Senza titolo)",
+      title: (draftPreset !== "custom" ? computedTitle : draftTitle) || "(Senza titolo)",
       start: draft.start,
       end: draft.end,
       allDay: false,
@@ -1063,6 +1063,22 @@ export function CalendarioClient({
                   </div>
                 )}
 
+                {selectedEvent.autoscuola && (
+                  <div className="mb-4">
+                    <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+                      <Building className="h-3 w-3" />
+                      Autoscuola
+                    </div>
+                    <Link
+                      href={`/autoscuola/${selectedEvent.autoscuola.id}`}
+                      className="flex items-center gap-2 rounded-[8px] bg-surface-2 px-3 py-2 text-[13px] font-medium text-pink transition-colors hover:bg-pink/10"
+                    >
+                      <Building className="h-3.5 w-3.5" />
+                      {selectedEvent.autoscuola.name}
+                    </Link>
+                  </div>
+                )}
+
                 {selectedEvent.description && (
                   <p className="mb-4 rounded-[8px] bg-surface-2 p-2.5 text-[12px] leading-relaxed text-ink-600">
                     {selectedEvent.description.slice(0, 200)}
@@ -1187,7 +1203,7 @@ export function CalendarioClient({
                 {EVENT_PRESETS.map((preset) => (
                   <button
                     key={preset.id}
-                    onClick={() => applyPreset(preset.id, draftAutoscuola, draft)}
+                    onClick={() => applyPreset(preset.id, draft)}
                     className={`h-7 cursor-pointer rounded-[999px] border px-3 text-[11.5px] font-semibold transition-all ${
                       draftPreset === preset.id
                         ? "border-pink bg-pink/10 text-pink"
@@ -1200,37 +1216,27 @@ export function CalendarioClient({
               </div>
             </div>
 
-            {/* Autoscuola selector */}
+            {/* Autoscuola combobox */}
             <div ref={autoscuolaDropdownRef} className="relative">
               <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Autoscuola</label>
-              {draftAutoscuola ? (
-                <div className="flex items-center gap-2 rounded-[10px] border border-border-1 bg-surface px-3 py-2">
-                  <Building className="h-3.5 w-3.5 text-ink-400" />
-                  <span className="flex-1 text-[13px] font-medium text-ink-900">
-                    {draftAutoscuola.name}
-                    <span className="ml-1.5 text-[11.5px] font-normal text-ink-400">
-                      {draftAutoscuola.town}, {draftAutoscuola.province}
-                    </span>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
+                <input
+                  value={draftAutoscuolaText}
+                  onChange={(e) => handleAutoscuolaTextChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !showAutoscuolaDropdown) handleDraftSubmit() }}
+                  placeholder="Nome autoscuola (facoltativo)"
+                  className={`h-[38px] w-full rounded-[10px] border bg-surface pl-9 pr-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20 ${
+                    draftAutoscuola ? "border-pink/40" : "border-border-1"
+                  }`}
+                />
+                {draftAutoscuola && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-[4px] bg-pink/10 px-1.5 py-0.5 text-[10px] font-semibold text-pink">
+                    Collegata
                   </span>
-                  <button
-                    onClick={handleDeselectAutoscuola}
-                    className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-ink-400 hover:bg-surface-2 hover:text-ink-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
-                  <input
-                    value={autoscuolaQuery}
-                    onChange={(e) => setAutoscuolaQuery(e.target.value)}
-                    placeholder="Cerca autoscuola..."
-                    className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface pl-9 pr-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
-                  />
-                </div>
-              )}
-              {showAutoscuolaDropdown && !draftAutoscuola && (
+                )}
+              </div>
+              {showAutoscuolaDropdown && (
                 <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-[200px] overflow-y-auto rounded-[12px] border border-border-1 bg-surface shadow-lg">
                   {autoscuolaResults.map((r) => (
                     <button
@@ -1249,18 +1255,27 @@ export function CalendarioClient({
               )}
             </div>
 
-            {/* Title */}
-            <div>
-              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Titolo</label>
-              <input
-                ref={draftTitleRef}
-                value={draftTitle}
-                onChange={(e) => setDraftTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleDraftSubmit() }}
-                placeholder="Meeting con…"
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
-              />
-            </div>
+            {/* Title — auto-generated for presets, manual only for "custom" */}
+            {draftPreset === "custom" ? (
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Titolo</label>
+                <input
+                  ref={draftTitleRef}
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleDraftSubmit() }}
+                  placeholder="Meeting con…"
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+                />
+              </div>
+            ) : computedTitle ? (
+              <div>
+                <label className="mb-1 block text-[12.5px] font-medium text-ink-700">Titolo</label>
+                <p className="rounded-[8px] bg-surface-2 px-3 py-2 text-[13px] font-medium text-ink-700">
+                  {computedTitle}
+                </p>
+              </div>
+            ) : null}
 
             {/* Date/time */}
             <div className="grid grid-cols-2 gap-3">

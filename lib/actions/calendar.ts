@@ -2,8 +2,8 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { oauthTokens, activities } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
+import { oauthTokens, activities, autoscuole } from "@/lib/db/schema"
+import { eq, and, inArray } from "drizzle-orm"
 import { getGoogleCalendarClient } from "@/lib/google/client"
 import { revalidatePath } from "next/cache"
 
@@ -42,7 +42,29 @@ export async function getCalendarEvents(timeMin: string, timeMax: string) {
       maxResults: 250,
     })
 
-    return (res.data.items ?? []).map((event) => ({
+    const items = res.data.items ?? []
+
+    // Bulk lookup: which events are linked to autoscuole via activities?
+    const eventIds = items.map((e) => e.id!).filter(Boolean)
+    let autoscuolaMap: Record<string, { id: string; name: string }> = {}
+    if (eventIds.length > 0) {
+      const linked = await db
+        .select({
+          calendarEventId: activities.calendarEventId,
+          autoscuolaId: autoscuole.id,
+          autoscuolaName: autoscuole.name,
+        })
+        .from(activities)
+        .innerJoin(autoscuole, eq(activities.autoscuolaId, autoscuole.id))
+        .where(inArray(activities.calendarEventId, eventIds))
+      for (const row of linked) {
+        if (row.calendarEventId) {
+          autoscuolaMap[row.calendarEventId] = { id: row.autoscuolaId, name: row.autoscuolaName }
+        }
+      }
+    }
+
+    return items.map((event) => ({
       id: event.id!,
       title: event.summary ?? "(Senza titolo)",
       start: event.start?.dateTime ?? event.start?.date ?? "",
@@ -61,6 +83,7 @@ export async function getCalendarEvents(timeMin: string, timeMax: string) {
           self: a.self ?? false,
         })) ?? [],
       description: event.description ?? null,
+      autoscuola: autoscuolaMap[event.id!] ?? null,
     }))
   } catch {
     return []
