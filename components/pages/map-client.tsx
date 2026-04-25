@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { MapPin, Search } from "lucide-react"
+import Supercluster from "supercluster"
 import {
   APIProvider,
   Map,
@@ -14,7 +15,9 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps"
 import { STAGES, REGIONI_PROVINCE } from "@/lib/constants"
+import { formatProvince } from "@/lib/utils"
 import { StageChip } from "@/components/ui/stage-chip"
+import regionBoundaries from "@/lib/region-boundaries.json"
 
 type MapAutoscuola = {
   id: string
@@ -106,7 +109,7 @@ function AutoscuolaMarker({
                 margin: "2px 0 6px",
               }}
             >
-              {a.town}, {a.province}
+              {a.town}, {formatProvince(a.province)}
             </p>
             <StageChip stageId={a.stageId} size="sm" />
             {isAdmin && a.salesName && (
@@ -117,6 +120,163 @@ function AutoscuolaMarker({
           </div>
         </InfoWindow>
       )}
+    </>
+  )
+}
+
+// ── Cluster marker ──────────────────────────────────────────────────
+function ClusterMarker({
+  lat,
+  lng,
+  count,
+  color,
+}: {
+  lat: number
+  lng: number
+  count: number
+  color: string
+}) {
+  const map = useMap()
+  const size = Math.min(48, 24 + Math.sqrt(count) * 4)
+  return (
+    <AdvancedMarker
+      position={{ lat, lng }}
+      zIndex={5}
+      onClick={() => {
+        map?.panTo({ lat, lng })
+        map?.setZoom((map.getZoom() ?? 8) + 2)
+      }}
+      style={{ cursor: "pointer" }}
+    >
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          backgroundColor: color,
+          border: "3px solid white",
+          boxShadow: `0 2px 8px ${color}60`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: count > 99 ? "10px" : "11px",
+          fontWeight: 700,
+          color: "white",
+        }}
+      >
+        {count}
+      </div>
+    </AdvancedMarker>
+  )
+}
+
+// ── Clustered markers container ─────────────────────────────────────
+function ClusteredMarkers({
+  items,
+  hoveredId,
+  onHover,
+  onLeave,
+  isAdmin,
+}: {
+  items: MapAutoscuola[]
+  hoveredId: string | null
+  onHover: (id: string) => void
+  onLeave: () => void
+  isAdmin: boolean
+}) {
+  const map = useMap()
+  const [zoom, setZoom] = useState(6)
+  const [bounds, setBounds] = useState<[number, number, number, number]>([-180, -85, 180, 85])
+
+  // Track zoom and bounds changes
+  useEffect(() => {
+    if (!map) return
+    const listener = map.addListener("idle", () => {
+      const z = map.getZoom()
+      if (z != null) setZoom(Math.round(z))
+      const b = map.getBounds()
+      if (b) {
+        setBounds([
+          b.getSouthWest()!.lng(),
+          b.getSouthWest()!.lat(),
+          b.getNorthEast()!.lng(),
+          b.getNorthEast()!.lat(),
+        ])
+      }
+    })
+    return () => listener.remove()
+  }, [map])
+
+  // Build supercluster index
+  const index = useMemo(() => {
+    const sc = new Supercluster<{ id: string; stageColor: string }>({
+      radius: 60,
+      maxZoom: 14,
+    })
+    const points: Supercluster.PointFeature<{ id: string; stageColor: string }>[] = items
+      .filter((a) => a.lat && a.lng)
+      .map((a) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [a.lng!, a.lat!] },
+        properties: { id: a.id, stageColor: a.stageColor },
+      }))
+    sc.load(points)
+    return sc
+  }, [items])
+
+  // Get clusters for current viewport
+  const clusters = useMemo(() => {
+    return index.getClusters(bounds, zoom)
+  }, [index, bounds, zoom])
+
+  // Build a lookup for quick access
+  const itemById = useMemo(() => {
+    const lookup: Record<string, MapAutoscuola> = {}
+    for (const a of items) lookup[a.id] = a
+    return lookup
+  }, [items])
+
+  return (
+    <>
+      {clusters.map((cluster) => {
+        const [lng, lat] = cluster.geometry.coordinates
+        const props = cluster.properties as Record<string, unknown>
+
+        if (props.cluster) {
+          // Determine dominant color in cluster
+          const leaves = index.getLeaves(props.cluster_id as number, Infinity)
+          const colorCounts: Record<string, number> = {}
+          for (const leaf of leaves) {
+            const c = leaf.properties.stageColor
+            colorCounts[c] = (colorCounts[c] ?? 0) + 1
+          }
+          const dominantColor = Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "#EC4899"
+
+          return (
+            <ClusterMarker
+              key={`cluster-${props.cluster_id}`}
+              lat={lat}
+              lng={lng}
+              count={props.point_count as number}
+              color={dominantColor}
+            />
+          )
+        }
+
+        // Individual marker
+        const a = itemById[props.id as string]
+        if (!a) return null
+        return (
+          <AutoscuolaMarker
+            key={a.id}
+            a={a}
+            isHovered={hoveredId === a.id}
+            onHover={onHover}
+            onLeave={onLeave}
+            isAdmin={isAdmin}
+          />
+        )
+      })}
     </>
   )
 }
@@ -181,7 +341,7 @@ function CssFallbackMap({
                     {a.name.replace("Autoscuola ", "")}
                   </p>
                   <p className="text-[11px] text-ink-400">
-                    {a.town}, {a.province}
+                    {a.town}, {formatProvince(a.province)}
                   </p>
                   <StageChip stageId={a.stageId} size="sm" />
                 </div>
@@ -299,7 +459,18 @@ function convexHull(points: { lat: number; lng: number }[]): { lat: number; lng:
 
 // Expand hull outward by a padding (in degrees ~2-3km)
 function padHull(hull: { lat: number; lng: number }[], pad: number): { lat: number; lng: number }[] {
-  if (hull.length < 3) return hull
+  if (hull.length === 0) return hull
+  if (hull.length < 3) {
+    // For 1-2 points, create a small circle/diamond around them
+    const cx = hull.reduce((s, p) => s + p.lng, 0) / hull.length
+    const cy = hull.reduce((s, p) => s + p.lat, 0) / hull.length
+    return [
+      { lat: cy + pad, lng: cx },
+      { lat: cy, lng: cx + pad },
+      { lat: cy - pad, lng: cx },
+      { lat: cy, lng: cx - pad },
+    ]
+  }
   const cx = hull.reduce((s, p) => s + p.lng, 0) / hull.length
   const cy = hull.reduce((s, p) => s + p.lat, 0) / hull.length
   return hull.map((p) => {
@@ -310,7 +481,9 @@ function padHull(hull: { lat: number; lng: number }[], pad: number): { lat: numb
   })
 }
 
-export function MapClient({ autoscuole, isAdmin = false }: { autoscuole: MapAutoscuola[]; isAdmin?: boolean }) {
+type SalesTerritoryEntry = { userId: string; region: string; salesName: string; salesColor: string }
+
+export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }: { autoscuole: MapAutoscuola[]; isAdmin?: boolean; salesTerritories?: SalesTerritoryEntry[] }) {
   const [selectedRegione, setSelectedRegione] = useState<string | null>(null)
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -344,24 +517,40 @@ export function MapClient({ autoscuole, isAdmin = false }: { autoscuole: MapAuto
       ? (REGIONI_PROVINCE[selectedRegione] ?? []).filter((p) => presentProvinces.includes(p)).sort()
       : []
 
-  // Territory polygons
+  // Territory polygons — based on where autoscuole are, using real region boundaries
   const territoryPolygons = useMemo(() => {
+    const boundaries = regionBoundaries as Record<string, { lat: number; lng: number }[][]>
+
     if (!isAdmin) {
-      // Sales: single polygon for their autoscuole
-      const pts = autoscuole.filter((a) => a.lat && a.lng).map((a) => ({ lat: a.lat!, lng: a.lng! }))
-      if (pts.length < 3) return []
-      return [{ name: "Il tuo territorio", color: "#EC4899", hull: padHull(convexHull(pts), 0.04) }]
+      const regionSet = new Set<string>()
+      for (const a of autoscuole) {
+        const region = PROVINCE_TO_REGIONE[a.province]
+        if (region) regionSet.add(region)
+      }
+      return [...regionSet].map((region) => ({
+        name: region,
+        color: "#EC4899",
+        paths: boundaries[region] ?? [],
+      })).filter((t) => t.paths.length > 0)
     }
-    // Admin: one polygon per sales user
-    const bySales: Record<string, { name: string; color: string; pts: { lat: number; lng: number }[] }> = {}
+
+    // Admin: one region per sales, based on their actual autoscuole
+    const salesRegions: Record<string, { name: string; color: string; regions: Set<string> }> = {}
     for (const a of autoscuole) {
-      if (!a.salesId || !a.lat || !a.lng) continue
-      if (!bySales[a.salesId]) bySales[a.salesId] = { name: a.salesName!, color: a.salesColor ?? "#94A3B8", pts: [] }
-      bySales[a.salesId].pts.push({ lat: a.lat, lng: a.lng })
+      if (!a.salesId) continue
+      const region = PROVINCE_TO_REGIONE[a.province]
+      if (!region) continue
+      if (!salesRegions[a.salesId]) salesRegions[a.salesId] = { name: a.salesName!, color: a.salesColor ?? "#94A3B8", regions: new Set() }
+      salesRegions[a.salesId].regions.add(region)
     }
-    return Object.values(bySales)
-      .filter((s) => s.pts.length >= 3)
-      .map((s) => ({ name: s.name, color: s.color, hull: padHull(convexHull(s.pts), 0.04) }))
+
+    return Object.values(salesRegions).flatMap((s) =>
+      [...s.regions].map((region) => ({
+        name: `${s.name} — ${region}`,
+        color: s.color,
+        paths: boundaries[region] ?? [],
+      })).filter((t) => t.paths.length > 0)
+    )
   }, [autoscuole, isAdmin])
 
   // Map center & zoom
@@ -494,7 +683,7 @@ export function MapClient({ autoscuole, isAdmin = false }: { autoscuole: MapAuto
                   {a.name.replace("Autoscuola ", "")}
                 </p>
                 <p className="text-[11.5px] text-ink-400">
-                  {a.town}, {a.province}
+                  {a.town}, {formatProvince(a.province)}
                   {isAdmin && a.salesName && <span> · {a.salesName}</span>}
                 </p>
               </div>
@@ -517,31 +706,28 @@ export function MapClient({ autoscuole, isAdmin = false }: { autoscuole: MapAuto
               style={{ width: "100%", height: "100%" }}
             >
               {/* Territory outlines */}
-              {territoryPolygons.map((tp) => (
-                <Polygon
-                  key={tp.name}
-                  paths={tp.hull}
-                  strokeColor={tp.color}
-                  strokeOpacity={0.7}
-                  strokeWeight={2}
-                  fillColor={tp.color}
-                  fillOpacity={0.06}
-                />
-              ))}
-
-              {filtered.map((a) => {
-                if (!a.lat || !a.lng) return null
-                return (
-                  <AutoscuolaMarker
-                    key={a.id}
-                    a={a}
-                    isHovered={hoveredId === a.id}
-                    onHover={handleHover}
-                    onLeave={handleLeave}
-                    isAdmin={isAdmin}
+              {territoryPolygons.map((tp) =>
+                tp.paths.map((ring, i) => (
+                  <Polygon
+                    key={`${tp.name}-${i}`}
+                    paths={ring}
+                    strokeColor={tp.color}
+                    strokeOpacity={0.8}
+                    strokeWeight={2}
+                    fillColor={tp.color}
+                    fillOpacity={0.08}
+                    zIndex={10}
                   />
-                )
-              })}
+                ))
+              )}
+
+              <ClusteredMarkers
+                items={filtered}
+                hoveredId={hoveredId}
+                onHover={handleHover}
+                onLeave={handleLeave}
+                isAdmin={isAdmin}
+              />
               <MapControls bounds={mapBounds} />
             </Map>
           </APIProvider>
@@ -570,15 +756,17 @@ export function MapClient({ autoscuole, isAdmin = false }: { autoscuole: MapAuto
                   Territori
                 </p>
                 <div className="space-y-1">
-                  {territoryPolygons.map((tp) => (
-                    <div key={tp.name} className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-4 rounded-[2px] border"
-                        style={{ backgroundColor: tp.color + "20", borderColor: tp.color }}
-                      />
-                      <span className="text-[10.5px] text-ink-600">{tp.name}</span>
-                    </div>
-                  ))}
+                  {territoryPolygons
+                    .filter((tp, i, arr) => arr.findIndex((t) => t.name.split(" — ")[0] === tp.name.split(" — ")[0]) === i)
+                    .map((tp) => (
+                      <div key={tp.name} className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-4 rounded-[2px] border"
+                          style={{ backgroundColor: tp.color + "20", borderColor: tp.color }}
+                        />
+                        <span className="text-[10.5px] text-ink-600">{tp.name.split(" — ")[0]}</span>
+                      </div>
+                    ))}
                 </div>
               </>
             )}
