@@ -134,8 +134,11 @@ export function CalendarioClient({
       left = Math.max(8, (window.innerWidth - POPOVER_W) / 2)
     }
 
+    // Clamp top so popover always has room — prefer aligning to event top,
+    // but slide up if the event is in the bottom half of the screen
+    const maxTop = Math.max(8, window.innerHeight * 0.35)
     setDraftPopoverPos({
-      top: Math.min(Math.max(8, rect.top), window.innerHeight - 200),
+      top: Math.min(Math.max(8, rect.top), maxTop),
       left,
     })
     setDragOffset(null)
@@ -1137,17 +1140,19 @@ export function CalendarioClient({
       )}
 
       {/* Draft popover — no mask, floating next to draft block */}
-      {draft && draftPopoverPos && (
+      {draft && draftPopoverPos && (() => {
+        const popoverTop = Math.max(8, (dragOffset?.y ?? 0) + draftPopoverPos.top)
+        return (
         <div
           ref={draftPopoverRef}
           className="fixed z-50 w-[400px] overflow-y-auto rounded-[20px] border border-border-1 bg-surface shadow-xl"
           style={{
-            top: Math.max(8, (dragOffset?.y ?? 0) + draftPopoverPos.top),
+            top: popoverTop,
             left: Math.max(8, Math.min(
               (dragOffset?.x ?? 0) + draftPopoverPos.left,
               window.innerWidth - 420
             )),
-            maxHeight: "calc(100vh - 16px)",
+            maxHeight: `calc(100vh - ${popoverTop + 8}px)`,
           }}
         >
           {/* Drag handle bar */}
@@ -1378,7 +1383,8 @@ export function CalendarioClient({
           </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
     </div>
   )
