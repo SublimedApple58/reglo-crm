@@ -1145,14 +1145,13 @@ export function CalendarioClient({
         return (
         <div
           ref={draftPopoverRef}
-          className="fixed z-50 w-[400px] overflow-y-auto rounded-[20px] border border-border-1 bg-surface shadow-xl"
+          className="fixed z-50 w-[400px] rounded-[20px] border border-border-1 bg-surface shadow-xl"
           style={{
             top: popoverTop,
             left: Math.max(8, Math.min(
               (dragOffset?.x ?? 0) + draftPopoverPos.left,
               window.innerWidth - 420
             )),
-            maxHeight: `calc(100vh - ${popoverTop + 8}px)`,
           }}
         >
           {/* Drag handle bar */}
