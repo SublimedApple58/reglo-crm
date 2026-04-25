@@ -328,8 +328,8 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
     .set({ followUpAt: followUpAt ? new Date(followUpAt) : null })
     .where(eq(autoscuole.id, autoscuolaId))
 
-  // Create a calendar event + activity when setting a follow-up date
   if (followUpAt) {
+    // Create a calendar event + activity when setting a follow-up date
     const { createCalendarEvent } = await import("@/lib/actions/calendar")
     const [autoscuola] = await db
       .select({ name: autoscuole.name, email: autoscuole.email })
@@ -351,6 +351,33 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
         })
       } catch {
         // Calendar not connected — still save the follow-up date
+      }
+    }
+  } else {
+    // Removing follow-up: cancel the most recent scheduled follow-up activity + delete calendar event
+    const { deleteCalendarEvent } = await import("@/lib/actions/calendar")
+    const followUpActivities = await db
+      .select({ id: activities.id, calendarEventId: activities.calendarEventId })
+      .from(activities)
+      .where(
+        and(
+          eq(activities.autoscuolaId, autoscuolaId),
+          eq(activities.type, "meeting"),
+          eq(activities.status, "scheduled"),
+          sql`${activities.title} LIKE 'Follow-up con %'`
+        )
+      )
+      .orderBy(desc(activities.createdAt))
+      .limit(1)
+
+    for (const act of followUpActivities) {
+      await db.update(activities).set({ status: "cancelled" }).where(eq(activities.id, act.id))
+      if (act.calendarEventId) {
+        try {
+          await deleteCalendarEvent(act.calendarEventId)
+        } catch {
+          // Calendar event may already be deleted
+        }
       }
     }
   }
