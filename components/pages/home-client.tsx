@@ -177,7 +177,7 @@ export function HomeClient({
       </Link>
 
       {/* Upcoming Meetings + Grain — two cards side by side */}
-      <div className="grid grid-cols-[1fr_auto] gap-4">
+      <div className="grid grid-cols-[1fr_auto] items-start gap-4">
         {/* Upcoming Meetings */}
         {googleConnected ? (
           <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
