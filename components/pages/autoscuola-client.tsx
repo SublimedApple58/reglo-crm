@@ -17,21 +17,25 @@ import {
   Sparkles,
   FileText,
   StickyNote,
-  ExternalLink,
   Download,
   Trash2,
   Upload,
   File,
 } from "lucide-react"
 import { STAGES } from "@/lib/constants"
-import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, deleteAutoscuola } from "@/lib/actions/autoscuole"
+import { formatProvince } from "@/lib/utils"
+import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, deleteAutoscuola, setFollowUp } from "@/lib/actions/autoscuole"
 import { deleteDocument } from "@/lib/actions/documents"
+import { MeetingDialog } from "@/components/meeting-dialog"
+import { DateTimePicker } from "@/components/date-time-picker"
 import type { Autoscuola, PipelineStage, User, Activity, Document } from "@/lib/db/schema"
 
 type ActivityFlat = Activity & {
   userName: string
   userColor: string
   userInitials: string
+  status: string
+  scheduledAt: Date | null
 }
 
 type DocumentWithUser = {
@@ -71,6 +75,7 @@ export function AutoscuolaClient({
   stages,
   documents,
   isAdmin = false,
+  googleConnected = false,
 }: {
   autoscuola: Autoscuola
   stage: PipelineStage
@@ -79,6 +84,7 @@ export function AutoscuolaClient({
   stages: typeof STAGES extends readonly (infer T)[] ? T[] : never
   documents: DocumentWithUser[]
   isAdmin?: boolean
+  googleConnected?: boolean
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("attivita")
@@ -87,6 +93,7 @@ export function AutoscuolaClient({
   const [activityText, setActivityText] = useState("")
   const [activityType, setActivityType] = useState<"call" | "email" | "meeting" | "note">("call")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showMeetingDialog, setShowMeetingDialog] = useState(false)
 
   const currentStageOrder = STAGES.findIndex((s) => s.id === currentStageId)
 
@@ -152,7 +159,7 @@ export function AutoscuolaClient({
               </h1>
               <p className="flex items-center gap-2 text-[12.5px] text-ink-500">
                 <MapPin className="h-3 w-3" />
-                {autoscuola.town}, {autoscuola.province}
+                {autoscuola.town}, {formatProvince(autoscuola.province)}
                 {autoscuola.students ? (
                   <>
                     <span className="mx-1 text-ink-300">·</span>
@@ -191,11 +198,13 @@ export function AutoscuolaClient({
                   Email
                 </button>
               )}
-              <a href="https://cal.com/reglo?redirect=false" target="_blank" rel="noopener noreferrer" className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90">
+              <button
+                onClick={() => setShowMeetingDialog(true)}
+                className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90"
+              >
                 <Calendar className="h-3.5 w-3.5" />
                 Fissa meeting
-                <ExternalLink className="h-3 w-3 opacity-70" />
-              </a>
+              </button>
             </div>
           </div>
 
@@ -337,11 +346,34 @@ export function AutoscuolaClient({
                           })
                         : ""}
                     </p>
-                    <p className="text-[13px] font-semibold text-ink-900">{a.title}</p>
+                    <p className={`text-[13px] font-semibold ${a.status === "cancelled" ? "text-ink-400 line-through" : "text-ink-900"}`}>
+                      {a.title}
+                      {a.status === "cancelled" && (
+                        <span className="ml-2 inline-block rounded-[4px] bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-400 no-underline" style={{ textDecoration: "none" }}>
+                          Annullato
+                        </span>
+                      )}
+                      {a.status === "scheduled" && a.scheduledAt && new Date(a.scheduledAt) > new Date() && (
+                        <span className="ml-2 inline-block rounded-[4px] bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-500 no-underline">
+                          Programmato
+                        </span>
+                      )}
+                    </p>
                     {a.body && (
                       <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-600">
                         {a.body}
                       </p>
+                    )}
+                    {a.meetLink && (
+                      <a
+                        href={a.meetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1.5 inline-flex items-center gap-1.5 rounded-[999px] bg-pink/10 px-3 py-1 text-[11.5px] font-semibold text-pink hover:bg-pink/20"
+                      >
+                        <Video className="h-3 w-3" />
+                        Partecipa al meeting
+                      </a>
                     )}
                   </div>
                 ))}
@@ -489,7 +521,27 @@ export function AutoscuolaClient({
           </div>
         </div>
 
+        {/* Follow-up */}
+        <div className="border-b border-border-1 p-5">
+          <h3 className="mb-3 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
+            Follow-up
+          </h3>
+          <FollowUpPicker autoscuolaId={autoscuola.id} initialDate={autoscuola.followUpAt} />
+        </div>
+
       </div>
+
+      {/* Meeting dialog */}
+      {showMeetingDialog && (
+        <MeetingDialog
+          onClose={() => setShowMeetingDialog(false)}
+          onCreated={() => setShowMeetingDialog(false)}
+          defaultTitle={`Meeting con ${autoscuola.name}`}
+          defaultGuests={autoscuola.email ? [autoscuola.email] : []}
+          autoscuolaId={autoscuola.id}
+          googleConnected={googleConnected}
+        />
+      )}
 
       {/* Delete confirmation */}
       {showDeleteConfirm && (
@@ -893,6 +945,51 @@ function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
           </span>
         )}
       </div>
+    </div>
+  )
+}
+
+function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; initialDate: Date | null }) {
+  const [isPending, startTransition] = useTransition()
+  const [date, setDate] = useState(initialDate ? new Date(initialDate).toISOString().slice(0, 16) : "")
+
+  const followUpDate = date ? new Date(date) : null
+  const now = new Date()
+  const isExpired = followUpDate && followUpDate < now
+  const diffMs = followUpDate ? followUpDate.getTime() - now.getTime() : 0
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+  function handleChange(value: string) {
+    setDate(value)
+    startTransition(() => {
+      setFollowUp(autoscuolaId, value || null)
+    })
+  }
+
+  return (
+    <div>
+      <div className="mb-2">
+        <DateTimePicker
+          value={date || new Date().toISOString().slice(0, 16)}
+          onChange={(v) => handleChange(v)}
+        />
+      </div>
+      {followUpDate && (
+        <p className="text-[12px]" style={{ color: isExpired ? "#EF4444" : "#10B981" }}>
+          {isExpired
+            ? `Scaduto da ${Math.abs(diffDays)} giorn${Math.abs(diffDays) === 1 ? "o" : "i"}`
+            : `Tra ${diffDays} giorn${diffDays === 1 ? "o" : "i"}`}
+        </p>
+      )}
+      {date && (
+        <button
+          onClick={() => handleChange("")}
+          disabled={isPending}
+          className="mt-1 text-[11px] text-ink-400 hover:text-ink-600"
+        >
+          Rimuovi follow-up
+        </button>
+      )}
     </div>
   )
 }

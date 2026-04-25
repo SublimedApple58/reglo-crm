@@ -1,8 +1,9 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { autoscuole, pipelineStages, activities, users, commissionLines, documents } from "@/lib/db/schema"
-import { eq, and, ilike, or, desc, asc, sql } from "drizzle-orm"
+import { autoscuole, pipelineStages, activities, users, commissionLines, documents, salesTerritories } from "@/lib/db/schema"
+import { eq, and, ilike, or, desc, asc, sql, inArray } from "drizzle-orm"
+import { REGIONI_PROVINCE } from "@/lib/constants"
 import { auth } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
@@ -125,9 +126,24 @@ export async function createAutoscuola(data: {
   if (!session?.user) throw new Error("Non autorizzato")
 
   const id = `as_${Date.now()}`
+
+  // Auto-assign: check if the province belongs to a region assigned to a sales
+  let assignedTo = data.assignedTo ?? null
+  if (!assignedTo) {
+    const allTerritories = await db.select().from(salesTerritories)
+    for (const t of allTerritories) {
+      const provinces = REGIONI_PROVINCE[t.region] ?? []
+      if (provinces.includes(data.province)) {
+        assignedTo = t.userId
+        break
+      }
+    }
+  }
+
   await db.insert(autoscuole).values({
     id,
     ...data,
+    assignedTo,
     pipelineValue: 0,
     students: 0,
     lastContact: 0,
@@ -154,12 +170,19 @@ export async function createActivity(data: {
   type: "call" | "email" | "meeting" | "note"
   title: string
   body?: string
+  meetLink?: string | null
+  calendarEventId?: string | null
 }) {
   const session = await auth()
   if (!session?.user) throw new Error("Non autorizzato")
 
   await db.insert(activities).values({
-    ...data,
+    autoscuolaId: data.autoscuolaId,
+    type: data.type,
+    title: data.title,
+    body: data.body,
+    meetLink: data.meetLink ?? null,
+    calendarEventId: data.calendarEventId ?? null,
     userId: session.user.id,
   })
 
@@ -219,6 +242,116 @@ export async function getRecentActivities(limit: number = 10) {
     .innerJoin(autoscuole, eq(activities.autoscuolaId, autoscuole.id))
     .orderBy(desc(activities.createdAt))
     .limit(limit)
+}
+
+// ── Sales Territories ─────────────────────────────────────────────────
+
+export async function getSalesTerritories(userId: string) {
+  return db.select().from(salesTerritories).where(eq(salesTerritories.userId, userId))
+}
+
+export async function getAllSalesTerritories() {
+  return db
+    .select({ territory: salesTerritories, user: { id: users.id, name: users.name } })
+    .from(salesTerritories)
+    .innerJoin(users, eq(salesTerritories.userId, users.id))
+}
+
+export async function assignRegion(userId: string, region: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  await db.insert(salesTerritories).values({ userId, region }).onConflictDoNothing()
+
+  // Auto-assign all unassigned autoscuole in that region's provinces
+  const provinces = REGIONI_PROVINCE[region] ?? []
+  if (provinces.length > 0) {
+    await db
+      .update(autoscuole)
+      .set({ assignedTo: userId })
+      .where(
+        and(
+          inArray(autoscuole.province, provinces),
+          sql`${autoscuole.assignedTo} IS NULL`
+        )
+      )
+  }
+
+  revalidatePath("/admin/assegnazioni")
+  revalidatePath("/pipeline")
+}
+
+export async function unassignRegion(userId: string, region: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  await db.delete(salesTerritories).where(
+    and(eq(salesTerritories.userId, userId), eq(salesTerritories.region, region))
+  )
+
+  // Unassign all autoscuole in that region's provinces from this sales
+  const provinces = REGIONI_PROVINCE[region] ?? []
+  if (provinces.length > 0) {
+    await db
+      .update(autoscuole)
+      .set({ assignedTo: null })
+      .where(
+        and(
+          eq(autoscuole.assignedTo, userId),
+          inArray(autoscuole.province, provinces)
+        )
+      )
+  }
+
+  revalidatePath("/admin/assegnazioni")
+  revalidatePath("/pipeline")
+}
+
+export async function getAutoscuoleBySales(userId: string) {
+  return db
+    .select({
+      autoscuola: autoscuole,
+      stage: pipelineStages,
+    })
+    .from(autoscuole)
+    .innerJoin(pipelineStages, eq(autoscuole.stageId, pipelineStages.id))
+    .where(eq(autoscuole.assignedTo, userId))
+    .orderBy(asc(autoscuole.name))
+}
+
+export async function setFollowUp(autoscuolaId: string, followUpAt: string | null) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  await db
+    .update(autoscuole)
+    .set({ followUpAt: followUpAt ? new Date(followUpAt) : null })
+    .where(eq(autoscuole.id, autoscuolaId))
+
+  revalidatePath(`/autoscuola/${autoscuolaId}`)
+  revalidatePath("/pipeline")
+}
+
+export async function searchAutoscuole(query: string) {
+  if (!query || query.length < 2) return []
+
+  return db
+    .select({
+      id: autoscuole.id,
+      name: autoscuole.name,
+      town: autoscuole.town,
+      province: autoscuole.province,
+      email: autoscuole.email,
+    })
+    .from(autoscuole)
+    .where(
+      or(
+        ilike(autoscuole.name, `%${query}%`),
+        ilike(autoscuole.town, `%${query}%`)
+      )
+    )
+    .orderBy(asc(autoscuole.name))
+    .limit(10)
 }
 
 export async function searchGlobal(query: string) {

@@ -67,6 +67,42 @@ export const REGIONI_PROVINCE: Record<string, string[]> = {
   "Veneto": ["BL", "PD", "RO", "TV", "VE", "VR", "VI"],
 }
 
+export const PROVINCE_NAMES: Record<string, string> = {
+  AG: "Agrigento", AL: "Alessandria", AN: "Ancona", AO: "Aosta", AP: "Ascoli Piceno",
+  AQ: "L'Aquila", AR: "Arezzo", AT: "Asti", AV: "Avellino", BA: "Bari",
+  BG: "Bergamo", BI: "Biella", BL: "Belluno", BN: "Benevento", BO: "Bologna",
+  BR: "Brindisi", BS: "Brescia", BT: "Barletta-Andria-Trani", BZ: "Bolzano",
+  CA: "Cagliari", CB: "Campobasso", CE: "Caserta", CH: "Chieti", CL: "Caltanissetta",
+  CN: "Cuneo", CO: "Como", CR: "Cremona", CS: "Cosenza", CT: "Catania",
+  CZ: "Catanzaro", EN: "Enna", FC: "Forlì-Cesena", FE: "Ferrara", FG: "Foggia",
+  FI: "Firenze", FM: "Fermo", FR: "Frosinone", GE: "Genova", GO: "Gorizia",
+  GR: "Grosseto", IM: "Imperia", IS: "Isernia", KR: "Crotone", LC: "Lecco",
+  LE: "Lecce", LI: "Livorno", LO: "Lodi", LT: "Latina", LU: "Lucca",
+  MB: "Monza e Brianza", MC: "Macerata", ME: "Messina", MI: "Milano", MN: "Mantova",
+  MO: "Modena", MS: "Massa-Carrara", MT: "Matera", NA: "Napoli", NO: "Novara",
+  NU: "Nuoro", OR: "Oristano", PA: "Palermo", PC: "Piacenza", PD: "Padova",
+  PE: "Pescara", PG: "Perugia", PI: "Pisa", PN: "Pordenone", PO: "Prato",
+  PR: "Parma", PT: "Pistoia", PU: "Pesaro e Urbino", PV: "Pavia", PZ: "Potenza",
+  RA: "Ravenna", RC: "Reggio Calabria", RE: "Reggio Emilia", RG: "Ragusa",
+  RI: "Rieti", RM: "Roma", RN: "Rimini", RO: "Rovigo", SA: "Salerno",
+  SI: "Siena", SO: "Sondrio", SP: "La Spezia", SR: "Siracusa", SS: "Sassari",
+  SU: "Sud Sardegna", SV: "Savona", TA: "Taranto", TE: "Teramo", TN: "Trento",
+  TO: "Torino", TP: "Trapani", TR: "Terni", TS: "Trieste", TV: "Treviso",
+  UD: "Udine", VA: "Varese", VB: "Verbano-Cusio-Ossola", VC: "Vercelli",
+  VE: "Venezia", VI: "Vicenza", VR: "Verona", VT: "Viterbo", VV: "Vibo Valentia",
+}
+
+export const EVENT_PRESETS = [
+  { id: "follow_up", label: "Follow-up", titleTemplate: "Follow-up con {autoscuola}", duration: 30, meet: true },
+  { id: "demo", label: "Demo", titleTemplate: "Demo per {autoscuola}", duration: 45, meet: true },
+  { id: "chiusura", label: "Chiusura", titleTemplate: "Chiusura con {autoscuola}", duration: 60, meet: true },
+  { id: "primo_contatto", label: "Primo contatto", titleTemplate: "Primo contatto con {autoscuola}", duration: 15, meet: false },
+  { id: "onboarding", label: "Onboarding", titleTemplate: "Onboarding {autoscuola}", duration: 60, meet: true },
+  { id: "custom", label: "Personalizzato", titleTemplate: "", duration: 60, meet: true },
+] as const
+
+export type EventPresetId = (typeof EVENT_PRESETS)[number]["id"]
+
 export const SALES_COLORS = [
   "#EC4899", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",
   "#EF4444", "#06B6D4", "#F97316", "#14B8A6",
