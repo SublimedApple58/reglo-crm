@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useCallback, useRef } from "react"
+import { useState, useTransition, useCallback, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Building,
@@ -981,6 +981,19 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
     })
   }
 
+  // Ref to programmatically click the DateTimePicker button
+  const pickerBtnRef = useRef<HTMLDivElement>(null)
+
+  // When showPicker becomes true, auto-open the DateTimePicker calendar
+  useEffect(() => {
+    if (showPicker && !date) {
+      setTimeout(() => {
+        const btn = pickerBtnRef.current?.querySelector("button")
+        btn?.click()
+      }, 50)
+    }
+  }, [showPicker, date])
+
   if (!date && !showPicker) {
     return (
       <button
@@ -995,7 +1008,7 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
 
   return (
     <div>
-      <div className="mb-2">
+      <div className="mb-2" ref={pickerBtnRef}>
         <DateTimePicker
           value={date || new Date().toISOString().slice(0, 16)}
           onChange={(v) => handleChange(v)}
