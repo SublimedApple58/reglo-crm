@@ -94,7 +94,7 @@ export const PROVINCE_NAMES: Record<string, string> = {
 
 export const EVENT_PRESETS = [
   { id: "primo_contatto", label: "Primo contatto", titleTemplate: "Primo contatto con {autoscuola}", duration: 15, meet: false },
-  { id: "follow_up", label: "Follow-up", titleTemplate: "Follow-up con {autoscuola}", duration: 30, meet: true },
+  { id: "follow_up", label: "Follow-up", titleTemplate: "Follow-up con {autoscuola}", duration: 30, meet: false },
   { id: "demo", label: "Demo", titleTemplate: "Demo per {autoscuola}", duration: 45, meet: true },
   { id: "chiusura", label: "Chiusura", titleTemplate: "Chiusura con {autoscuola}", duration: 60, meet: true },
   { id: "onboarding", label: "Onboarding", titleTemplate: "Onboarding {autoscuola}", duration: 60, meet: true },

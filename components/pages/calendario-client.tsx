@@ -7,8 +7,8 @@ import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { Video, ExternalLink, X, Plus, Users, Calendar, Clock, Trash2, Pencil, Search, Building } from "lucide-react"
 import Link from "next/link"
-import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, rsvpCalendarEvent } from "@/lib/actions/calendar"
-import { searchAutoscuole } from "@/lib/actions/autoscuole"
+import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, rsvpCalendarEvent, createGoogleTask } from "@/lib/actions/calendar"
+import { searchAutoscuole, setFollowUp } from "@/lib/actions/autoscuole"
 import { EVENT_PRESETS } from "@/lib/constants"
 import { DateTimePicker } from "@/components/date-time-picker"
 import type { EventClickArg, DatesSetArg, DateSelectArg, EventChangeArg } from "@fullcalendar/core"
@@ -430,13 +430,20 @@ export function CalendarioClient({
   // Create event from draft popover
   const handleDraftSubmit = useCallback(() => {
     if (!draft) return
-    // For non-custom presets, use the auto-generated title; for custom, use the manual title
     const title = draftPreset !== "custom"
       ? (computedTitle?.trim() || "Nuovo evento")
       : (draftTitle.trim() || "Nuovo evento")
 
     startTransition(async () => {
       try {
+        if (draftPreset === "follow_up" && draftAutoscuola) {
+          // Follow-up → Google Task + set followUpAt on autoscuola
+          await setFollowUp(draftAutoscuola.id, new Date(draft.start).toISOString())
+          clearDraft()
+          refreshEvents()
+          return
+        }
+
         await createCalendarEvent({
           title,
           description: draftNotes || undefined,
@@ -1334,73 +1341,86 @@ export function CalendarioClient({
               />
             </div>
 
-            {/* Guests */}
-            <div>
-              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Ospiti</label>
-              <div className="flex flex-wrap gap-1.5 rounded-[10px] border border-border-1 bg-surface p-2">
-                {draftGuests.map((g) => (
-                  <span key={g} className="flex items-center gap-1 rounded-[6px] bg-surface-2 px-2 py-1 text-[12px] text-ink-700">
-                    {g}
-                    <button onClick={() => setDraftGuests(draftGuests.filter((x) => x !== g))} className="cursor-pointer text-ink-400 hover:text-red-500">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-                <input
-                  value={draftGuestInput}
-                  onChange={(e) => setDraftGuestInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault()
+            {/* Follow-up hint */}
+            {draftPreset === "follow_up" && (
+              <p className="rounded-[10px] bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
+                Il follow-up verrà creato come attività su Google Calendar{draftAutoscuola ? "" : " — seleziona un'autoscuola"}.
+              </p>
+            )}
+
+            {/* Guests — hidden for follow-up */}
+            {draftPreset !== "follow_up" && (
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Ospiti</label>
+                <div className="flex flex-wrap gap-1.5 rounded-[10px] border border-border-1 bg-surface p-2">
+                  {draftGuests.map((g) => (
+                    <span key={g} className="flex items-center gap-1 rounded-[6px] bg-surface-2 px-2 py-1 text-[12px] text-ink-700">
+                      {g}
+                      <button onClick={() => setDraftGuests(draftGuests.filter((x) => x !== g))} className="cursor-pointer text-ink-400 hover:text-red-500">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    value={draftGuestInput}
+                    onChange={(e) => setDraftGuestInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault()
+                        const email = draftGuestInput.trim()
+                        if (email && email.includes("@") && !draftGuests.includes(email)) {
+                          setDraftGuests([...draftGuests, email])
+                          setDraftGuestInput("")
+                        }
+                      }
+                    }}
+                    onBlur={() => {
                       const email = draftGuestInput.trim()
                       if (email && email.includes("@") && !draftGuests.includes(email)) {
                         setDraftGuests([...draftGuests, email])
                         setDraftGuestInput("")
                       }
-                    }
-                  }}
-                  onBlur={() => {
-                    const email = draftGuestInput.trim()
-                    if (email && email.includes("@") && !draftGuests.includes(email)) {
-                      setDraftGuests([...draftGuests, email])
-                      setDraftGuestInput("")
-                    }
-                  }}
-                  placeholder={draftGuests.length === 0 ? "email@esempio.com" : ""}
-                  className="min-w-[120px] flex-1 bg-transparent px-1 py-1 text-[12.5px] text-ink-900 outline-none placeholder:text-ink-400"
-                />
+                    }}
+                    placeholder={draftGuests.length === 0 ? "email@esempio.com" : ""}
+                    className="min-w-[120px] flex-1 bg-transparent px-1 py-1 text-[12.5px] text-ink-900 outline-none placeholder:text-ink-400"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Meet link toggle */}
-            <label className="flex cursor-pointer items-center gap-3">
-              <div
-                onClick={() => setDraftMeetLink(!draftMeetLink)}
-                className="flex h-5 w-9 items-center rounded-full p-0.5 transition-colors"
-                style={{ backgroundColor: draftMeetLink ? "#EC4899" : "#CBD5E1" }}
-              >
+            {/* Meet link toggle — hidden for follow-up */}
+            {draftPreset !== "follow_up" && (
+              <label className="flex cursor-pointer items-center gap-3">
                 <div
-                  className="h-4 w-4 rounded-full bg-white shadow transition-transform"
-                  style={{ transform: draftMeetLink ? "translateX(16px)" : "translateX(0)" }}
+                  onClick={() => setDraftMeetLink(!draftMeetLink)}
+                  className="flex h-5 w-9 items-center rounded-full p-0.5 transition-colors"
+                  style={{ backgroundColor: draftMeetLink ? "#EC4899" : "#CBD5E1" }}
+                >
+                  <div
+                    className="h-4 w-4 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: draftMeetLink ? "translateX(16px)" : "translateX(0)" }}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Video className="h-3.5 w-3.5 text-ink-500" />
+                  <span className="text-[13px] font-medium text-ink-700">Crea link Google Meet</span>
+                </div>
+              </label>
+            )}
+
+            {/* Notes — hidden for follow-up */}
+            {draftPreset !== "follow_up" && (
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Note (opzionale)</label>
+                <textarea
+                  value={draftNotes}
+                  onChange={(e) => setDraftNotes(e.target.value)}
+                  placeholder="Aggiungi dettagli…"
+                  rows={3}
+                  className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                <Video className="h-3.5 w-3.5 text-ink-500" />
-                <span className="text-[13px] font-medium text-ink-700">Crea link Google Meet</span>
-              </div>
-            </label>
-
-            {/* Notes */}
-            <div>
-              <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Note (opzionale)</label>
-              <textarea
-                value={draftNotes}
-                onChange={(e) => setDraftNotes(e.target.value)}
-                placeholder="Aggiungi dettagli…"
-                rows={3}
-                className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
-              />
-            </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-1">
@@ -1412,10 +1432,10 @@ export function CalendarioClient({
               </button>
               <button
                 onClick={handleDraftSubmit}
-                disabled={isPending}
+                disabled={isPending || (draftPreset === "follow_up" && !draftAutoscuola)}
                 className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
               >
-                {isPending ? "Creazione..." : "Crea evento"}
+                {isPending ? "Creazione..." : draftPreset === "follow_up" ? "Crea follow-up" : "Crea evento"}
               </button>
             </div>
           </div>
