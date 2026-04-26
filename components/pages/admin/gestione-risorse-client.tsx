@@ -426,16 +426,6 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   )
 }
 
-const ICON_EMOJIS = [
-  "📋", "📊", "📈", "📉", "📌", "📎", "📝", "📄",
-  "📁", "📂", "🗂", "📑", "📒", "📓", "📔", "📕",
-  "💡", "🎯", "🔑", "🏆", "⭐", "🔥", "💰", "💎",
-  "🛡", "⚡", "🚀", "🎓", "🧩", "🔧", "⚙️", "🔍",
-  "📞", "✉️", "💬", "🗣", "🤝", "👥", "🏢", "🏗",
-  "📅", "⏰", "✅", "❌", "⚠️", "🚫", "🔔", "🔒",
-  "🎨", "🖊", "📐", "🗺", "🌍", "🏠", "🚗", "🎉",
-]
-
 function EmojiIconPicker({
   value,
   onChange,
@@ -445,6 +435,23 @@ function EmojiIconPicker({
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const Picker = useRef<React.ComponentType<Record<string, unknown>> | null>(null)
+  const [ready, setReady] = useState(false)
+
+  const dataRef = useRef<unknown>(null)
+
+  useEffect(() => {
+    if (open && !Picker.current) {
+      Promise.all([
+        import("@emoji-mart/react"),
+        import("@emoji-mart/data"),
+      ]).then(([mod, data]) => {
+        Picker.current = mod.default
+        dataRef.current = data.default
+        setReady(true)
+      })
+    }
+  }, [open])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -468,30 +475,26 @@ function EmojiIconPicker({
         )}
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[280px] rounded-[14px] border border-border-1 bg-surface p-3 shadow-xl">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Scegli icona</span>
-            {value && (
-              <button
-                onClick={() => { onChange(null); setOpen(false) }}
-                className="text-[11px] font-medium text-red-400 hover:text-red-500"
-              >
-                Rimuovi
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-8 gap-0.5">
-            {ICON_EMOJIS.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => { onChange(emoji); setOpen(false) }}
-                className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[18px] transition-colors hover:bg-surface-2"
-                style={{ backgroundColor: value === emoji ? "#FDF2F8" : undefined }}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
+        <div className="absolute left-0 top-full z-50 mt-1">
+          {value && (
+            <button
+              onClick={() => { onChange(null); setOpen(false) }}
+              className="mb-1 rounded-[8px] border border-border-1 bg-surface px-3 py-1.5 text-[11px] font-medium text-red-400 shadow-sm hover:text-red-500"
+            >
+              Rimuovi icona
+            </button>
+          )}
+          {ready && Picker.current && (
+            <Picker.current
+              data={dataRef.current}
+              onEmojiSelect={(e: { native: string }) => { onChange(e.native); setOpen(false) }}
+              theme="light"
+              locale="it"
+              previewPosition="none"
+              skinTonePosition="search"
+              set="native"
+            />
+          )}
         </div>
       )}
     </div>
