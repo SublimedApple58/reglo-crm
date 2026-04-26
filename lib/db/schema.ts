@@ -83,6 +83,7 @@ export const news = pgTable("news", {
   excerpt: text("excerpt"),
   body: text("body"),
   pinned: boolean("pinned").default(false),
+  icon: text("icon"),
   authorId: text("author_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })

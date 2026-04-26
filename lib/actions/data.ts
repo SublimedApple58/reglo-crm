@@ -103,6 +103,7 @@ export async function createNews(data: {
   excerpt?: string
   body?: string
   pinned?: boolean
+  icon?: string
   authorId: string
 }) {
   const [result] = await db.insert(news).values(data).returning()
@@ -119,6 +120,7 @@ export async function updateNews(
     excerpt: string
     body: string
     pinned: boolean
+    icon: string | null
   }>
 ) {
   await db.update(news).set(data).where(eq(news.id, id))

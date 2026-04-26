@@ -58,6 +58,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   const [editTitle, setEditTitle] = useState(selected?.title ?? "")
   const [editCategory, setEditCategory] = useState(selected?.category ?? RESOURCE_CATEGORIES[0].label)
   const [editTags, setEditTags] = useState<string[]>(selected?.tags ?? [])
+  const [editIcon, setEditIcon] = useState<string | null>(selected?.icon ?? null)
   const [newTag, setNewTag] = useState("")
   const [, setTick] = useState(0)
 
@@ -100,6 +101,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
     setEditTitle(res.title)
     setEditCategory(res.category)
     setEditTags(res.tags ?? [])
+    setEditIcon(res.icon ?? null)
     editor?.commands.setContent(res.html ?? "")
     setModified(false)
   }
@@ -115,12 +117,13 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         html,
         tags: editTags,
         pinned: selected.pinned ?? false,
+        icon: editIcon ?? undefined,
       })
       setModified(false)
       setResources((prev) =>
         prev.map((r) =>
           r.id === selected.id
-            ? { ...r, title: editTitle, category: editCategory, html, tags: editTags }
+            ? { ...r, title: editTitle, category: editCategory, html, tags: editTags, icon: editIcon }
             : r
         )
       )
@@ -223,7 +226,11 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
                   borderLeftColor: doc.id === selectedId ? "#EC4899" : "transparent",
                 }}
               >
-                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" />
+                {doc.icon ? (
+                  <span className="mt-0.5 shrink-0 text-[16px] leading-none">{doc.icon}</span>
+                ) : (
+                  <FileText className="mt-0.5 h-4 w-4 shrink-0 text-ink-400" />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-[13px] font-semibold text-ink-900">{doc.title}</p>
@@ -241,6 +248,10 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
           <div className="flex flex-col overflow-hidden">
             {/* Editor header */}
             <div className="flex items-center gap-3 border-b border-border-1 px-5 py-3">
+              <EmojiIconPicker
+                value={editIcon}
+                onChange={(emoji) => { setEditIcon(emoji); setModified(true) }}
+              />
               <div className="flex-1">
                 <input
                   value={editTitle}
@@ -412,6 +423,78 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         </div>
       )}
     </>
+  )
+}
+
+const ICON_EMOJIS = [
+  "📋", "📊", "📈", "📉", "📌", "📎", "📝", "📄",
+  "📁", "📂", "🗂", "📑", "📒", "📓", "📔", "📕",
+  "💡", "🎯", "🔑", "🏆", "⭐", "🔥", "💰", "💎",
+  "🛡", "⚡", "🚀", "🎓", "🧩", "🔧", "⚙️", "🔍",
+  "📞", "✉️", "💬", "🗣", "🤝", "👥", "🏢", "🏗",
+  "📅", "⏰", "✅", "❌", "⚠️", "🚫", "🔔", "🔒",
+  "🎨", "🖊", "📐", "🗺", "🌍", "🏠", "🚗", "🎉",
+]
+
+function EmojiIconPicker({
+  value,
+  onChange,
+}: {
+  value: string | null
+  onChange: (emoji: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] transition-colors hover:bg-surface-2"
+        title={value ? "Cambia icona" : "Aggiungi icona"}
+      >
+        {value ? (
+          <span className="text-[22px] leading-none">{value}</span>
+        ) : (
+          <FileText className="h-5 w-5 text-ink-300" />
+        )}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-[280px] rounded-[14px] border border-border-1 bg-surface p-3 shadow-xl">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Scegli icona</span>
+            {value && (
+              <button
+                onClick={() => { onChange(null); setOpen(false) }}
+                className="text-[11px] font-medium text-red-400 hover:text-red-500"
+              >
+                Rimuovi
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-8 gap-0.5">
+            {ICON_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => { onChange(emoji); setOpen(false) }}
+                className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[18px] transition-colors hover:bg-surface-2"
+                style={{ backgroundColor: value === emoji ? "#FDF2F8" : undefined }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
