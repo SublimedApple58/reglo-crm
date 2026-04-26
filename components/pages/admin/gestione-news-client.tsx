@@ -48,6 +48,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
   const [editTitle, setEditTitle] = useState(selected?.title ?? "")
   const [editCategory, setEditCategory] = useState(selected?.category ?? NEWS_CATEGORIES[0].id)
   const [editExcerpt, setEditExcerpt] = useState(selected?.excerpt ?? "")
+  const [, setTick] = useState(0)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -59,6 +60,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
     ],
     content: selected?.body ?? "",
     onUpdate: () => setModified(true),
+    onTransaction: () => setTick((t) => t + 1),
     editorProps: {
       attributes: {
         class:

@@ -59,6 +59,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   const [editCategory, setEditCategory] = useState(selected?.category ?? RESOURCE_CATEGORIES[0].label)
   const [editTags, setEditTags] = useState<string[]>(selected?.tags ?? [])
   const [newTag, setNewTag] = useState("")
+  const [, setTick] = useState(0)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -83,6 +84,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
     ],
     content: selected?.html ?? "",
     onUpdate: () => setModified(true),
+    onTransaction: () => setTick((t) => t + 1),
     editorProps: {
       attributes: {
         class:
