@@ -286,8 +286,8 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
               <ToolbarBtn icon={Undo2} action={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} title="Annulla" />
               <ToolbarBtn icon={Redo2} action={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} title="Ripeti" />
               <div className="mx-1 h-5 w-px bg-border-1" />
-              <ToolbarBtn icon={Heading1} action={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} title="Titolo 1" />
-              <ToolbarBtn icon={Heading2} action={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })} title="Titolo 2" />
+              <ToolbarBtn icon={Heading1} action={() => smartToggleHeading(editor, 1)} active={editor?.isActive("heading", { level: 1 })} title="Titolo 1" />
+              <ToolbarBtn icon={Heading2} action={() => smartToggleHeading(editor, 2)} active={editor?.isActive("heading", { level: 2 })} title="Titolo 2" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               <ToolbarBtn icon={Bold} action={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} title="Grassetto" />
               <ToolbarBtn icon={Italic} action={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} title="Corsivo" />
@@ -411,6 +411,42 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       )}
     </>
   )
+}
+
+function smartToggleHeading(editor: ReturnType<typeof useEditor> | null, level: 1 | 2) {
+  if (!editor) return
+
+  const { state } = editor
+  const { from, to } = state.selection
+
+  // No selection (just cursor) — default: toggle whole block
+  if (from === to) {
+    editor.chain().focus().toggleHeading({ level }).run()
+    return
+  }
+
+  const $from = state.doc.resolve(from)
+  const $to = state.doc.resolve(to)
+  const sameParent = $from.sameParent($to)
+  const parentNode = $from.parent
+  const blockStart = $from.start()
+  const blockEnd = $from.end()
+
+  // Full block, multi-block, or not a paragraph — default behavior
+  if (
+    !sameParent ||
+    parentNode.type.name !== "paragraph" ||
+    (from <= blockStart && to >= blockEnd)
+  ) {
+    editor.chain().focus().toggleHeading({ level }).run()
+    return
+  }
+
+  // Partial selection within a paragraph — split first, then apply heading
+  const chain = editor.chain().focus()
+  if (to < blockEnd) chain.setTextSelection(to).splitBlock()
+  if (from > blockStart) chain.setTextSelection(from).splitBlock()
+  chain.toggleHeading({ level }).run()
 }
 
 function ToolbarBtn({
