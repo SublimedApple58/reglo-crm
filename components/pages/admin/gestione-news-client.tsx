@@ -466,7 +466,11 @@ function smartToggleHeading(editor: ReturnType<typeof useEditor> | null, level: 
 
   const chain = editor.chain().focus()
   if (to < blockEnd) chain.setTextSelection(to).splitBlock()
-  if (from > blockStart) chain.setTextSelection(from).splitBlock()
+  if (from > blockStart) {
+    chain.setTextSelection(from).splitBlock()
+  } else if (to < blockEnd) {
+    chain.setTextSelection(from)
+  }
   chain.toggleHeading({ level }).run()
 }
 

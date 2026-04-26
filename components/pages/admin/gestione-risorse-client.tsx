@@ -445,7 +445,14 @@ function smartToggleHeading(editor: ReturnType<typeof useEditor> | null, level: 
   // Partial selection within a paragraph — split first, then apply heading
   const chain = editor.chain().focus()
   if (to < blockEnd) chain.setTextSelection(to).splitBlock()
-  if (from > blockStart) chain.setTextSelection(from).splitBlock()
+  if (from > blockStart) {
+    // Split at start — cursor lands in the selected-text block (correct)
+    chain.setTextSelection(from).splitBlock()
+  } else if (to < blockEnd) {
+    // Only split at end — cursor landed in the remainder block (wrong)
+    // Move back to the selected-text block
+    chain.setTextSelection(from)
+  }
   chain.toggleHeading({ level }).run()
 }
 
