@@ -331,8 +331,8 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
     .where(eq(autoscuole.id, autoscuolaId))
 
   if (followUpAt) {
-    // Create a Google Task + a lightweight calendar event for visibility
-    const { createGoogleTask, createCalendarEvent } = await import("@/lib/actions/calendar")
+    // Create a Google Task (attività) for follow-up
+    const { createGoogleTask } = await import("@/lib/actions/calendar")
     const [autoscuola] = await db
       .select({ name: autoscuole.name })
       .from(autoscuole)
@@ -341,9 +341,6 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
 
     if (autoscuola) {
       let taskId: string | null = null
-      let calendarEventId: string | null = null
-
-      // Google Task (for to-do list)
       try {
         taskId = await createGoogleTask({
           title: `Follow-up con ${autoscuola.name}`,
@@ -351,42 +348,21 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
           dueDate: followUpAt,
         })
       } catch {
-        // Tasks scope not granted yet
+        // Google not connected or tasks scope not granted
       }
 
-      // Calendar event (for visibility on the calendar)
-      try {
-        const start = new Date(followUpAt)
-        const end = new Date(start.getTime() + 15 * 60 * 1000)
-        const result = await createCalendarEvent({
-          title: `Follow-up: ${autoscuola.name}`,
-          description: `Promemoria follow-up\n${process.env.NEXTAUTH_URL ?? ""}/autoscuola/${autoscuolaId}`,
-          startDateTime: start.toISOString(),
-          endDateTime: end.toISOString(),
-          guests: [],
-          addMeetLink: false,
-          autoscuolaId,
-        })
-        calendarEventId = result.eventId
-      } catch {
-        // Calendar not connected
-      }
-
-      // Save activity if no calendar event was created (to avoid duplicate from createCalendarEvent)
-      if (!calendarEventId) {
-        await db.insert(activities).values({
-          autoscuolaId,
-          userId: session.user.id,
-          type: "meeting",
-          title: `Follow-up con ${autoscuola.name}`,
-          scheduledAt: new Date(followUpAt),
-          calendarEventId: taskId,
-        })
-      }
+      await db.insert(activities).values({
+        autoscuolaId,
+        userId: session.user.id,
+        type: "meeting",
+        title: `Follow-up con ${autoscuola.name}`,
+        scheduledAt: new Date(followUpAt),
+        calendarEventId: taskId,
+      })
     }
   } else {
-    // Removing follow-up: cancel activity + delete calendar event + delete task
-    const { deleteCalendarEvent, deleteGoogleTask } = await import("@/lib/actions/calendar")
+    // Removing follow-up: cancel activity + delete Google Task
+    const { deleteGoogleTask } = await import("@/lib/actions/calendar")
     const followUpActivities = await db
       .select({ id: activities.id, calendarEventId: activities.calendarEventId })
       .from(activities)
@@ -404,7 +380,6 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
     for (const act of followUpActivities) {
       await db.update(activities).set({ status: "cancelled" }).where(eq(activities.id, act.id))
       if (act.calendarEventId) {
-        try { await deleteCalendarEvent(act.calendarEventId) } catch {}
         try { await deleteGoogleTask(act.calendarEventId) } catch {}
       }
     }
