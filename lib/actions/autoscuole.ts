@@ -92,6 +92,8 @@ export async function updateAutoscuola(
     notes: string
     address: string
     assignedTo: string | null
+    interesseQuiz: boolean | null
+    interesseRinnovo: boolean | null
   }>
 ) {
   const session = await auth()

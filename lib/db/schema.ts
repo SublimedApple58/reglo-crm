@@ -57,6 +57,8 @@ export const autoscuole = pgTable("autoscuole", {
   expectedCloseDate: timestamp("expected_close_date"),
   info: jsonb("info").$type<Record<string, string>>(),
   followUpAt: timestamp("follow_up_at"),
+  interesseQuiz: boolean("interesse_quiz"),
+  interesseRinnovo: boolean("interesse_rinnovo"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

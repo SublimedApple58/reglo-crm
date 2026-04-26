@@ -560,6 +560,18 @@ export function AutoscuolaClient({
           <FollowUpPicker autoscuolaId={autoscuola.id} initialDate={autoscuola.followUpAt} />
         </div>
 
+        {/* Interessi */}
+        <div className="border-b border-border-1 p-5">
+          <h3 className="mb-3 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
+            Interessi
+          </h3>
+          <InteressiToggles
+            autoscuolaId={autoscuola.id}
+            initialQuiz={autoscuola.interesseQuiz}
+            initialRinnovo={autoscuola.interesseRinnovo}
+          />
+        </div>
+
       </div>
 
       {/* Meeting dialog */}
@@ -1292,6 +1304,58 @@ function ContrattoTab({
         <FileText className="h-3.5 w-3.5" />
         Correggi dati
       </button>
+    </div>
+  )
+}
+
+function InteressiToggles({
+  autoscuolaId,
+  initialQuiz,
+  initialRinnovo,
+}: {
+  autoscuolaId: string
+  initialQuiz: boolean | null
+  initialRinnovo: boolean | null
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [quiz, setQuiz] = useState(initialQuiz ?? false)
+  const [rinnovo, setRinnovo] = useState(initialRinnovo ?? false)
+
+  function toggle(field: "interesseQuiz" | "interesseRinnovo") {
+    const next = field === "interesseQuiz" ? !quiz : !rinnovo
+    if (field === "interesseQuiz") setQuiz(next)
+    else setRinnovo(next)
+    startTransition(() => {
+      updateAutoscuola(autoscuolaId, { [field]: next })
+    })
+  }
+
+  const items = [
+    { label: "Quiz patente", value: quiz, field: "interesseQuiz" as const },
+    { label: "Rinnovo patenti", value: rinnovo, field: "interesseRinnovo" as const },
+  ]
+
+  return (
+    <div className="space-y-2.5">
+      {items.map((item) => (
+        <button
+          key={item.field}
+          onClick={() => toggle(item.field)}
+          disabled={isPending}
+          className="flex w-full cursor-pointer items-center justify-between rounded-[10px] border border-border-1 px-3 py-2.5 transition-colors hover:bg-surface-2 disabled:opacity-60"
+        >
+          <span className="text-[13px] font-medium text-ink-700">{item.label}</span>
+          <div
+            className="flex h-[22px] w-[40px] items-center rounded-full p-[2px] transition-colors"
+            style={{ backgroundColor: item.value ? "#EC4899" : "#E2E8F0" }}
+          >
+            <div
+              className="h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform"
+              style={{ transform: item.value ? "translateX(18px)" : "translateX(0)" }}
+            />
+          </div>
+        </button>
+      ))}
     </div>
   )
 }
