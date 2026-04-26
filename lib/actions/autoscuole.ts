@@ -331,33 +331,38 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
     .where(eq(autoscuole.id, autoscuolaId))
 
   if (followUpAt) {
-    // Create a calendar event + activity when setting a follow-up date
-    const { createCalendarEvent } = await import("@/lib/actions/calendar")
+    // Create a Google Task for follow-up
+    const { createGoogleTask } = await import("@/lib/actions/calendar")
     const [autoscuola] = await db
-      .select({ name: autoscuole.name, email: autoscuole.email })
+      .select({ name: autoscuole.name })
       .from(autoscuole)
       .where(eq(autoscuole.id, autoscuolaId))
       .limit(1)
 
     if (autoscuola) {
+      let taskId: string | null = null
       try {
-        const start = new Date(followUpAt)
-        const end = new Date(start.getTime() + 30 * 60 * 1000) // 30 min
-        await createCalendarEvent({
+        taskId = await createGoogleTask({
           title: `Follow-up con ${autoscuola.name}`,
-          startDateTime: start.toISOString(),
-          endDateTime: end.toISOString(),
-          guests: autoscuola.email ? [autoscuola.email] : [],
-          addMeetLink: true,
-          autoscuolaId,
+          notes: `Autoscuola: ${autoscuola.name}\nLink: ${process.env.NEXTAUTH_URL ?? ""}/autoscuola/${autoscuolaId}`,
+          dueDate: followUpAt,
         })
       } catch {
-        // Calendar not connected — still save the follow-up date
+        // Google not connected — still save the follow-up date
       }
+
+      await db.insert(activities).values({
+        autoscuolaId,
+        userId: session.user.id,
+        type: "meeting",
+        title: `Follow-up con ${autoscuola.name}`,
+        scheduledAt: new Date(followUpAt),
+        calendarEventId: taskId,
+      })
     }
   } else {
-    // Removing follow-up: cancel the most recent scheduled follow-up activity + delete calendar event
-    const { deleteCalendarEvent } = await import("@/lib/actions/calendar")
+    // Removing follow-up: cancel activity + delete Google Task
+    const { deleteGoogleTask } = await import("@/lib/actions/calendar")
     const followUpActivities = await db
       .select({ id: activities.id, calendarEventId: activities.calendarEventId })
       .from(activities)
@@ -376,9 +381,9 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
       await db.update(activities).set({ status: "cancelled" }).where(eq(activities.id, act.id))
       if (act.calendarEventId) {
         try {
-          await deleteCalendarEvent(act.calendarEventId)
+          await deleteGoogleTask(act.calendarEventId)
         } catch {
-          // Calendar event may already be deleted
+          // Task may already be deleted
         }
       }
     }

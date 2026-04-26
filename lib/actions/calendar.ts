@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { oauthTokens, activities, autoscuole } from "@/lib/db/schema"
 import { eq, and, inArray } from "drizzle-orm"
-import { getGoogleCalendarClient } from "@/lib/google/client"
+import { getGoogleCalendarClient, getGoogleTasksClient } from "@/lib/google/client"
 import { revalidatePath } from "next/cache"
 
 export async function hasGoogleConnected() {
@@ -235,4 +235,46 @@ export async function rsvpCalendarEvent(
     eventId,
     requestBody: { attendees: updated },
   })
+}
+
+// ── Google Tasks ──────────────────────────────────────────────────────
+
+export async function createGoogleTask(data: {
+  title: string
+  notes?: string
+  dueDate: string // ISO datetime
+}) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  const tasks = await getGoogleTasksClient(session.user.id)
+  if (!tasks) return null
+
+  const result = await tasks.tasks.insert({
+    tasklist: "@default",
+    requestBody: {
+      title: data.title,
+      notes: data.notes,
+      due: new Date(data.dueDate).toISOString(),
+    },
+  })
+
+  return result.data.id ?? null
+}
+
+export async function deleteGoogleTask(taskId: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  const tasks = await getGoogleTasksClient(session.user.id)
+  if (!tasks) return
+
+  try {
+    await tasks.tasks.delete({
+      tasklist: "@default",
+      task: taskId,
+    })
+  } catch {
+    // Task may already be deleted
+  }
 }
