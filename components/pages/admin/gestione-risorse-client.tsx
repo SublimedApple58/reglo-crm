@@ -13,23 +13,15 @@ import {
   Bold,
   Italic,
   Underline,
-  Strikethrough,
   Heading1,
   Heading2,
-  Heading3,
   List,
   ListOrdered,
   Quote,
-  Code,
   Minus,
   Link2,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Highlighter,
   Undo2,
   Redo2,
-  Table as TableIcon,
   Tag,
   FileText,
   LinkIcon,
@@ -38,64 +30,12 @@ import {
   Kanban,
   DollarSign,
   Users,
-  Palette,
-  Smile,
   ImageIcon,
-  RowsIcon,
-  ColumnsIcon,
-  Trash,
 } from "lucide-react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import UnderlineExt from "@tiptap/extension-underline"
 import LinkExt from "@tiptap/extension-link"
-import TextAlign from "@tiptap/extension-text-align"
-import Highlight from "@tiptap/extension-highlight"
-import { TextStyle } from "@tiptap/extension-text-style"
-import { Extension } from "@tiptap/react"
-
-declare module "@tiptap/core" {
-  interface Commands<ReturnType> {
-    fontSize: {
-      setFontSize: (size: string) => ReturnType
-      unsetFontSize: () => ReturnType
-    }
-  }
-}
-
-const FontSize = Extension.create({
-  name: "fontSize",
-  addGlobalAttributes() {
-    return [{
-      types: ["textStyle"],
-      attributes: {
-        fontSize: {
-          default: null,
-          parseHTML: (el: HTMLElement) => el.style.fontSize?.replace(/['"]+/g, "") || null,
-          renderHTML: (attrs: Record<string, string>) => {
-            if (!attrs.fontSize) return {}
-            return { style: `font-size: ${attrs.fontSize}` }
-          },
-        },
-      },
-    }]
-  },
-  addCommands() {
-    return {
-      setFontSize: (size: string) => ({ chain }) => {
-        return chain().setMark("textStyle", { fontSize: size }).run()
-      },
-      unsetFontSize: () => ({ chain }) => {
-        return chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run()
-      },
-    }
-  },
-})
-import Color from "@tiptap/extension-color"
-import { Table } from "@tiptap/extension-table"
-import TableRow from "@tiptap/extension-table-row"
-import TableCell from "@tiptap/extension-table-cell"
-import TableHeader from "@tiptap/extension-table-header"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
@@ -123,7 +63,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ codeBlock: false }),
+      StarterKit,
       UnderlineExt,
       LinkExt.configure({
         openOnClick: false,
@@ -138,15 +78,6 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
           return ["a", { ...HTMLAttributes, target: isInternal ? "_self" : "_blank", rel: isInternal ? null : "noopener noreferrer" }, 0]
         },
       }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Highlight.configure({ multicolor: true }),
-      TextStyle,
-      FontSize,
-      Color,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableCell,
-      TableHeader,
       Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: "Inizia a scrivere..." }),
     ],
@@ -351,64 +282,26 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-0.5 border-b border-border-1 px-5 py-1.5">
-              {/* Undo/Redo */}
+            <div className="flex items-center gap-0.5 border-b border-border-1 px-5 py-1.5">
               <ToolbarBtn icon={Undo2} action={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} title="Annulla" />
               <ToolbarBtn icon={Redo2} action={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} title="Ripeti" />
               <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Font size */}
-              <select
-                value={editor?.getAttributes("textStyle")?.fontSize ?? ""}
-                onChange={(e) => {
-                  const size = e.target.value
-                  if (size) {
-                    editor?.chain().focus().setFontSize(size).run()
-                  } else {
-                    editor?.chain().focus().unsetFontSize().run()
-                  }
-                }}
-                className="h-7 rounded-[6px] border border-border-1 bg-surface px-1.5 text-[11px] text-ink-600 outline-none"
-              >
-                <option value="">Dimensione</option>
-                <option value="11px">Piccolo (11)</option>
-                <option value="13px">Normale (13)</option>
-                <option value="16px">Medio (16)</option>
-                <option value="18px">Grande (18)</option>
-                <option value="22px">Molto grande (22)</option>
-                <option value="28px">Titolo (28)</option>
-                <option value="36px">Display (36)</option>
-              </select>
-              <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Headings */}
               <ToolbarBtn icon={Heading1} action={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })} title="Titolo 1" />
               <ToolbarBtn icon={Heading2} action={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })} title="Titolo 2" />
-              <ToolbarBtn icon={Heading3} action={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive("heading", { level: 3 })} title="Titolo 3" />
               <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Inline formatting */}
               <ToolbarBtn icon={Bold} action={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")} title="Grassetto" />
               <ToolbarBtn icon={Italic} action={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")} title="Corsivo" />
               <ToolbarBtn icon={Underline} action={() => editor?.chain().focus().toggleUnderline().run()} active={editor?.isActive("underline")} title="Sottolineato" />
-              <ToolbarBtn icon={Strikethrough} action={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive("strike")} title="Barrato" />
-              <ToolbarBtn icon={Highlighter} action={() => editor?.chain().focus().toggleHighlight().run()} active={editor?.isActive("highlight")} title="Evidenzia" />
-              {/* Color picker */}
-              <ColorPickerBtn editor={editor} />
               <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Alignment */}
-              <ToolbarBtn icon={AlignLeft} action={() => editor?.chain().focus().setTextAlign("left").run()} active={editor?.isActive({ textAlign: "left" })} title="Allinea a sinistra" />
-              <ToolbarBtn icon={AlignCenter} action={() => editor?.chain().focus().setTextAlign("center").run()} active={editor?.isActive({ textAlign: "center" })} title="Allinea al centro" />
-              <ToolbarBtn icon={AlignRight} action={() => editor?.chain().focus().setTextAlign("right").run()} active={editor?.isActive({ textAlign: "right" })} title="Allinea a destra" />
-              <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Block elements */}
               <ToolbarBtn icon={List} action={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive("bulletList")} title="Elenco puntato" />
               <ToolbarBtn icon={ListOrdered} action={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive("orderedList")} title="Elenco numerato" />
               <ToolbarBtn icon={Quote} action={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")} title="Citazione" />
               <ToolbarBtn icon={Minus} action={() => editor?.chain().focus().setHorizontalRule().run()} title="Linea orizzontale" />
               <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Link */}
               <ToolbarBtn
                 icon={Link2}
                 active={editor?.isActive("link")}
-                title="Link esterno"
+                title="Link"
                 action={() => {
                   if (editor?.isActive("link")) {
                     editor?.chain().focus().unsetLink().run()
@@ -418,16 +311,9 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
                   }
                 }}
               />
-              {/* Internal link */}
               <ToolbarBtn icon={LinkIcon} action={() => setShowInternalLink(true)} title="Link interno" />
               <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Image upload */}
               <ImageUploadBtn editor={editor} onModified={() => setModified(true)} />
-              {/* Emoji picker */}
-              <EmojiPickerBtn editor={editor} />
-              <div className="mx-1 h-5 w-px bg-border-1" />
-              {/* Table */}
-              <TableMenuBtn editor={editor} />
             </div>
 
             {/* Editor content */}
@@ -542,6 +428,7 @@ function ToolbarBtn({
 }) {
   return (
     <button
+      onMouseDown={(e) => e.preventDefault()}
       onClick={action}
       disabled={disabled}
       title={title}
@@ -553,109 +440,6 @@ function ToolbarBtn({
     >
       <Icon className="h-4 w-4" />
     </button>
-  )
-}
-
-const COLOR_PALETTE = [
-  { label: "Nero", hex: "#000000" },
-  { label: "Grigio", hex: "#64748B" },
-  { label: "Rosso", hex: "#EF4444" },
-  { label: "Blu", hex: "#3B82F6" },
-  { label: "Verde", hex: "#10B981" },
-  { label: "Arancione", hex: "#F97316" },
-  { label: "Viola", hex: "#8B5CF6" },
-  { label: "Rosa", hex: "#EC4899" },
-]
-
-function ColorPickerBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        title="Colore testo"
-        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-        style={{ color: "#64748B" }}
-      >
-        <Palette className="h-4 w-4" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 grid grid-cols-4 gap-1 rounded-[10px] border border-border-1 bg-surface p-2 shadow-lg" onMouseDown={(e) => e.preventDefault()}>
-          {COLOR_PALETTE.map((c) => (
-            <button
-              key={c.hex}
-              title={c.label}
-              onClick={() => { editor?.chain().focus().setColor(c.hex).run(); setOpen(false) }}
-              className="h-6 w-6 rounded-full border border-border-1 transition-transform hover:scale-110"
-              style={{ backgroundColor: c.hex }}
-            />
-          ))}
-          <button
-            title="Rimuovi colore"
-            onClick={() => { editor?.chain().focus().unsetColor().run(); setOpen(false) }}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-border-1 text-[10px] text-ink-400 hover:bg-surface-2"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-const EMOJI_LIST = [
-  "😀", "😂", "🥲", "😍", "🤩", "😎", "🤔", "😉",
-  "👍", "👎", "👏", "🙌", "💪", "🤝", "✌️", "🫡",
-  "❤️", "🔥", "⭐", "✅", "❌", "⚠️", "💡", "🎯",
-  "📞", "✉️", "📋", "📊", "💰", "🏆", "🚀", "🦈",
-  "🎉", "💯", "👀", "🙏", "📌", "🔗", "📆", "⏰",
-]
-
-function EmojiPickerBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        title="Emoji"
-        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
-      >
-        <Smile className="h-4 w-4" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 grid w-[220px] grid-cols-8 gap-0.5 rounded-[10px] border border-border-1 bg-surface p-2 shadow-lg" onMouseDown={(e) => e.preventDefault()}>
-          {EMOJI_LIST.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => { editor?.chain().focus().insertContent(emoji).run(); setOpen(false) }}
-              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[16px] transition-colors hover:bg-surface-2"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -676,6 +460,7 @@ function ImageUploadBtn({ editor, onModified }: { editor: ReturnType<typeof useE
   return (
     <>
       <button
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileRef.current?.click()}
         title="Inserisci immagine"
         className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
@@ -690,81 +475,6 @@ function ImageUploadBtn({ editor, onModified }: { editor: ReturnType<typeof useE
         onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = "" }}
       />
     </>
-  )
-}
-
-function TableMenuBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
-  const [open, setOpen] = useState(false)
-  const [rows, setRows] = useState(3)
-  const [cols, setCols] = useState(3)
-  const ref = useRef<HTMLDivElement>(null)
-  const isInTable = editor?.isActive("table")
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        title="Tabella"
-        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-        style={{
-          backgroundColor: isInTable ? "#FDF2F8" : "transparent",
-          color: isInTable ? "#EC4899" : "#64748B",
-        }}
-      >
-        <TableIcon className="h-4 w-4" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-[200px] rounded-[10px] border border-border-1 bg-surface p-3 shadow-lg">
-          {!isInTable ? (
-            <>
-              <p className="mb-2 text-[11px] font-semibold text-ink-500">Nuova tabella</p>
-              <div className="mb-2 flex items-center gap-2">
-                <label className="text-[11px] text-ink-500">Righe</label>
-                <input type="number" min={1} max={20} value={rows} onChange={(e) => setRows(+e.target.value)} className="h-6 w-14 rounded border border-border-1 px-1.5 text-[11px] outline-none" />
-              </div>
-              <div className="mb-3 flex items-center gap-2">
-                <label className="text-[11px] text-ink-500">Colonne</label>
-                <input type="number" min={1} max={10} value={cols} onChange={(e) => setCols(+e.target.value)} className="h-6 w-14 rounded border border-border-1 px-1.5 text-[11px] outline-none" />
-              </div>
-              <button
-                onClick={() => { editor?.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(); setOpen(false) }}
-                className="w-full rounded-[6px] bg-pink py-1.5 text-[11px] font-semibold text-white hover:bg-pink/90"
-              >
-                Inserisci tabella
-              </button>
-            </>
-          ) : (
-            <div className="space-y-1">
-              <p className="mb-2 text-[11px] font-semibold text-ink-500">Modifica tabella</p>
-              <button onClick={() => { editor?.chain().focus().addRowAfter().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
-                <RowsIcon className="h-3.5 w-3.5" /> Aggiungi riga
-              </button>
-              <button onClick={() => { editor?.chain().focus().addColumnAfter().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
-                <ColumnsIcon className="h-3.5 w-3.5" /> Aggiungi colonna
-              </button>
-              <button onClick={() => { editor?.chain().focus().deleteRow().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
-                <Minus className="h-3.5 w-3.5" /> Rimuovi riga
-              </button>
-              <button onClick={() => { editor?.chain().focus().deleteColumn().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-ink-700 hover:bg-surface-2">
-                <Minus className="h-3.5 w-3.5" /> Rimuovi colonna
-              </button>
-              <div className="my-1 h-px bg-border-1" />
-              <button onClick={() => { editor?.chain().focus().deleteTable().run(); setOpen(false) }} className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-[11px] text-red-500 hover:bg-red-50">
-                <Trash className="h-3.5 w-3.5" /> Elimina tabella
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
   )
 }
 

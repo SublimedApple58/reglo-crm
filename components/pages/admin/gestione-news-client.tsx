@@ -17,7 +17,6 @@ import {
   ListOrdered,
   Quote,
   FileText,
-  Smile,
   ImageIcon,
   Link2,
 } from "lucide-react"
@@ -275,6 +274,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
               ) : (
                 <button
                   key={i}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={item.action}
                   title={item.title}
                   className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
@@ -289,7 +289,6 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
             )}
             <div className="mx-1 h-5 w-px bg-border-1" />
             <NewsImageBtn editor={editor} onModified={() => setModified(true)} />
-            <NewsEmojiBtn editor={editor} />
           </div>
 
           {/* Excerpt */}
@@ -438,52 +437,6 @@ function CategoryManagerDialog({
   )
 }
 
-const NEWS_EMOJI_LIST = [
-  "😀", "😂", "🥲", "😍", "🤩", "😎", "🤔", "😉",
-  "👍", "👎", "👏", "🙌", "💪", "🤝", "✌️", "🫡",
-  "❤️", "🔥", "⭐", "✅", "❌", "⚠️", "💡", "🎯",
-  "📞", "✉️", "📋", "📊", "💰", "🏆", "🚀", "🦈",
-  "🎉", "💯", "👀", "🙏", "📌", "🔗", "📆", "⏰",
-]
-
-function NewsEmojiBtn({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    if (open) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        title="Emoji"
-        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
-      >
-        <Smile className="h-4 w-4" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 grid w-[220px] grid-cols-8 gap-0.5 rounded-[10px] border border-border-1 bg-surface p-2 shadow-lg" onMouseDown={(e) => e.preventDefault()}>
-          {NEWS_EMOJI_LIST.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => { editor?.chain().focus().insertContent(emoji).run(); setOpen(false) }}
-              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[16px] transition-colors hover:bg-surface-2"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function NewsImageBtn({ editor, onModified }: { editor: ReturnType<typeof useEditor> | null; onModified: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -501,6 +454,7 @@ function NewsImageBtn({ editor, onModified }: { editor: ReturnType<typeof useEdi
   return (
     <>
       <button
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileRef.current?.click()}
         title="Inserisci immagine"
         className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
