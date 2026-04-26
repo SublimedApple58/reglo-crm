@@ -250,12 +250,16 @@ export async function createGoogleTask(data: {
   const tasks = await getGoogleTasksClient(session.user.id)
   if (!tasks) return null
 
+  const dueDate = new Date(data.dueDate)
+  const timeStr = dueDate.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" })
+  const titleWithTime = `${data.title} (${timeStr})`
+
   const result = await tasks.tasks.insert({
     tasklist: "@default",
     requestBody: {
-      title: data.title,
+      title: titleWithTime,
       notes: data.notes,
-      due: new Date(data.dueDate).toISOString(),
+      due: dueDate.toISOString(),
     },
   })
 
