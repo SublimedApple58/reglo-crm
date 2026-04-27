@@ -209,8 +209,8 @@ function ClusteredMarkers({
   // Build supercluster index
   const index = useMemo(() => {
     const sc = new Supercluster<{ id: string; stageColor: string }>({
-      radius: 120,
-      maxZoom: 13,
+      radius: 80,
+      maxZoom: 15,
     })
     const points: Supercluster.PointFeature<{ id: string; stageColor: string }>[] = items
       .filter((a) => a.lat && a.lng)

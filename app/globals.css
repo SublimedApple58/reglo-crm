@@ -143,6 +143,65 @@
   background: #94A3B8;
 }
 
+/* Tiptap table styles */
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+  overflow: hidden;
+}
+.ProseMirror td,
+.ProseMirror th {
+  border: 1px solid #E2E8F0;
+  padding: 8px 12px;
+  vertical-align: top;
+  position: relative;
+  min-width: 80px;
+}
+.ProseMirror th {
+  background-color: #F8FAFC;
+  font-weight: 600;
+  color: #0F172A;
+}
+.ProseMirror .selectedCell {
+  background-color: #FDF2F8;
+}
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -1px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #EC4899;
+  cursor: col-resize;
+  z-index: 10;
+}
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Kanban column scrollbar — thin and unobtrusive */
+.kanban-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.kanban-scroll:hover::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.kanban-scroll:hover {
+  scrollbar-color: #CBD5E1 transparent;
+}
+
 /* Internal links (href starts with /) */
 .reglo-links a[href^="/"] {
   color: #EC4899;

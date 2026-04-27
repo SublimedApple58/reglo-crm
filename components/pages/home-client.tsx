@@ -1,9 +1,11 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
-import { ArrowUpRight, Video, Calendar, ChevronRight } from "lucide-react"
+import { ArrowUpRight, Video, Calendar, ChevronRight, CheckCircle2, Circle, ListChecks } from "lucide-react"
+import { completeGoogleTask } from "@/lib/actions/calendar"
+import type { GoogleTask } from "@/lib/actions/calendar"
 import {
   APIProvider,
   Map as GoogleMap,
@@ -11,6 +13,257 @@ import {
   Polygon,
 } from "@vis.gl/react-google-maps"
 import { REGIONI_PROVINCE } from "@/lib/constants"
+
+function getTaskDueBadge(due: string | null) {
+  if (!due) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const dueDate = new Date(due)
+  dueDate.setHours(0, 0, 0, 0)
+
+  if (dueDate < today) return { label: "Scaduta", className: "bg-red-100 text-red-700" }
+  if (dueDate.getTime() === today.getTime()) return { label: "Oggi", className: "bg-amber-100 text-amber-700" }
+  if (dueDate.getTime() === tomorrow.getTime()) return { label: "Domani", className: "bg-blue-100 text-blue-700" }
+  return {
+    label: dueDate.toLocaleDateString("it-IT", { day: "numeric", month: "short" }),
+    className: "bg-ink-100 text-ink-500",
+  }
+}
+
+function parseFollowUpLink(task: GoogleTask): { name: string; href: string } | null {
+  const titleMatch = task.title.match(/^Follow-up con (.+?)(?:\s*\(\d{2}:\d{2}\))?$/)
+  if (!titleMatch) return null
+  const linkMatch = task.notes?.match(/\/autoscuola\/([^\s]+)/)
+  if (!linkMatch) return { name: titleMatch[1], href: "#" }
+  return { name: titleMatch[1], href: `/autoscuola/${linkMatch[1]}` }
+}
+
+function TasksWidget({ tasks }: { tasks: GoogleTask[] }) {
+  const [completed, setCompleted] = useState<Set<string>>(new Set())
+  const [isPending, startTransition] = useTransition()
+
+  const pendingTasks = tasks.filter((t) => t.status === "needsAction" && !completed.has(t.id))
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayTasks = pendingTasks.filter((t) => {
+    if (!t.due) return false
+    const due = new Date(t.due)
+    due.setHours(0, 0, 0, 0)
+    return due.getTime() <= today.getTime()
+  })
+  const futureTasks = pendingTasks.filter((t) => {
+    if (!t.due) return true
+    const due = new Date(t.due)
+    due.setHours(0, 0, 0, 0)
+    return due.getTime() > today.getTime()
+  })
+  const maxTotal = 6
+  const showToday = todayTasks.slice(0, maxTotal)
+  const remaining = maxTotal - showToday.length
+  const showFuture = remaining > 0 ? futureTasks.slice(0, remaining) : []
+
+  function handleComplete(taskId: string) {
+    setCompleted((prev) => new Set(prev).add(taskId))
+    startTransition(async () => {
+      try {
+        await completeGoogleTask(taskId)
+      } catch {
+        setCompleted((prev) => {
+          const next = new Set(prev)
+          next.delete(taskId)
+          return next
+        })
+      }
+    })
+  }
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
+      <div className="flex items-center justify-between border-b border-border-1 px-5 py-3.5">
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-4 w-4 text-pink" />
+          <h4 className="text-[14px] font-bold text-ink-900">Le mie attività</h4>
+          {pendingTasks.length > 0 && (
+            <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink/10 px-1.5 font-mono text-[10px] font-semibold text-pink">
+              {pendingTasks.length}
+            </span>
+          )}
+        </div>
+        <Link
+          href="/attivita"
+          className="flex items-center gap-1 text-[12px] font-medium text-pink hover:underline"
+        >
+          Vedi tutte
+          <ChevronRight className="h-3 w-3" />
+        </Link>
+      </div>
+      <div className="flex-1 px-5 py-3">
+        {showToday.length > 0 || showFuture.length > 0 ? (
+          <div className="space-y-2">
+            {showToday.length > 0 && (
+              <>
+                <p className="text-[10.5px] font-semibold tracking-[0.3px] text-ink-400 uppercase">Oggi</p>
+                {showToday.map((task) => (
+                  <TaskRow key={task.id} task={task} onComplete={handleComplete} isPending={isPending} />
+                ))}
+              </>
+            )}
+            {showFuture.length > 0 && (
+              <>
+                <p className={`text-[10.5px] font-semibold tracking-[0.3px] text-ink-400 uppercase ${showToday.length > 0 ? "pt-1" : ""}`}>
+                  Prossimi giorni
+                </p>
+                {showFuture.map((task) => (
+                  <TaskRow key={task.id} task={task} onComplete={handleComplete} isPending={isPending} />
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <CheckCircle2 className="mb-2 h-8 w-8 text-ink-300" />
+            <p className="text-[13px] font-medium text-ink-500">Nessuna attività in sospeso</p>
+            <p className="text-[12px] text-ink-400">Tutti i follow-up sono completati</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MeetingRow({ event }: { event: UpcomingEvent }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-ink-900">
+          {event.title}
+        </p>
+        <p className="text-[11.5px] text-ink-400">
+          {new Date(event.start).toLocaleDateString("it-IT", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })}{" "}
+          ·{" "}
+          {new Date(event.start).toLocaleTimeString("it-IT", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+          {event.location && (
+            <span className="ml-1 text-ink-300">· {event.location}</span>
+          )}
+        </p>
+      </div>
+      {event.meetLink && (
+        <a
+          href={event.meetLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-7 items-center gap-1 rounded-[999px] bg-pink/10 px-2.5 text-[11px] font-semibold text-pink hover:bg-pink/20"
+        >
+          <Video className="h-3 w-3" />
+          Meet
+        </a>
+      )}
+    </div>
+  )
+}
+
+function MeetingsWidget({ events }: { events: UpcomingEvent[] }) {
+  const now = new Date()
+  const todayStr = now.toISOString().split("T")[0]
+
+  const todayEvents = events.filter((e) => e.start.split("T")[0] === todayStr)
+  const futureEvents = events.filter((e) => e.start.split("T")[0] !== todayStr)
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
+      <div className="flex items-center justify-between border-b border-border-1 px-5 py-3.5">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-pink" />
+          <h4 className="text-[14px] font-bold text-ink-900">Prossimi meeting</h4>
+        </div>
+        <Link
+          href="/calendario"
+          className="flex items-center gap-1 text-[12px] font-medium text-pink hover:underline"
+        >
+          Vedi tutto
+          <ChevronRight className="h-3 w-3" />
+        </Link>
+      </div>
+      <div className="flex-1 px-5 py-3">
+        {events.length > 0 ? (
+          <div className="space-y-2.5">
+            {todayEvents.length > 0 && (
+              <>
+                <p className="text-[10.5px] font-semibold tracking-[0.3px] text-ink-400 uppercase">Oggi</p>
+                {todayEvents.map((event, i) => (
+                  <MeetingRow key={`today-${i}`} event={event} />
+                ))}
+              </>
+            )}
+            {futureEvents.length > 0 && (
+              <>
+                <p className={`text-[10.5px] font-semibold tracking-[0.3px] text-ink-400 uppercase ${todayEvents.length > 0 ? "pt-1" : ""}`}>
+                  Prossimi giorni
+                </p>
+                {futureEvents.map((event, i) => (
+                  <MeetingRow key={`future-${i}`} event={event} />
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <Calendar className="mb-2 h-8 w-8 text-ink-300" />
+            <p className="text-[13px] font-medium text-ink-500">Nessun meeting in programma</p>
+            <p className="text-[12px] text-ink-400">I prossimi 7 giorni sono liberi</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TaskRow({ task, onComplete, isPending }: { task: GoogleTask; onComplete: (id: string) => void; isPending: boolean }) {
+  const badge = getTaskDueBadge(task.due)
+  const followUp = parseFollowUpLink(task)
+  const displayTitle = task.title.replace(/\s*\(\d{2}:\d{2}\)$/, "")
+
+  return (
+    <div className="flex items-start gap-2.5">
+      <button
+        onClick={() => onComplete(task.id)}
+        disabled={isPending}
+        className="mt-0.5 shrink-0 text-ink-300 hover:text-pink transition-colors"
+      >
+        <Circle className="h-[16px] w-[16px]" />
+      </button>
+      <div className="min-w-0 flex-1">
+        {followUp ? (
+          <p className="truncate text-[13px] font-semibold text-ink-900">
+            Follow-up con{" "}
+            <Link href={followUp.href} className="text-pink hover:underline">
+              {followUp.name}
+            </Link>
+          </p>
+        ) : (
+          <p className="truncate text-[13px] font-semibold text-ink-900">
+            {displayTitle}
+          </p>
+        )}
+        {badge && (
+          <span className={`mt-0.5 inline-block rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+            {badge.label}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const PROVINCE_TO_REGIONE: Record<string, string> = {}
 for (const [regione, provs] of Object.entries(REGIONI_PROVINCE)) {
@@ -64,6 +317,7 @@ export function HomeClient({
   homeCards,
   googleConnected = false,
   upcomingEvents = [],
+  googleTasks = [],
 }: {
   userName: string
   stagesWithCounts: { id: string; label: string; color: string; count: number }[]
@@ -73,6 +327,7 @@ export function HomeClient({
   homeCards?: HomeCardData[]
   googleConnected?: boolean
   upcomingEvents?: UpcomingEvent[]
+  googleTasks?: GoogleTask[]
 }) {
   const firstName = userName.split(" ")[0]
   const shortcuts = homeCards && homeCards.length > 0
@@ -180,68 +435,7 @@ export function HomeClient({
       <div className="grid grid-cols-2 items-start gap-4">
         {/* Upcoming Meetings */}
         {googleConnected ? (
-          <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
-            <div className="flex items-center justify-between border-b border-border-1 px-5 py-3.5">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-pink" />
-                <h4 className="text-[14px] font-bold text-ink-900">Prossimi meeting</h4>
-              </div>
-              <Link
-                href="/calendario"
-                className="flex items-center gap-1 text-[12px] font-medium text-pink hover:underline"
-              >
-                Vedi tutto
-                <ChevronRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <div className="flex-1 px-5 py-3">
-              {upcomingEvents.length > 0 ? (
-                <div className="space-y-2.5">
-                  {upcomingEvents.map((event, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold text-ink-900">
-                          {event.title}
-                        </p>
-                        <p className="text-[11.5px] text-ink-400">
-                          {new Date(event.start).toLocaleDateString("it-IT", {
-                            weekday: "short",
-                            day: "numeric",
-                            month: "short",
-                          })}{" "}
-                          ·{" "}
-                          {new Date(event.start).toLocaleTimeString("it-IT", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          {event.location && (
-                            <span className="ml-1 text-ink-300">· {event.location}</span>
-                          )}
-                        </p>
-                      </div>
-                      {event.meetLink && (
-                        <a
-                          href={event.meetLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex h-7 items-center gap-1 rounded-[999px] bg-pink/10 px-2.5 text-[11px] font-semibold text-pink hover:bg-pink/20"
-                        >
-                          <Video className="h-3 w-3" />
-                          Meet
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <Calendar className="mb-2 h-8 w-8 text-ink-300" />
-                  <p className="text-[13px] font-medium text-ink-500">Nessun meeting in programma</p>
-                  <p className="text-[12px] text-ink-400">I prossimi 7 giorni sono liberi</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <MeetingsWidget events={upcomingEvents} />
         ) : (
           <div className="flex flex-col items-center justify-center overflow-hidden rounded-[18px] border border-border-1 bg-surface px-6 py-8 text-center">
             <Calendar className="mb-3 h-10 w-10 text-ink-300" />
@@ -258,31 +452,24 @@ export function HomeClient({
           </div>
         )}
 
-        {/* Grain */}
-        <a
-          href="https://grain.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex overflow-hidden rounded-[18px] border border-border-1 bg-[#0A0A0A] transition-all hover:-translate-y-px hover:shadow-lg"
-        >
-          <div className="flex flex-1 flex-col justify-center px-6 py-5">
-            <h4 className="mb-1.5 text-[16px] font-bold text-white">
-              Grain | The AI Notetaker
-            </h4>
-            <p className="mb-3 text-[12.5px] leading-[1.6] text-white/50">
-              Grain usa il potere dell&apos;AI per registrare i tuoi meeting e rendere la vendita più veloce.
+        {/* Tasks Widget */}
+        {googleConnected ? (
+          <TasksWidget tasks={googleTasks} />
+        ) : (
+          <div className="flex flex-col items-center justify-center overflow-hidden rounded-[18px] border border-border-1 bg-surface px-6 py-8 text-center">
+            <ListChecks className="mb-3 h-10 w-10 text-ink-300" />
+            <h4 className="mb-1.5 text-[15px] font-bold text-ink-900">Collega Google Calendar</h4>
+            <p className="mb-4 text-[12.5px] leading-relaxed text-ink-500">
+              Visualizza le tue attività e follow-up direttamente dal CRM.
             </p>
-            <div className="flex items-center gap-2">
-              <img src="/grain-logo.svg" alt="Grain" className="h-5 w-5" />
-              <span className="text-[12px] text-white/40 underline decoration-white/20 underline-offset-2">
-                https://grain.com/
-              </span>
-            </div>
+            <button
+              onClick={() => signIn("google", { callbackUrl: "/" })}
+              className="flex h-[34px] items-center gap-2 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
+            >
+              Collega Google
+            </button>
           </div>
-          <div className="w-[170px] shrink-0 self-stretch overflow-hidden">
-            <img src="/grain-papero.png" alt="" className="h-[115%] w-full object-cover -mt-[5%]" />
-          </div>
-        </a>
+        )}
       </div>
     </div>
   )

@@ -7,15 +7,14 @@ import {
   Search,
   Filter,
   Clock,
-  Building,
   X,
   Plus,
   Users,
+  Phone,
 } from "lucide-react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
-import { StageChip } from "@/components/ui/stage-chip"
 import { createAutoscuola } from "@/lib/actions/autoscuole"
-import { STAGES } from "@/lib/constants"
+import { STAGES, SALES_COLORS } from "@/lib/constants"
 import { formatProvince } from "@/lib/utils"
 import { updateAutoscuolaStage } from "@/lib/actions/autoscuole"
 
@@ -25,6 +24,8 @@ type AutoscuolaFlat = {
   owner: string | null
   province: string
   town: string
+  phone: string | null
+  email: string | null
   stageId: string
   pipelineValue: number | null
   lastContact: number | null
@@ -251,7 +252,7 @@ export function PipelineClient({
 
       {/* Content — isolated scroll container */}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
-        <KanbanView autoscuole={filtered} stages={stages} onDragEnd={handleDragEnd} onAddToStage={(stageId) => setNewOppStage(stageId)} isAdmin={isAdmin} />
+        <KanbanView autoscuole={filtered} stages={stages} onDragEnd={handleDragEnd} onAddToStage={(stageId) => setNewOppStage(stageId)} isAdmin={isAdmin} salesUsers={salesUsers} />
       </div>
 
       {/* New opportunity dialog */}
@@ -353,16 +354,18 @@ function KanbanView({
   onDragEnd,
   onAddToStage,
   isAdmin = false,
+  salesUsers,
 }: {
   autoscuole: AutoscuolaFlat[]
   stages: StageConfig[]
   onDragEnd: (result: DropResult) => void
   onAddToStage: (stageId: string) => void
   isAdmin?: boolean
+  salesUsers: SalesUser[]
 }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex h-full gap-3.5 overflow-x-auto bg-surface-2 p-4">
+      <div className="flex h-full gap-3 overflow-x-auto px-4 py-4" style={{ backgroundColor: "#F1F5F9" }}>
         {stages.map((stage) => (
           <KanbanColumn
             key={stage.id}
@@ -370,11 +373,18 @@ function KanbanView({
             autoscuole={autoscuole.filter((a) => a.stageId === stage.id)}
             onAddToStage={onAddToStage}
             isAdmin={isAdmin}
+            salesUsers={salesUsers}
           />
         ))}
       </div>
     </DragDropContext>
   )
+}
+
+function getSalesColor(salesName: string | null, salesUsers: SalesUser[]): string {
+  if (!salesName) return "#94A3B8"
+  const idx = salesUsers.findIndex((u) => u.name === salesName)
+  return SALES_COLORS[idx >= 0 ? idx % SALES_COLORS.length : 0]
 }
 
 const INITIAL_VISIBLE = 30
@@ -385,50 +395,49 @@ function KanbanColumn({
   autoscuole,
   onAddToStage,
   isAdmin,
+  salesUsers,
 }: {
   stage: StageConfig
   autoscuole: AutoscuolaFlat[]
   onAddToStage: (stageId: string) => void
   isAdmin: boolean
+  salesUsers: SalesUser[]
 }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
   const items = autoscuole.slice(0, visibleCount)
   const hiddenCount = autoscuole.length - visibleCount
 
   return (
-    <div className="flex w-[292px] shrink-0 flex-col" style={{ maxHeight: "100%" }}>
-      {/* Column header */}
-      <div
-        className="flex items-center gap-2 rounded-t-[18px] px-3.5 py-2.5"
-        style={{
-          backgroundColor: stage.color + "12",
-          border: `1px solid ${stage.color}28`,
-          borderBottom: "none",
-        }}
-      >
-        <span
-          className="inline-block h-[6px] w-[6px] rounded-full"
-          style={{ backgroundColor: stage.color }}
-        />
-        <span
-          className="flex-1 text-[12px] font-semibold"
-          style={{ color: stage.color }}
+    <div className="flex w-[280px] shrink-0 flex-col" style={{ maxHeight: "100%" }}>
+      {/* Column header — Notion style pill */}
+      <div className="mb-2.5 flex items-center gap-2 px-1">
+        <div
+          className="flex items-center gap-1.5 rounded-[999px] px-2.5 py-1"
+          style={{ backgroundColor: stage.color + "18" }}
         >
-          {stage.label}
-        </span>
-        <span
-          className="rounded-full bg-white px-2 py-0.5 text-[10.5px] font-semibold"
-          style={{ color: stage.color }}
-        >
-          {autoscuole.length}
-        </span>
+          <span
+            className="inline-block h-[8px] w-[8px] rounded-full"
+            style={{ backgroundColor: stage.color }}
+          />
+          <span
+            className="text-[12px] font-semibold uppercase tracking-[0.3px]"
+            style={{ color: stage.color }}
+          >
+            {stage.label}
+          </span>
+          <span
+            className="text-[12px] font-medium"
+            style={{ color: stage.color, opacity: 0.7 }}
+          >
+            {autoscuole.length}
+          </span>
+        </div>
         <button
           onClick={() => onAddToStage(stage.id)}
-          className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed transition-colors hover:bg-white"
-          style={{ borderColor: stage.color + "80", color: stage.color }}
+          className="ml-auto flex h-5 w-5 items-center justify-center rounded text-ink-400 transition-colors hover:bg-white hover:text-ink-600"
           title={`Aggiungi a ${stage.label}`}
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -438,14 +447,9 @@ function KanbanColumn({
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-b-[14px] p-2.5 transition-colors"
+            className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-[8px] p-0.5 transition-colors kanban-scroll"
             style={{
-              backgroundColor: snapshot.isDraggingOver
-                ? stage.color + "10"
-                : stage.color + "06",
-              border: snapshot.isDraggingOver
-                ? `2px dashed ${stage.color}80`
-                : "2px dashed transparent",
+              backgroundColor: snapshot.isDraggingOver ? stage.color + "0A" : "transparent",
             }}
           >
             {items.map((item, index) => (
@@ -456,63 +460,87 @@ function KanbanColumn({
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
-                    className="shrink-0 rounded-[14px] border bg-white transition-all"
+                    className="shrink-0 cursor-pointer rounded-[14px] border px-3.5 py-3 transition-shadow hover:shadow-[0_2px_8px_rgba(15,23,42,0.06)]"
                     style={{
                       ...provided.draggableProps.style,
-                      borderColor: `#E2E8F0`,
-                      borderLeftColor: stage.color,
-                      borderLeftWidth: 4,
-                      padding: "12px 14px",
+                      backgroundColor: stage.color + "08",
+                      borderColor: stage.color + "20",
                       boxShadow: snapshot.isDragging
-                        ? "0 4px 14px rgba(15,23,42,0.12)"
+                        ? "0 8px 24px rgba(15,23,42,0.12)"
                         : undefined,
                     }}
                   >
-                    <p className="mb-1 text-[13px] font-semibold leading-tight text-ink-900">
+                    {/* Name */}
+                    <p className="mb-0.5 text-[14px] font-bold leading-snug text-ink-900">
                       {item.name.replace("Autoscuola ", "")}
                     </p>
-                    <p className="mb-2 flex items-center gap-[5px] text-[11.5px] text-ink-500">
-                      <Building className="h-3 w-3" />
-                      {item.town}, {formatProvince(item.province)}
+                    {/* Owner / Town */}
+                    <p className="mb-2.5 text-[12.5px] text-ink-500">
+                      {item.owner || `${item.town}, ${formatProvince(item.province)}`}
                     </p>
+
+                    {/* Sales assignee */}
                     {isAdmin && item.salesName && (
-                      <p className="mb-1.5 flex items-center gap-1 text-[10.5px] text-ink-400">
-                        <Users className="h-3 w-3" />
-                        {item.salesName}
+                      <div className="mb-2.5 flex items-center gap-1.5">
+                        <span
+                          className="inline-block h-[10px] w-[10px] rounded-full"
+                          style={{ backgroundColor: getSalesColor(item.salesName, salesUsers) }}
+                        />
+                        <span className="text-[12px] text-ink-600">{item.salesName}</span>
+                      </div>
+                    )}
+
+                    {/* Phone */}
+                    {item.phone && (
+                      <p
+                        className="mb-0.5 text-[13px] font-semibold"
+                        style={{ color: "#0D9488" }}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          window.location.href = `tel:${item.phone}`
+                        }}
+                      >
+                        {item.phone}
                       </p>
                     )}
-                    <div className="flex items-center justify-between">
-                      {item.pipelineValue ? (
-                        <span
-                          className="rounded-[999px] px-2 py-0.5 text-[10.5px] font-semibold"
-                          style={{
-                            color: stage.color,
-                            backgroundColor: stage.color + "15",
-                          }}
-                        >
-                          €{item.pipelineValue.toLocaleString("it-IT")}
-                        </span>
-                      ) : (
-                        <span />
-                      )}
-                      {item.followUpAt ? (() => {
-                        const fu = new Date(item.followUpAt)
-                        const now = new Date()
-                        const diffDays = Math.ceil((fu.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                        const isExpired = diffDays < 0
-                        return (
-                          <span className="flex items-center gap-1 text-[10.5px]" style={{ color: isExpired ? "#EF4444" : "#10B981" }}>
-                            <Clock className="h-3 w-3" />
-                            {isExpired ? `−${Math.abs(diffDays)}g` : `${diffDays}g`}
+                    {/* Email */}
+                    {item.email && (
+                      <p className="mb-2 text-[12px] text-ink-500">{item.email}</p>
+                    )}
+
+                    {/* Footer: pipeline value + follow-up */}
+                    {(item.pipelineValue || item.followUpAt || item.lastContact !== null) && (
+                      <div className="flex items-center justify-between pt-1">
+                        {item.pipelineValue ? (
+                          <span className="text-[11.5px] font-semibold text-ink-500">
+                            €{item.pipelineValue.toLocaleString("it-IT")}
                           </span>
-                        )
-                      })() : item.lastContact !== null ? (
-                        <span className="flex items-center gap-1 text-[10.5px] text-ink-400">
-                          <Clock className="h-3 w-3" />
-                          {item.lastContact}g
-                        </span>
-                      ) : null}
-                    </div>
+                        ) : (
+                          <span />
+                        )}
+                        {item.followUpAt ? (() => {
+                          const fu = new Date(item.followUpAt)
+                          const now = new Date()
+                          const diffDays = Math.ceil((fu.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                          const isExpired = diffDays < 0
+                          return (
+                            <span
+                              className="flex items-center gap-1 text-[10.5px] font-medium"
+                              style={{ color: isExpired ? "#EF4444" : "#10B981" }}
+                            >
+                              <Clock className="h-3 w-3" />
+                              {isExpired ? `−${Math.abs(diffDays)}g` : `${diffDays}g`}
+                            </span>
+                          )
+                        })() : item.lastContact !== null ? (
+                          <span className="flex items-center gap-1 text-[10.5px] text-ink-400">
+                            <Clock className="h-3 w-3" />
+                            {item.lastContact}g
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                   </Link>
                 )}
               </Draggable>
@@ -520,9 +548,9 @@ function KanbanColumn({
             {hiddenCount > 0 && (
               <button
                 onClick={() => setVisibleCount((c) => c + LOAD_MORE_COUNT)}
-                className="shrink-0 rounded-[10px] border border-dashed border-border-1 py-2 text-center text-[11px] font-medium text-ink-400 transition-colors hover:border-ink-300 hover:text-ink-600"
+                className="shrink-0 rounded-[8px] border border-dashed border-[#CBD5E1] py-2 text-center text-[11px] font-medium text-ink-400 transition-colors hover:border-ink-400 hover:text-ink-600"
               >
-                +{hiddenCount} altre — mostra di più
+                +{hiddenCount} altre
               </button>
             )}
             {provided.placeholder}

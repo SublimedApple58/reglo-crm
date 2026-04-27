@@ -19,12 +19,27 @@ import {
   FileText,
   ImageIcon,
   Link2,
+  Table,
+  Rows3,
+  Columns3,
+  Trash,
+  ArrowUpFromLine,
+  ArrowDownFromLine,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  PanelTop,
+  TableCellsMerge,
+  TableCellsSplit,
 } from "lucide-react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import UnderlineExt from "@tiptap/extension-underline"
 import LinkExt from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
+import { Table as TableExt } from "@tiptap/extension-table"
+import { TableRow } from "@tiptap/extension-table-row"
+import { TableCell } from "@tiptap/extension-table-cell"
+import { TableHeader } from "@tiptap/extension-table-header"
 import { NEWS_CATEGORIES } from "@/lib/constants"
 import { createNews, updateNews, deleteNews, toggleNewsPin, getNewsCategories, upsertNewsCategory, deleteNewsCategory } from "@/lib/actions/data"
 import type { News, NewsCategory } from "@/lib/db/schema"
@@ -58,6 +73,10 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
       UnderlineExt,
       LinkExt.configure({ openOnClick: false, autolink: true, defaultProtocol: "https" }),
       Image.configure({ inline: false, allowBase64: false }),
+      TableExt.configure({ resizable: true, lastColumnResizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: selected?.body ?? "",
     onUpdate: () => setModified(true),
@@ -65,7 +84,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
+          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
       },
     },
   })
@@ -303,6 +322,8 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
             )}
             <div className="mx-1 h-5 w-px bg-border-1" />
             <NewsImageBtn editor={editor} onModified={() => setModified(true)} />
+            <div className="mx-1 h-5 w-px bg-border-1" />
+            <NewsTableToolbar editor={editor} />
           </div>
 
           {/* Excerpt */}
@@ -519,6 +540,76 @@ function EmojiIconPicker({
               skinTonePosition="search"
               set="native"
             />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NewsTableToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const isInTable = editor?.isActive("table")
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  const items = isInTable
+    ? [
+        { label: "Riga sopra", icon: ArrowUpFromLine, action: () => editor?.chain().focus().addRowBefore().run() },
+        { label: "Riga sotto", icon: ArrowDownFromLine, action: () => editor?.chain().focus().addRowAfter().run() },
+        { label: "Colonna a sinistra", icon: ArrowLeftFromLine, action: () => editor?.chain().focus().addColumnBefore().run() },
+        { label: "Colonna a destra", icon: ArrowRightFromLine, action: () => editor?.chain().focus().addColumnAfter().run() },
+        null,
+        { label: "Riga intestazione", icon: PanelTop, action: () => editor?.chain().focus().toggleHeaderRow().run() },
+        { label: "Unisci celle", icon: TableCellsMerge, action: () => editor?.chain().focus().mergeCells().run() },
+        { label: "Dividi celle", icon: TableCellsSplit, action: () => editor?.chain().focus().splitCell().run() },
+        null,
+        { label: "Elimina riga", icon: Rows3, action: () => editor?.chain().focus().deleteRow().run(), danger: true },
+        { label: "Elimina colonna", icon: Columns3, action: () => editor?.chain().focus().deleteColumn().run(), danger: true },
+        { label: "Elimina tabella", icon: Trash, action: () => editor?.chain().focus().deleteTable().run(), danger: true },
+      ]
+    : [
+        { label: "Inserisci tabella", icon: Table, action: () => { editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() } },
+      ]
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setOpen(!open)}
+        title="Tabella"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
+        style={{
+          backgroundColor: isInTable ? "#FDF2F8" : open ? "#F1F5F9" : "transparent",
+          color: isInTable ? "#EC4899" : "#64748B",
+        }}
+      >
+        <Table className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1.5 w-[200px] rounded-[10px] border border-border-1 bg-surface py-1 shadow-lg">
+          {items.map((item, i) =>
+            item === null ? (
+              <div key={i} className="my-1 h-px bg-border-1" />
+            ) : (
+              <button
+                key={i}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { item.action(); setOpen(false) }}
+                className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2"
+                style={{ color: (item as { danger?: boolean }).danger ? "#EF4444" : "#475569" }}
+              >
+                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                {item.label}
+              </button>
+            )
           )}
         </div>
       )}

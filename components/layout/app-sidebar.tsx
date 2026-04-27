@@ -12,6 +12,7 @@ import {
   DollarSign,
   BookOpen,
   Calendar,
+  CheckSquare,
   Users,
   ArrowLeftRight,
   FileEdit,
@@ -25,6 +26,7 @@ import {
 import { getPipelineCounts } from "@/lib/actions/autoscuole"
 import { getAdminStats, getUnreadNewsCount } from "@/lib/actions/data"
 import { getPendingContractRequestsCount } from "@/lib/actions/contracts"
+import { getGoogleTasks } from "@/lib/actions/calendar"
 
 const navItems = [
   { label: "Home", href: "/", icon: Home },
@@ -34,6 +36,7 @@ const navItems = [
   { label: "Commissioni", href: "/commissioni", icon: DollarSign },
   { label: "Risorse", href: "/risorse", icon: BookOpen },
   { label: "Calendario", href: "/calendario", icon: Calendar },
+  { label: "Attività", href: "/attivita", icon: CheckSquare, badgeKey: "pendingTasks" as const },
   { label: "Profilo", href: "/profilo", icon: User },
 ]
 
@@ -51,13 +54,14 @@ type BadgeCounts = {
   unassigned: number
   unreadNews: number
   pendingContracts: number
+  pendingTasks: number
 }
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [badges, setBadges] = useState<BadgeCounts>({ pipeline: 0, unassigned: 0, unreadNews: 0, pendingContracts: 0 })
+  const [badges, setBadges] = useState<BadgeCounts>({ pipeline: 0, unassigned: 0, unreadNews: 0, pendingContracts: 0, pendingTasks: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
 
   const role = (session?.user as Record<string, unknown>)?.role as string | undefined
@@ -70,9 +74,10 @@ export function AppSidebar() {
   useEffect(() => {
     async function loadBadges() {
       try {
-        const [counts, stats, unread, pendingContracts] = await Promise.all([getPipelineCounts(), getAdminStats(), getUnreadNewsCount(), getPendingContractRequestsCount()])
+        const [counts, stats, unread, pendingContracts, tasks] = await Promise.all([getPipelineCounts(), getAdminStats(), getUnreadNewsCount(), getPendingContractRequestsCount(), getGoogleTasks()])
         const total = counts.reduce((sum, c) => sum + c.count, 0)
-        setBadges({ pipeline: total, unassigned: stats.unassigned, unreadNews: unread, pendingContracts })
+        const pendingTasks = tasks.filter((t) => t.status === "needsAction").length
+        setBadges({ pipeline: total, unassigned: stats.unassigned, unreadNews: unread, pendingContracts, pendingTasks })
       } catch {
         // ignore
       }
@@ -97,7 +102,7 @@ export function AppSidebar() {
     return pathname.startsWith(href)
   }
 
-  function getBadgeValue(key: "pipeline" | "unassigned" | "unreadNews" | "pendingContracts") {
+  function getBadgeValue(key: "pipeline" | "unassigned" | "unreadNews" | "pendingContracts" | "pendingTasks") {
     return badges[key] || 0
   }
 
@@ -125,7 +130,7 @@ export function AppSidebar() {
               item={item}
               isActive={isActive(item.href)}
               badgeValue={"badgeKey" in item && item.badgeKey ? getBadgeValue(item.badgeKey) : undefined}
-              badgeDot={"badgeKey" in item && item.badgeKey === "unreadNews"}
+              badgeDot={false}
             />
           ))}
 

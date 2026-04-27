@@ -98,7 +98,10 @@ export function BachecaClient({ news, userId }: { news: News[]; userId?: string 
                   </span>
                   {item.pinned && <Pin className="h-3 w-3 text-pink" />}
                 </div>
-                <p className="mb-0.5 text-[13px] font-semibold text-ink-900">{item.title}</p>
+                <p className="mb-0.5 text-[13px] font-semibold text-ink-900">
+                  {item.icon && <span className="mr-1.5">{item.icon}</span>}
+                  {item.title}
+                </p>
                 {item.excerpt && (
                   <p className="line-clamp-2 text-[12px] text-ink-500">{item.excerpt}</p>
                 )}
@@ -136,6 +139,7 @@ export function BachecaClient({ news, userId }: { news: News[]; userId?: string 
                 {selected.category}
               </span>
               <h1 className="mb-2 text-[24px] font-bold tracking-tight text-ink-900">
+                {selected.icon && <span className="mr-2">{selected.icon}</span>}
                 {selected.title}
               </h1>
               <p className="text-[13px] text-ink-400">
@@ -152,7 +156,7 @@ export function BachecaClient({ news, userId }: { news: News[]; userId?: string 
             {selected.body && (
               <div
                 onClick={handleContentClick}
-                className="reglo-links prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_hr]:my-4 [&_hr]:border-border-1"
+                className="reglo-links prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_hr]:my-4 [&_hr]:border-border-1 [&_table]:border-collapse [&_table]:my-4 [&_table]:w-full [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold"
                 dangerouslySetInnerHTML={{ __html: selected.body }}
               />
             )}

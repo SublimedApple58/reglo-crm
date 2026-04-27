@@ -282,3 +282,74 @@ export async function deleteGoogleTask(taskId: string) {
     // Task may already be deleted
   }
 }
+
+export type GoogleTask = {
+  id: string
+  title: string
+  due: string | null
+  status: "needsAction" | "completed"
+  notes: string | null
+  completed: string | null
+}
+
+export async function getGoogleTasks(includeCompleted = false): Promise<GoogleTask[]> {
+  const session = await auth()
+  if (!session?.user) return []
+
+  const tasks = await getGoogleTasksClient(session.user.id)
+  if (!tasks) return []
+
+  try {
+    const res = await tasks.tasks.list({
+      tasklist: "@default",
+      showCompleted: includeCompleted,
+      showHidden: includeCompleted,
+      maxResults: 100,
+    })
+
+    return (res.data.items ?? []).map((t) => ({
+      id: t.id!,
+      title: t.title ?? "",
+      due: t.due ?? null,
+      status: (t.status as "needsAction" | "completed") ?? "needsAction",
+      notes: t.notes ?? null,
+      completed: t.completed ?? null,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function completeGoogleTask(taskId: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  const tasks = await getGoogleTasksClient(session.user.id)
+  if (!tasks) throw new Error("Google non connesso")
+
+  await tasks.tasks.patch({
+    tasklist: "@default",
+    task: taskId,
+    requestBody: { status: "completed" },
+  })
+
+  revalidatePath("/")
+  revalidatePath("/attivita")
+}
+
+export async function uncompleteGoogleTask(taskId: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  const tasks = await getGoogleTasksClient(session.user.id)
+  if (!tasks) throw new Error("Google non connesso")
+
+  await tasks.tasks.patch({
+    tasklist: "@default",
+    task: taskId,
+    requestBody: { status: "needsAction", completed: null },
+  })
+
+  revalidatePath("/")
+  revalidatePath("/attivita")
+}

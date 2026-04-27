@@ -31,6 +31,17 @@ import {
   DollarSign,
   Users,
   ImageIcon,
+  Table,
+  Rows3,
+  Columns3,
+  Trash,
+  ArrowUpFromLine,
+  ArrowDownFromLine,
+  ArrowLeftFromLine,
+  ArrowRightFromLine,
+  PanelTop,
+  TableCellsMerge,
+  TableCellsSplit,
 } from "lucide-react"
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
@@ -38,6 +49,10 @@ import UnderlineExt from "@tiptap/extension-underline"
 import LinkExt from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
+import { Table as TableExt } from "@tiptap/extension-table"
+import { TableRow } from "@tiptap/extension-table-row"
+import { TableCell } from "@tiptap/extension-table-cell"
+import { TableHeader } from "@tiptap/extension-table-header"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
 import { upsertResource, deleteResource, getResources } from "@/lib/actions/data"
 import { searchGlobal } from "@/lib/actions/autoscuole"
@@ -82,6 +97,10 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       }),
       Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({ placeholder: "Inizia a scrivere..." }),
+      TableExt.configure({ resizable: true, lastColumnResizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: selected?.html ?? "",
     onUpdate: () => setModified(true),
@@ -327,6 +346,8 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
               <ToolbarBtn icon={LinkIcon} action={() => setShowInternalLink(true)} title="Link interno" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               <ImageUploadBtn editor={editor} onModified={() => setModified(true)} />
+              <div className="mx-1 h-5 w-px bg-border-1" />
+              <TableToolbar editor={editor} />
             </div>
 
             {/* Editor content */}
@@ -542,6 +563,76 @@ function smartToggleHeading(editor: ReturnType<typeof useEditor> | null, level: 
     chain.setTextSelection(from)
   }
   chain.toggleHeading({ level }).run()
+}
+
+function TableToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const isInTable = editor?.isActive("table")
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  const items = isInTable
+    ? [
+        { label: "Riga sopra", icon: ArrowUpFromLine, action: () => editor?.chain().focus().addRowBefore().run() },
+        { label: "Riga sotto", icon: ArrowDownFromLine, action: () => editor?.chain().focus().addRowAfter().run() },
+        { label: "Colonna a sinistra", icon: ArrowLeftFromLine, action: () => editor?.chain().focus().addColumnBefore().run() },
+        { label: "Colonna a destra", icon: ArrowRightFromLine, action: () => editor?.chain().focus().addColumnAfter().run() },
+        null,
+        { label: "Riga intestazione", icon: PanelTop, action: () => editor?.chain().focus().toggleHeaderRow().run() },
+        { label: "Unisci celle", icon: TableCellsMerge, action: () => editor?.chain().focus().mergeCells().run() },
+        { label: "Dividi celle", icon: TableCellsSplit, action: () => editor?.chain().focus().splitCell().run() },
+        null,
+        { label: "Elimina riga", icon: Rows3, action: () => editor?.chain().focus().deleteRow().run(), danger: true },
+        { label: "Elimina colonna", icon: Columns3, action: () => editor?.chain().focus().deleteColumn().run(), danger: true },
+        { label: "Elimina tabella", icon: Trash, action: () => editor?.chain().focus().deleteTable().run(), danger: true },
+      ]
+    : [
+        { label: "Inserisci tabella", icon: Table, action: () => { editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() } },
+      ]
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setOpen(!open)}
+        title="Tabella"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
+        style={{
+          backgroundColor: isInTable ? "#FDF2F8" : open ? "#F1F5F9" : "transparent",
+          color: isInTable ? "#EC4899" : "#64748B",
+        }}
+      >
+        <Table className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1.5 w-[200px] rounded-[10px] border border-border-1 bg-surface py-1 shadow-lg">
+          {items.map((item, i) =>
+            item === null ? (
+              <div key={i} className="my-1 h-px bg-border-1" />
+            ) : (
+              <button
+                key={i}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { item.action(); setOpen(false) }}
+                className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2"
+                style={{ color: (item as { danger?: boolean }).danger ? "#EF4444" : "#475569" }}
+              >
+                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                {item.label}
+              </button>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ToolbarBtn({

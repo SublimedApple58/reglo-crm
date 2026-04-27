@@ -5,7 +5,8 @@ export const STAGES = [
   { id: "email", label: "Email inviata", color: "#8B5CF6", tone: "violet", order: 3 },
   { id: "in_attesa", label: "In attesa", color: "#A855F7", tone: "violet", order: 4 },
   { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 5 },
-  { id: "cliente", label: "Cliente", color: "#F59E0B", tone: "amber", order: 6 },
+  { id: "non_chiusa", label: "Non chiusa", color: "#F97316", tone: "orange", order: 6 },
+  { id: "cliente", label: "Cliente", color: "#F59E0B", tone: "amber", order: 7 },
 ] as const
 
 export type StageId = (typeof STAGES)[number]["id"]

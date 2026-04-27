@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { HomeClient } from "@/components/pages/home-client"
 import { getPipelineCounts, getAutoscuole } from "@/lib/actions/autoscuole"
 import { getHomeCards } from "@/lib/actions/data"
-import { hasGoogleConnected, getCalendarEvents } from "@/lib/actions/calendar"
+import { hasGoogleConnected, getCalendarEvents, getGoogleTasks } from "@/lib/actions/calendar"
 import { STAGES } from "@/lib/constants"
 
 export default async function HomePage() {
@@ -21,6 +21,9 @@ export default async function HomePage() {
   ])
   const filters = isAdmin ? undefined : { assignedTo: u.id as string }
   const allAutoscuole = await getAutoscuole(filters)
+
+  // Fetch tasks if Google connected
+  const googleTasks = googleConnected ? await getGoogleTasks() : []
 
   // Fetch upcoming events if Google connected
   let upcomingEvents: { title: string; start: string; meetLink: string | null; location: string | null }[] = []
@@ -85,6 +88,7 @@ export default async function HomePage() {
       homeCards={homeCards}
       googleConnected={googleConnected}
       upcomingEvents={upcomingEvents}
+      googleTasks={googleTasks}
     />
   )
 }

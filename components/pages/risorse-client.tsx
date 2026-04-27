@@ -28,6 +28,14 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   "book-open": BookOpen,
 }
 
+function ResourceIcon({ icon, color, size = "md" }: { icon: string | null; color: string; size?: "sm" | "md" }) {
+  const LucideIcon = ICON_MAP[icon ?? ""]
+  const cls = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"
+  if (LucideIcon) return <span style={{ color }}><LucideIcon className={cls} /></span>
+  if (icon) return <span className={size === "sm" ? "text-[14px]" : "text-[16px]"} role="img">{icon}</span>
+  return <span style={{ color }}><FileText className={cls} /></span>
+}
+
 export function RisorseClient({ resources, userId }: { resources: Resource[]; userId?: string }) {
   const router = useRouter()
 
@@ -121,14 +129,13 @@ export function RisorseClient({ resources, userId }: { resources: Resource[]; us
 
         <div className="flex-1 overflow-y-auto">
           {filteredDocs.map((doc) => {
-            const Icon = ICON_MAP[doc.icon ?? ""] ?? FileText
             const isSelected = doc.id === selectedId
 
             return (
               <button
                 key={doc.id}
                 onClick={() => setSelectedId(doc.id)}
-                className="flex w-full items-start gap-3 border-b border-border-2 px-4 py-3 text-left transition-colors"
+                className="flex w-full items-center gap-3 border-b border-border-2 px-4 py-3 text-left transition-colors"
                 style={{
                   backgroundColor: isSelected ? "#FDF2F8" : "transparent",
                   borderLeftWidth: 3,
@@ -136,10 +143,10 @@ export function RisorseClient({ resources, userId }: { resources: Resource[]; us
                 }}
               >
                 <div
-                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: (doc.color ?? "#64748B") + "15" }}
                 >
-                  <span style={{ color: doc.color ?? "#64748B" }}><Icon className="h-4 w-4" /></span>
+                  <ResourceIcon icon={doc.icon} color={doc.color ?? "#64748B"} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center gap-1.5">
@@ -181,6 +188,7 @@ export function RisorseClient({ resources, userId }: { resources: Resource[]; us
                 {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
               <h1 className="text-[22px] font-bold tracking-tight text-ink-900">
+                {selected.icon && !ICON_MAP[selected.icon] && <span className="mr-2">{selected.icon}</span>}
                 {selected.title}
               </h1>
             </div>
