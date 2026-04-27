@@ -171,9 +171,10 @@ export async function createActivity(data: {
   autoscuolaId: string
   type: "call" | "email" | "meeting" | "note"
   title: string
-  body?: string
+  body?: string | null
   meetLink?: string | null
   calendarEventId?: string | null
+  scheduledAt?: string | null
 }) {
   const session = await auth()
   if (!session?.user) throw new Error("Non autorizzato")
@@ -182,9 +183,10 @@ export async function createActivity(data: {
     autoscuolaId: data.autoscuolaId,
     type: data.type,
     title: data.title,
-    body: data.body,
+    body: data.body ?? null,
     meetLink: data.meetLink ?? null,
     calendarEventId: data.calendarEventId ?? null,
+    scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
     userId: session.user.id,
   })
 

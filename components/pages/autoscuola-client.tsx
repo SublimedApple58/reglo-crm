@@ -22,12 +22,16 @@ import {
   Upload,
   File,
   DollarSign,
+  AlertTriangle,
+  Copy,
+  CheckSquare,
 } from "lucide-react"
 import { STAGES } from "@/lib/constants"
 import { formatProvince } from "@/lib/utils"
 import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, deleteAutoscuola, setFollowUp } from "@/lib/actions/autoscuole"
 import { deleteDocument } from "@/lib/actions/documents"
-import { createContractRequest, updateContractRequest } from "@/lib/actions/contracts"
+import { createContractRequest, updateContractRequest, resubmitContractRequest, getContractFileUrl } from "@/lib/actions/contracts"
+import { createGoogleTask } from "@/lib/actions/calendar"
 import { MeetingDialog } from "@/components/meeting-dialog"
 import { DateTimePicker } from "@/components/date-time-picker"
 import type { Autoscuola, PipelineStage, User, Activity, Document, ContractRequest } from "@/lib/db/schema"
@@ -101,7 +105,13 @@ export function AutoscuolaClient({
   const [currentStageId, setCurrentStageId] = useState(autoscuola.stageId)
   const [isPending, startTransition] = useTransition()
   const [activityText, setActivityText] = useState("")
-  const [activityType, setActivityType] = useState<"call" | "email" | "meeting" | "note">("call")
+  const [activityType, setActivityType] = useState<"call" | "email" | "meeting" | "note" | "task">("call")
+  const [taskDueDate, setTaskDueDate] = useState(() => {
+    const now = new Date()
+    now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0)
+    const pad = (n: number) => n.toString().padStart(2, "0")
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+  })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showMeetingDialog, setShowMeetingDialog] = useState(false)
 
@@ -117,19 +127,36 @@ export function AutoscuolaClient({
   function handleAddActivity() {
     if (!activityText.trim()) return
     startTransition(async () => {
-      await createActivity({
-        autoscuolaId: autoscuola.id,
-        type: activityType,
-        title:
-          activityType === "call"
-            ? `Chiamata registrata`
-            : activityType === "email"
-            ? `Email inviata`
-            : activityType === "meeting"
-            ? `Meeting registrato`
-            : `Nota aggiunta`,
-        body: activityText,
-      })
+      if (activityType === "task") {
+        // Create a Google Task + CRM activity with scheduledAt
+        const dueISO = new Date(taskDueDate).toISOString()
+        await createGoogleTask({
+          title: activityText.trim(),
+          notes: `Autoscuola: ${autoscuola.name}`,
+          dueDate: dueISO,
+        })
+        await createActivity({
+          autoscuolaId: autoscuola.id,
+          type: "note",
+          title: activityText.trim(),
+          body: null,
+          scheduledAt: dueISO,
+        })
+      } else {
+        await createActivity({
+          autoscuolaId: autoscuola.id,
+          type: activityType,
+          title:
+            activityType === "call"
+              ? `Chiamata registrata`
+              : activityType === "email"
+              ? `Email inviata`
+              : activityType === "meeting"
+              ? `Meeting registrato`
+              : `Nota aggiunta`,
+          body: activityText,
+        })
+      }
       setActivityText("")
     })
   }
@@ -283,10 +310,22 @@ export function AutoscuolaClient({
                 <textarea
                   value={activityText}
                   onChange={(e) => setActivityText(e.target.value)}
-                  placeholder="Registra un'attività…"
+                  placeholder={activityType === "task" ? "Descrivi la task..." : "Registra un'attivita\u2026"}
                   className="mb-3 w-full resize-none rounded-[10px] border border-border-2 bg-surface-2 p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink"
                   rows={3}
                 />
+
+                {/* Task date picker */}
+                {activityType === "task" && (
+                  <div className="mb-3">
+                    <DateTimePicker
+                      label="Scadenza"
+                      value={taskDueDate}
+                      onChange={(v) => setTaskDueDate(v)}
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div className="flex gap-1.5">
                     {(
@@ -295,6 +334,7 @@ export function AutoscuolaClient({
                         { type: "email" as const, icon: Mail, label: "Email" },
                         { type: "meeting" as const, icon: Video, label: "Meeting" },
                         { type: "note" as const, icon: StickyNote, label: "Nota" },
+                        { type: "task" as const, icon: CheckSquare, label: "Task" },
                       ] as const
                     ).map((btn) => (
                       <button
@@ -319,7 +359,7 @@ export function AutoscuolaClient({
                     className="flex items-center gap-1.5 rounded-[999px] bg-pink px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
                   >
                     <Send className="h-3 w-3" />
-                    Registra
+                    {activityType === "task" ? "Crea task" : "Registra"}
                   </button>
                 </div>
               </div>
@@ -992,6 +1032,28 @@ function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
   )
 }
 
+const REGLO_COMPANY_DATA = {
+  ragioneSociale: "–",
+  partitaIva: "–",
+  codiceFiscale: "–",
+  codiceSDI: "–",
+  indirizzo: "–",
+  cap: "–",
+  citta: "–",
+  provincia: "–",
+} as const
+
+const REGLO_FIELDS = [
+  { label: "Ragione sociale", key: "ragioneSociale" },
+  { label: "Partita IVA", key: "partitaIva" },
+  { label: "Codice fiscale", key: "codiceFiscale" },
+  { label: "Codice SDI / PEC", key: "codiceSDI" },
+  { label: "Indirizzo", key: "indirizzo" },
+  { label: "CAP", key: "cap" },
+  { label: "Citta", key: "citta" },
+  { label: "Provincia", key: "provincia" },
+] as const
+
 const CONTRACT_SECTIONS = [
   {
     title: "Dati aziendali",
@@ -1025,6 +1087,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; 
   pending: { label: "In attesa", color: "#F59E0B", bg: "#FEF3C7", icon: Clock },
   in_progress: { label: "In lavorazione", color: "#3B82F6", bg: "#DBEAFE", icon: Clock },
   done: { label: "Completato", color: "#10B981", bg: "#D1FAE5", icon: Check },
+  rejected: { label: "Rimandato", color: "#EF4444", bg: "#FEE2E2", icon: AlertTriangle },
 }
 
 function ContrattoTab({
@@ -1037,7 +1100,8 @@ function ContrattoTab({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState<ContractFormData & { notes: string }>(() => {
+  const [isResubmit, setIsResubmit] = useState(false)
+  const [form, setForm] = useState<ContractFormData & { notes: string; importoPreventivo: string; descrizioneServizio: string }>(() => {
     const r = contractRequest?.request
     return {
       ragioneSociale: r?.ragioneSociale ?? "",
@@ -1050,16 +1114,28 @@ function ContrattoTab({
       cittaFatturazione: r?.cittaFatturazione ?? "",
       provinciaFatturazione: r?.provinciaFatturazione ?? "",
       notes: r?.notes ?? "",
+      importoPreventivo: r?.importoPreventivo != null ? String(r.importoPreventivo) : "",
+      descrizioneServizio: r?.descrizioneServizio ?? "",
     }
   })
 
   function handleSubmit() {
+    const payload = {
+      ...form,
+      importoPreventivo: form.importoPreventivo ? parseFloat(form.importoPreventivo) : undefined,
+      descrizioneServizio: form.descrizioneServizio || undefined,
+    }
+
     startTransition(async () => {
-      if (contractRequest) {
-        await updateContractRequest(contractRequest.request.id, form)
+      if (isResubmit && contractRequest) {
+        await resubmitContractRequest(contractRequest.request.id, payload)
+        setEditing(false)
+        setIsResubmit(false)
+      } else if (contractRequest && editing) {
+        await updateContractRequest(contractRequest.request.id, payload)
         setEditing(false)
       } else {
-        await createContractRequest({ autoscuolaId, ...form })
+        await createContractRequest({ autoscuolaId, ...payload })
       }
       router.refresh()
     })
@@ -1071,7 +1147,7 @@ function ContrattoTab({
       <div>
         {editing && (
           <button
-            onClick={() => setEditing(false)}
+            onClick={() => { setEditing(false); setIsResubmit(false) }}
             className="mb-4 flex items-center gap-1 text-[12.5px] font-medium text-ink-500 transition-colors hover:text-ink-700"
           >
             <span className="text-[14px]">&larr;</span> Torna al riepilogo
@@ -1084,15 +1160,85 @@ function ContrattoTab({
               <FileText className="h-4 w-4 text-pink" />
             </div>
             <h3 className="text-[17px] font-bold text-ink-900">
-              {editing ? "Correggi dati fiscali" : "Richiesta contratto"}
+              {isResubmit ? "Correggi e reinvia" : editing ? "Correggi dati fiscali" : "Richiesta contratto"}
             </h3>
           </div>
           <p className="ml-[42px] text-[13px] text-ink-500">
-            Compila i dati fiscali dell&apos;autoscuola per richiedere la generazione del contratto.
+            {isResubmit
+              ? "Correggi i dati e reinvia la richiesta all'admin."
+              : "Compila i dati fiscali dell'autoscuola per richiedere la generazione del contratto."}
           </p>
         </div>
 
+        {/* Da inviare al cliente — dati Reglo */}
+        <div className="mb-5 rounded-[14px] border border-border-1 bg-surface p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="text-[15px] font-bold text-ink-900">Da inviare al cliente</h4>
+            <button
+              type="button"
+              onClick={() => {
+                const text = `RICHIESTA DATI FATTURA\n\n${REGLO_FIELDS.map((f) => `${f.label}: ${REGLO_COMPANY_DATA[f.key]}`).join("\n")}`
+                navigator.clipboard.writeText(text)
+              }}
+              className="flex items-center gap-1.5 rounded-[999px] border border-pink/30 px-3 py-1.5 text-[12px] font-semibold text-pink transition-colors hover:bg-pink/5"
+            >
+              <Copy className="h-3 w-3" />
+              Copia testo
+            </button>
+          </div>
+          <div className="rounded-[10px] border border-border-2 bg-surface-2/40 p-4">
+            <p className="mb-3 text-[12.5px] font-bold tracking-wide text-ink-700 uppercase">
+              Richiesta dati fattura
+            </p>
+            <div className="space-y-1.5">
+              {REGLO_FIELDS.map((f) => (
+                <div key={f.key} className="flex items-baseline gap-2 text-[13px]">
+                  <span className="text-ink-500">{f.label}:</span>
+                  <span className="font-medium text-ink-900">{REGLO_COMPANY_DATA[f.key]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-5">
+          {/* Dettagli preventivo section */}
+          <div className="rounded-[14px] border border-border-1 bg-surface p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-ink-400" />
+              <h4 className="text-[12.5px] font-semibold tracking-wide text-ink-500 uppercase">
+                Dettagli preventivo
+              </h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-[12px] font-medium text-ink-600">
+                  Importo preventivo (&euro;)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.importoPreventivo}
+                  onChange={(e) => setForm({ ...form, importoPreventivo: e.target.value })}
+                  placeholder="0.00"
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface-2/50 px-3 text-[13px] text-ink-900 outline-none transition-colors focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="mb-1.5 block text-[12px] font-medium text-ink-600">
+                  Descrizione servizio offerto
+                </label>
+                <textarea
+                  value={form.descrizioneServizio}
+                  onChange={(e) => setForm({ ...form, descrizioneServizio: e.target.value })}
+                  placeholder="Descrivi brevemente il servizio offerto..."
+                  className="w-full resize-none rounded-[10px] border border-border-1 bg-surface-2/50 p-3 text-[13px] text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
           {CONTRACT_SECTIONS.map((section) => {
             const SectionIcon = section.icon
             return (
@@ -1148,13 +1294,15 @@ function ContrattoTab({
             <Send className="h-3.5 w-3.5" />
             {isPending
               ? "Invio in corso..."
+              : isResubmit
+              ? "Correggi e reinvia"
               : editing
               ? "Salva modifiche"
               : "Invia richiesta"}
           </button>
-          {editing && (
+          {(editing || isResubmit) && (
             <button
-              onClick={() => setEditing(false)}
+              onClick={() => { setEditing(false); setIsResubmit(false) }}
               className="rounded-[999px] border border-border-1 px-5 py-2.5 text-[13px] font-medium text-ink-600 transition-colors hover:bg-surface-2"
             >
               Annulla
@@ -1192,6 +1340,146 @@ function ContrattoTab({
             year: "numeric",
           })}
         </p>
+
+        {/* Download links for uploaded PDFs */}
+        {(req.contractPdfKey || req.invoicePdfKey) && (
+          <div className="mt-6 space-y-2">
+            {req.contractPdfKey && (
+              <ContractDownloadLink
+                label="Contratto Firmato"
+                fileName={req.contractPdfName ?? "contratto.pdf"}
+                fileKey={req.contractPdfKey}
+              />
+            )}
+            {req.invoicePdfKey && (
+              <ContractDownloadLink
+                label="Fattura Emessa"
+                fileName={req.invoicePdfName ?? "fattura.pdf"}
+                fileKey={req.invoicePdfKey}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Rejected state
+  if (req.status === "rejected") {
+    return (
+      <div>
+        {/* Status header */}
+        <div className="mb-6 flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-red-100">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-[17px] font-bold text-ink-900">Richiesta rimandato</h3>
+              <p className="text-[12px] text-ink-400">
+                La richiesta è stata rimandato indietro dall&apos;admin
+              </p>
+            </div>
+          </div>
+          <span
+            className="flex items-center gap-1.5 rounded-[999px] px-3 py-1.5 text-[11.5px] font-semibold"
+            style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: statusInfo.color }}
+            />
+            {statusInfo.label}
+          </span>
+        </div>
+
+        {/* Progress bar showing rejected state */}
+        <div className="mb-6 flex gap-1.5">
+          {(["pending", "rejected"] as const).map((step) => {
+            const info = STATUS_LABELS[step]
+            return (
+              <div key={step} className="flex-1">
+                <div
+                  className="mb-1.5 h-[3px] rounded-full"
+                  style={{ backgroundColor: info.color }}
+                />
+                <p className="text-[10.5px] font-medium" style={{ color: info.color }}>
+                  {info.label}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Rejection reason alert */}
+        {req.rejectionReason && (
+          <div className="mb-5 rounded-[12px] border border-red-200 bg-red-50 p-4">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+              <div>
+                <p className="mb-0.5 text-[12.5px] font-semibold text-red-700">Motivo del rifiuto</p>
+                <p className="text-[13px] leading-relaxed text-red-600">{req.rejectionReason}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fiscal data sections (read-only summary) */}
+        <div className="space-y-4">
+          {CONTRACT_SECTIONS.map((section) => {
+            const SectionIcon = section.icon
+            const hasData = section.fields.some((f) => req[f.key as keyof typeof req])
+            if (!hasData) return null
+            return (
+              <div key={section.title} className="rounded-[14px] border border-border-1 bg-surface-2/30 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <SectionIcon className="h-3.5 w-3.5 text-ink-400" />
+                  <h4 className="text-[11.5px] font-semibold tracking-wider text-ink-400 uppercase">
+                    {section.title}
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                  {section.fields.map((field) => {
+                    const value = req[field.key as keyof typeof req] as string | null
+                    if (!value) return null
+                    return (
+                      <div key={field.key} className={`flex justify-between py-1 text-[13px] ${field.span === 2 ? "col-span-2" : ""}`}>
+                        <span className="text-ink-500">{field.label}</span>
+                        <span className="font-medium text-ink-900">{value}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <button
+          onClick={() => {
+            setEditing(true)
+            setIsResubmit(true)
+            // Reset form with current values
+            setForm({
+              ragioneSociale: req.ragioneSociale ?? "",
+              partitaIva: req.partitaIva ?? "",
+              codiceFiscale: req.codiceFiscale ?? "",
+              pecEmail: req.pecEmail ?? "",
+              codiceSDI: req.codiceSDI ?? "",
+              indirizzoFatturazione: req.indirizzoFatturazione ?? "",
+              capFatturazione: req.capFatturazione ?? "",
+              cittaFatturazione: req.cittaFatturazione ?? "",
+              provinciaFatturazione: req.provinciaFatturazione ?? "",
+              notes: req.notes ?? "",
+              importoPreventivo: req.importoPreventivo != null ? String(req.importoPreventivo) : "",
+              descrizioneServizio: req.descrizioneServizio ?? "",
+            })
+          }}
+          className="mt-5 flex items-center gap-2 rounded-[999px] bg-pink px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90"
+        >
+          <Send className="h-3.5 w-3.5" />
+          Correggi e reinvia
+        </button>
       </div>
     )
   }
@@ -1254,6 +1542,34 @@ function ContrattoTab({
         })}
       </div>
 
+      {/* Importo + descrizione servizio */}
+      {(req.importoPreventivo || req.descrizioneServizio) && (
+        <div className="mb-4 rounded-[14px] border border-amber-200/60 bg-amber-50/40 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <DollarSign className="h-3.5 w-3.5 text-amber-600" />
+            <h4 className="text-[11.5px] font-semibold tracking-wider text-amber-600 uppercase">
+              Dettagli preventivo
+            </h4>
+          </div>
+          <div className="space-y-1.5">
+            {req.importoPreventivo != null && (
+              <div className="flex justify-between text-[13px]">
+                <span className="text-ink-500">Importo</span>
+                <span className="font-semibold text-ink-900">
+                  {new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(req.importoPreventivo)}
+                </span>
+              </div>
+            )}
+            {req.descrizioneServizio && (
+              <div className="text-[13px]">
+                <span className="text-ink-500">Servizio: </span>
+                <span className="text-ink-700">{req.descrizioneServizio}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Fiscal data sections */}
       <div className="space-y-4">
         {CONTRACT_SECTIONS.map((section) => {
@@ -1305,6 +1621,47 @@ function ContrattoTab({
         Correggi dati
       </button>
     </div>
+  )
+}
+
+function ContractDownloadLink({
+  label,
+  fileName,
+  fileKey,
+}: {
+  label: string
+  fileName: string
+  fileKey: string
+}) {
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const url = await getContractFileUrl(fileKey)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = fileName
+      a.target = "_blank"
+      a.rel = "noopener noreferrer"
+      a.click()
+    } catch {
+      alert("Errore nel download del file")
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={downloading}
+      className="flex items-center gap-2 rounded-[10px] border border-border-1 bg-surface px-4 py-2.5 text-[13px] font-medium text-ink-700 transition-colors hover:bg-surface-2 disabled:opacity-50"
+    >
+      <Download className="h-4 w-4 text-ink-400" />
+      <span>{label}</span>
+      <span className="text-[11.5px] text-ink-400">({fileName})</span>
+    </button>
   )
 }
 
