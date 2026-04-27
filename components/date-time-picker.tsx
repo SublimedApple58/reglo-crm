@@ -10,9 +10,10 @@ const MONTHS_IT = [
 ]
 
 type DateTimePickerProps = {
-  value: string // local ISO string "YYYY-MM-DDTHH:mm"
+  value: string // local ISO string "YYYY-MM-DDTHH:mm" or "YYYY-MM-DD" when dateOnly
   onChange: (value: string) => void
   label?: string
+  dateOnly?: boolean
 }
 
 function pad(n: number) {
@@ -30,7 +31,7 @@ function parseLocal(s: string) {
   return new Date(y, m - 1, d, h, min)
 }
 
-export function DateTimePicker({ value, onChange, label }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -135,9 +136,13 @@ export function DateTimePicker({ value, onChange, label }: DateTimePickerProps) 
       >
         <Calendar className="h-3.5 w-3.5 text-ink-400" />
         <span>{displayDateStr}</span>
-        <span className="text-ink-400">·</span>
-        <Clock className="h-3.5 w-3.5 text-ink-400" />
-        <span>{displayTimeStr}</span>
+        {!dateOnly && (
+          <>
+            <span className="text-ink-400">·</span>
+            <Clock className="h-3.5 w-3.5 text-ink-400" />
+            <span>{displayTimeStr}</span>
+          </>
+        )}
       </button>
 
       {open && (
@@ -190,34 +195,38 @@ export function DateTimePicker({ value, onChange, label }: DateTimePickerProps) 
             })}
           </div>
 
-          {/* Divider */}
-          <div className="my-3 h-px bg-border-1" />
+          {!dateOnly && (
+            <>
+              {/* Divider */}
+              <div className="my-3 h-px bg-border-1" />
 
-          {/* Time picker */}
-          <div className="mb-3 flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-ink-400" />
-            <span className="text-[12px] font-medium text-ink-500">Orario</span>
-            <div className="flex-1" />
-            <select
-              value={hours}
-              onChange={(e) => setStagingTime(Number(e.target.value), minutes)}
-              className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-pink"
-            >
-              {Array.from({ length: 24 }, (_, i) => (
-                <option key={i} value={i}>{pad(i)}</option>
-              ))}
-            </select>
-            <span className="text-[13px] font-bold text-ink-400">:</span>
-            <select
-              value={minutes}
-              onChange={(e) => setStagingTime(hours, Number(e.target.value))}
-              className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-pink"
-            >
-              {[0, 15, 30, 45].map((m) => (
-                <option key={m} value={m}>{pad(m)}</option>
-              ))}
-            </select>
-          </div>
+              {/* Time picker */}
+              <div className="mb-3 flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-ink-400" />
+                <span className="text-[12px] font-medium text-ink-500">Orario</span>
+                <div className="flex-1" />
+                <select
+                  value={hours}
+                  onChange={(e) => setStagingTime(Number(e.target.value), minutes)}
+                  className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-pink"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{pad(i)}</option>
+                  ))}
+                </select>
+                <span className="text-[13px] font-bold text-ink-400">:</span>
+                <select
+                  value={minutes}
+                  onChange={(e) => setStagingTime(hours, Number(e.target.value))}
+                  className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-pink"
+                >
+                  {[0, 15, 30, 45].map((m) => (
+                    <option key={m} value={m}>{pad(m)}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Confirm button */}
           <button

@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { useState, useTransition, useMemo, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
-import { CheckCircle2, Circle, ListChecks, Calendar } from "lucide-react"
-import { completeGoogleTask, uncompleteGoogleTask } from "@/lib/actions/calendar"
+import { CheckCircle2, Circle, ListChecks, Calendar, Plus, X } from "lucide-react"
+import { completeGoogleTask, uncompleteGoogleTask, createGoogleTask } from "@/lib/actions/calendar"
 import type { GoogleTask } from "@/lib/actions/calendar"
+import { DateTimePicker } from "@/components/date-time-picker"
 
 type Filter = "all" | "todo" | "done"
 
@@ -71,6 +73,12 @@ export function AttivitaClient({
   const [filter, setFilter] = useState<Filter>("todo")
   const [toggledIds, setToggledIds] = useState<Map<string, "completed" | "needsAction">>(new Map())
   const [isPending, startTransition] = useTransition()
+  const [showNewForm, setShowNewForm] = useState(false)
+  const [newTitle, setNewTitle] = useState("")
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [newDue, setNewDue] = useState(todayStr)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   const tasks = useMemo(() => {
     return initialTasks.map((t) => {
@@ -104,6 +112,19 @@ export function AttivitaClient({
         tasks: groups[key],
       }))
   }, [filtered, filter])
+
+  function handleCreate() {
+    if (!newTitle.trim()) return
+    const dueDate = new Date(newDue + "T09:00:00").toISOString()
+
+    startTransition(async () => {
+      await createGoogleTask({ title: newTitle.trim(), dueDate })
+      setNewTitle("")
+      setNewDue(todayStr)
+      setShowNewForm(false)
+      router.refresh()
+    })
+  }
 
   function handleToggle(task: GoogleTask) {
     const newStatus = task.status === "needsAction" ? "completed" : "needsAction"
@@ -167,7 +188,49 @@ export function AttivitaClient({
             {pendingCount}
           </span>
         )}
+        <div className="ml-auto">
+          <button
+            onClick={() => {
+              setShowNewForm((v) => !v)
+              setTimeout(() => titleRef.current?.focus(), 50)
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-pink text-white transition-colors hover:bg-pink/90"
+          >
+            {showNewForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
+
+      {/* New task form */}
+      {showNewForm && (
+        <div className="mb-5 rounded-[12px] border border-ink-100 bg-white p-4">
+          <div className="flex gap-3">
+            <input
+              ref={titleRef}
+              type="text"
+              placeholder="Titolo attività..."
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              className="h-9 flex-1 rounded-[8px] border border-ink-200 px-3 text-[13px] text-ink-900 placeholder:text-ink-400 focus:border-pink focus:outline-none"
+            />
+            <div className="shrink-0">
+              <DateTimePicker
+                value={newDue + "T09:00"}
+                onChange={(v) => setNewDue(v.slice(0, 10))}
+                dateOnly
+              />
+            </div>
+            <button
+              onClick={handleCreate}
+              disabled={!newTitle.trim() || isPending}
+              className="h-9 rounded-[8px] bg-pink px-4 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+            >
+              Crea
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-5 flex gap-1 rounded-[10px] bg-surface-2 p-1">
