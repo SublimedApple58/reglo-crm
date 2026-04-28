@@ -127,11 +127,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.avatar = dbUser.avatar ?? user?.image ?? null
         }
       } else if (user) {
-        // Credentials provider
+        // Credentials provider — first login
         token.id = user.id
         token.role = (user as Record<string, unknown>).role as string
         token.territory = (user as Record<string, unknown>).territory as string
         token.avatar = (user as Record<string, unknown>).avatar as string
+      } else if (token.id) {
+        // Subsequent requests — refresh avatar from DB
+        const [dbUser] = await db
+          .select({ avatar: users.avatar })
+          .from(users)
+          .where(eq(users.id, token.id as string))
+          .limit(1)
+        if (dbUser) {
+          token.avatar = dbUser.avatar
+        }
       }
       return token
     },
