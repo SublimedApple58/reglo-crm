@@ -11,10 +11,11 @@ import {
   Plus,
   Users,
   Phone,
+  HelpCircle,
 } from "lucide-react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { createAutoscuola } from "@/lib/actions/autoscuole"
-import { STAGES, SALES_COLORS } from "@/lib/constants"
+import { STAGES, SALES_COLORS, STAGE_DESCRIPTIONS } from "@/lib/constants"
 import { formatProvince } from "@/lib/utils"
 import { updateAutoscuolaStage } from "@/lib/actions/autoscuole"
 
@@ -70,6 +71,7 @@ export function PipelineClient({
   const [search, setSearch] = useState("")
   const [autoscuole, setAutoscuole] = useState(initialAutoscuole)
   const [showFilters, setShowFilters] = useState(false)
+  const [showLegend, setShowLegend] = useState(false)
   const [newOppStage, setNewOppStage] = useState<string | null>(null)
   const [filters, setFilters] = useState<ActiveFilters>({
     stages: [],
@@ -241,6 +243,13 @@ export function PipelineClient({
             {filtered.length} autoscuole
           </span>
           <button
+            onClick={() => setShowLegend(true)}
+            className="flex h-8 items-center gap-1.5 rounded-[999px] border border-border-1 px-3 text-[12px] font-medium text-ink-600 transition-colors hover:bg-surface-2"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            Legenda
+          </button>
+          <button
             onClick={() => setNewOppStage("da_chiamare")}
             className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-pink/90"
           >
@@ -259,6 +268,9 @@ export function PipelineClient({
       {newOppStage && (
         <NewOppDialog defaultStage={newOppStage} onClose={() => setNewOppStage(null)} />
       )}
+
+      {/* Legend dialog */}
+      {showLegend && <LegendDialog onClose={() => setShowLegend(false)} />}
     </div>
   )
 }
@@ -690,6 +702,58 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function LegendDialog({ onClose }: { onClose: () => void }) {
+  // Split stages into two columns
+  const half = Math.ceil(STAGES.length / 2)
+  const leftStages = STAGES.slice(0, half)
+  const rightStages = STAGES.slice(half)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="w-[680px] rounded-[20px] border border-border-1 bg-surface p-8 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-7 flex items-center justify-between">
+          <h2 className="text-[20px] font-bold text-ink-900">Legenda Stati CRM</h2>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 hover:bg-surface-2">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-10 gap-y-5">
+          {[...leftStages, ...rightStages].map((stage, i) => {
+            const isLeft = i < half
+            const col = isLeft ? leftStages : rightStages
+            const idx = isLeft ? i : i - half
+            const s = col[idx]
+            return (
+              <div key={s.id} className="flex items-center gap-4">
+                <span
+                  className="inline-flex shrink-0 items-center gap-[6px] rounded-[999px] px-3 py-1.5 text-[12px] font-bold whitespace-nowrap uppercase tracking-[0.3px]"
+                  style={{
+                    color: s.color,
+                    backgroundColor: s.color + "18",
+                  }}
+                >
+                  <span
+                    className="inline-block h-[7px] w-[7px] rounded-full"
+                    style={{ backgroundColor: s.color }}
+                  />
+                  {s.label}
+                </span>
+                <span className="text-[13px] text-ink-500">
+                  {STAGE_DESCRIPTIONS[s.id] ?? ""}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

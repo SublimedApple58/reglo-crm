@@ -2,12 +2,23 @@ export const STAGES = [
   { id: "da_chiamare", label: "Da chiamare", color: "#64748B", tone: "slate", order: 0 },
   { id: "non_interessato", label: "Non interessato", color: "#EF4444", tone: "red", order: 1 },
   { id: "follow_up", label: "Follow up", color: "#3B82F6", tone: "blue", order: 2 },
-  { id: "email", label: "Email inviata", color: "#8B5CF6", tone: "violet", order: 3 },
-  { id: "in_attesa", label: "In attesa", color: "#A855F7", tone: "violet", order: 4 },
-  { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 5 },
-  { id: "non_chiusa", label: "Non chiusa", color: "#F97316", tone: "orange", order: 6 },
-  { id: "cliente", label: "Cliente", color: "#F59E0B", tone: "amber", order: 7 },
+  { id: "email", label: "Email", color: "#8B5CF6", tone: "violet", order: 3 },
+  { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 4 },
+  { id: "no_show", label: "No show", color: "#F97316", tone: "orange", order: 5 },
+  { id: "cliente", label: "Cliente", color: "#EC4899", tone: "pink", order: 6 },
+  { id: "nuove_features", label: "Nuove features", color: "#8B5CF6", tone: "violet", order: 7 },
 ] as const
+
+export const STAGE_DESCRIPTIONS: Record<string, string> = {
+  da_chiamare: "Nuovi lead inseriti",
+  non_interessato: "Perso o disinteressato",
+  follow_up: "Follow-up telefonico",
+  email: "In attesa di risposta email",
+  appuntamento: "Demo fissata su calendario",
+  no_show: "Non si è presentato all'appuntamento",
+  cliente: "Contratto e fattura OK",
+  nuove_features: "Interessati a nuove features non ancora disponibili",
+}
 
 export type StageId = (typeof STAGES)[number]["id"]
 
