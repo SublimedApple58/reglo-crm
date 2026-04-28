@@ -22,7 +22,6 @@ import {
   Link2,
   Undo2,
   Redo2,
-  Tag,
   FileText,
   LinkIcon,
   Building,
@@ -30,6 +29,14 @@ import {
   Kanban,
   DollarSign,
   Users,
+  Phone,
+  Mail,
+  Shield,
+  MessageSquare,
+  Star,
+  Heart,
+  Zap,
+  Globe,
   ImageIcon,
   ImagePlus,
   X as XIcon,
@@ -875,6 +882,28 @@ function InternalLinkDialog({
   )
 }
 
+const ICON_OPTIONS: { value: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: "file-text", Icon: FileText },
+  { value: "phone", Icon: Phone },
+  { value: "mail", Icon: Mail },
+  { value: "shield", Icon: Shield },
+  { value: "book-open", Icon: BookOpen },
+  { value: "users", Icon: Users },
+  { value: "building", Icon: Building },
+  { value: "dollar-sign", Icon: DollarSign },
+  { value: "message-square", Icon: MessageSquare },
+  { value: "star", Icon: Star },
+  { value: "heart", Icon: Heart },
+  { value: "zap", Icon: Zap },
+  { value: "globe", Icon: Globe },
+]
+
+function CategoryIcon({ icon, color, size = 16 }: { icon: string; color: string; size?: number }) {
+  const opt = ICON_OPTIONS.find((o) => o.value === icon)
+  const Comp = opt?.Icon ?? FileText
+  return <span style={{ color }}><Comp className={size <= 14 ? "h-3.5 w-3.5" : "h-4 w-4"} /></span>
+}
+
 function ResourceCategoryManager({
   categories,
   onUpdate,
@@ -889,6 +918,8 @@ function ResourceCategoryManager({
   const [newColor, setNewColor] = useState("#64748B")
   const [newIcon, setNewIcon] = useState("file-text")
   const [isPending, startTransition] = useTransition()
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [reassignTo, setReassignTo] = useState<string>("")
 
   function handleAdd() {
     if (!newLabel.trim()) return
@@ -903,49 +934,88 @@ function ResourceCategoryManager({
     })
   }
 
-  function handleDelete(label: string) {
+  function handleConfirmDelete() {
+    if (!deleteTarget || !reassignTo) return
     startTransition(async () => {
       const { getResourceCategories } = await import("@/lib/actions/data")
       const dbCats = await getResourceCategories()
-      const cat = dbCats.find((c) => c.label === label)
-      if (cat) await deleteResourceCategory(cat.id)
-      const updated = items.filter((c) => c.label !== label)
+      const cat = dbCats.find((c) => c.label === deleteTarget)
+      if (cat) await deleteResourceCategory(cat.id, reassignTo)
+      const updated = items.filter((c) => c.label !== deleteTarget)
       setItems(updated)
       onUpdate(updated)
+      setDeleteTarget(null)
+      setReassignTo("")
     })
   }
 
-  const iconOptions = [
-    { value: "file-text", label: "Documento" },
-    { value: "phone", label: "Telefono" },
-    { value: "mail", label: "Email" },
-    { value: "shield", label: "Scudo" },
-    { value: "book-open", label: "Libro" },
-    { value: "users", label: "Utenti" },
-    { value: "building", label: "Edificio" },
-    { value: "dollar-sign", label: "Dollaro" },
-  ]
+  const otherCategories = items.filter((c) => c.label !== deleteTarget)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="w-[440px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
+      <div className="w-[480px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-5 flex items-center justify-between">
           <h2 className="text-[18px] font-bold text-ink-900">Gestisci categorie</h2>
           <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-400 hover:bg-surface-2">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mb-4 space-y-2">
-          {items.map((cat) => (
-            <div key={cat.label} className="flex items-center gap-3 rounded-[10px] border border-border-1 px-3 py-2">
-              <span className="h-4 w-4 rounded-full" style={{ backgroundColor: cat.color }} />
-              <span className="flex-1 text-[13px] font-medium text-ink-900">{cat.label}</span>
-              <span className="text-[11px] text-ink-400">{cat.icon}</span>
+        {/* Delete confirmation */}
+        {deleteTarget && (
+          <div className="mb-4 rounded-[12px] border border-red-200 bg-red-50 p-4">
+            <p className="mb-3 text-[13px] font-medium text-ink-900">
+              Sposta le risorse di <strong>{deleteTarget}</strong> in:
+            </p>
+            <div className="mb-3 space-y-1.5">
+              {otherCategories.map((cat) => (
+                <button
+                  key={cat.label}
+                  onClick={() => setReassignTo(cat.label)}
+                  className="flex w-full items-center gap-2.5 rounded-[8px] border px-3 py-2 text-left text-[13px] transition-colors"
+                  style={{
+                    borderColor: reassignTo === cat.label ? "#EC4899" : "#E2E8F0",
+                    backgroundColor: reassignTo === cat.label ? "#FDF2F8" : "white",
+                  }}
+                >
+                  <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
+                  <span className="font-medium text-ink-900">{cat.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
               <button
-                onClick={() => handleDelete(cat.label)}
-                disabled={isPending}
-                className="text-[11px] text-red-500 hover:underline disabled:opacity-50"
+                onClick={() => { setDeleteTarget(null); setReassignTo("") }}
+                className="h-8 flex-1 rounded-[999px] border border-border-1 text-[12px] font-medium text-ink-600 hover:bg-surface-2"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={!reassignTo || isPending}
+                className="h-8 flex-1 rounded-[999px] bg-red-500 text-[12px] font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                {isPending ? "Spostamento..." : "Elimina e sposta"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Category list */}
+        <div className="mb-5 space-y-1.5">
+          {items.map((cat) => (
+            <div key={cat.label} className="flex items-center gap-3 rounded-[10px] border border-border-1 px-3 py-2.5">
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]"
+                style={{ backgroundColor: cat.color + "18" }}
+              >
+                <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
+              </div>
+              <span className="flex-1 text-[13px] font-medium text-ink-900">{cat.label}</span>
+              <button
+                onClick={() => { setDeleteTarget(cat.label); setReassignTo(otherCategories[0]?.label ?? "") }}
+                disabled={isPending || items.length <= 1}
+                className="text-[11px] text-red-500 hover:underline disabled:opacity-30"
               >
                 Elimina
               </button>
@@ -953,35 +1023,46 @@ function ResourceCategoryManager({
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder="Nuova categoria…"
-            className="h-8 flex-1 rounded-[8px] border border-border-1 px-3 text-[13px] outline-none focus:border-pink"
-          />
-          <select
-            value={newIcon}
-            onChange={(e) => setNewIcon(e.target.value)}
-            className="h-8 rounded-[8px] border border-border-1 px-1.5 text-[11px] text-ink-700 outline-none"
-          >
-            {iconOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+        {/* Add new */}
+        <div className="rounded-[12px] border border-border-1 bg-surface-2 p-3">
+          <p className="mb-2.5 text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Nuova categoria</p>
+          <div className="mb-2.5 flex items-center gap-2">
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              placeholder="Nome categoria…"
+              className="h-9 flex-1 rounded-[8px] border border-border-1 bg-white px-3 text-[13px] outline-none focus:border-pink"
+            />
+            <input
+              type="color"
+              value={newColor}
+              onChange={(e) => setNewColor(e.target.value)}
+              className="h-9 w-9 shrink-0 cursor-pointer rounded-[8px] border border-border-1"
+            />
+          </div>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {ICON_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setNewIcon(opt.value)}
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] border transition-colors"
+                style={{
+                  borderColor: newIcon === opt.value ? newColor : "#E2E8F0",
+                  backgroundColor: newIcon === opt.value ? newColor + "18" : "white",
+                  color: newIcon === opt.value ? newColor : "#94A3B8",
+                }}
+              >
+                <opt.Icon className="h-4 w-4" />
+              </button>
             ))}
-          </select>
-          <input
-            type="color"
-            value={newColor}
-            onChange={(e) => setNewColor(e.target.value)}
-            className="h-8 w-8 cursor-pointer rounded-[6px] border border-border-1"
-          />
+          </div>
           <button
             onClick={handleAdd}
             disabled={!newLabel.trim() || isPending}
-            className="h-8 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            className="h-9 w-full rounded-[999px] bg-pink text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
           >
-            Aggiungi
+            Aggiungi categoria
           </button>
         </div>
       </div>

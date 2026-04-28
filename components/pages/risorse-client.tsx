@@ -15,6 +15,14 @@ import {
   Minimize2,
   Send,
   Trash2,
+  Users,
+  Building,
+  DollarSign,
+  MessageSquare,
+  Star,
+  Heart,
+  Zap,
+  Globe,
 } from "lucide-react"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
 import { getComments, createComment, deleteComment } from "@/lib/actions/data"
@@ -28,9 +36,14 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   shield: Shield,
   "file-text": FileText,
   "book-open": BookOpen,
-  users: () => null, // fallback
-  building: () => null,
-  "dollar-sign": () => null,
+  users: Users,
+  building: Building,
+  "dollar-sign": DollarSign,
+  "message-square": MessageSquare,
+  star: Star,
+  heart: Heart,
+  zap: Zap,
+  globe: Globe,
 }
 
 function ResourceIcon({ icon, color, size = "md" }: { icon: string | null; color: string; size?: "sm" | "md" }) {

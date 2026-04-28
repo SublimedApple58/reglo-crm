@@ -279,7 +279,14 @@ export async function upsertResourceCategory(data: { id?: number; label: string;
   return result.id
 }
 
-export async function deleteResourceCategory(id: number) {
+export async function deleteResourceCategory(id: number, reassignTo?: string) {
+  if (reassignTo) {
+    // Get the label of the category being deleted
+    const [cat] = await db.select({ label: resourceCategories.label }).from(resourceCategories).where(eq(resourceCategories.id, id)).limit(1)
+    if (cat) {
+      await db.update(resources).set({ category: reassignTo }).where(eq(resources.category, cat.label))
+    }
+  }
   await db.delete(resourceCategories).where(eq(resourceCategories.id, id))
   revalidatePath("/risorse")
   revalidatePath("/admin/gestione-risorse")
