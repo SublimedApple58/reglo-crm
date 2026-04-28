@@ -662,7 +662,11 @@ function NewsImageBtn({ editor, onModified }: { editor: ReturnType<typeof useEdi
     const formData = new FormData()
     formData.append("file", file)
     const res = await fetch("/api/upload", { method: "POST", body: formData })
-    if (!res.ok) { alert("Errore caricamento immagine"); return }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Errore caricamento immagine: ${data.error ?? res.statusText}`)
+      return
+    }
     const { url } = await res.json()
     editor?.chain().focus().setImage({ src: url }).run()
     onModified()

@@ -5,56 +5,54 @@ import { documents } from "@/lib/db/schema"
 import { generateFileKey, uploadToR2, generatePresignedDownloadUrl } from "@/lib/storage/r2"
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
-    return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
-  }
+  try {
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
+    }
 
-  const formData = await request.formData()
-  const file = formData.get("file") as File | null
-  const autoscuolaId = formData.get("autoscuolaId") as string | null
+    const formData = await request.formData()
+    const file = formData.get("file") as File | null
+    const autoscuolaId = formData.get("autoscuolaId") as string | null
 
-  if (!file) {
-    return NextResponse.json(
-      { error: "File mancante" },
-      { status: 400 }
-    )
-  }
+    if (!file) {
+      return NextResponse.json({ error: "File mancante" }, { status: 400 })
+    }
 
-  // Editor image upload (no autoscuolaId) — upload to R2 and return permanent proxy URL
-  if (!autoscuolaId) {
-    const timestamp = Date.now()
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-    const key = `editor/${timestamp}-${safeName}`
-    try {
+    // Editor image upload (no autoscuolaId) — upload to R2 and return permanent proxy URL
+    if (!autoscuolaId) {
+      const timestamp = Date.now()
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+      const key = `editor/${timestamp}-${safeName}`
       const buffer = Buffer.from(await file.arrayBuffer())
       await uploadToR2(key, buffer, file.type)
-    } catch (err) {
-      console.error("R2 editor image upload failed:", err)
-      return NextResponse.json({ error: "Upload fallito" }, { status: 500 })
+      const url = `/api/editor-image/${key}`
+      return NextResponse.json({ url })
     }
-    const url = `/api/editor-image/${key}`
-    return NextResponse.json({ url })
+
+    const key = generateFileKey(autoscuolaId, file.name)
+
+    // Upload to R2 server-side
+    const buffer = Buffer.from(await file.arrayBuffer())
+    await uploadToR2(key, buffer, file.type)
+
+    // Create DB record only after successful upload
+    const [document] = await db
+      .insert(documents)
+      .values({
+        autoscuolaId,
+        userId: session.user.id,
+        name: file.name,
+        key,
+        size: file.size,
+        contentType: file.type,
+      })
+      .returning()
+
+    return NextResponse.json({ document })
+  } catch (err) {
+    console.error("Upload API error:", err)
+    const message = err instanceof Error ? err.message : "Errore sconosciuto"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-
-  const key = generateFileKey(autoscuolaId, file.name)
-
-  // Upload to R2 server-side
-  const buffer = Buffer.from(await file.arrayBuffer())
-  await uploadToR2(key, buffer, file.type)
-
-  // Create DB record only after successful upload
-  const [document] = await db
-    .insert(documents)
-    .values({
-      autoscuolaId,
-      userId: session.user.id,
-      name: file.name,
-      key,
-      size: file.size,
-      contentType: file.type,
-    })
-    .returning()
-
-  return NextResponse.json({ document })
 }
