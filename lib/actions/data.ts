@@ -54,6 +54,7 @@ export async function upsertResource(data: {
   pinned?: boolean
   icon?: string
   color?: string
+  coverImage?: string | null
 }) {
   if (data.id) {
     const { id, ...rest } = data
@@ -74,6 +75,7 @@ export async function upsertResource(data: {
       pinned: rest.pinned ?? false,
       icon: rest.icon ?? null,
       color: rest.color ?? null,
+      coverImage: rest.coverImage ?? null,
       authorId: session?.user?.id ?? null,
     }).returning()
     return result.id
@@ -104,6 +106,7 @@ export async function createNews(data: {
   body?: string
   pinned?: boolean
   icon?: string
+  coverImage?: string
   authorId: string
 }) {
   const [result] = await db.insert(news).values(data).returning()
@@ -121,6 +124,7 @@ export async function updateNews(
     body: string
     pinned: boolean
     icon: string | null
+    coverImage: string | null
   }>
 ) {
   await db.update(news).set(data).where(eq(news.id, id))

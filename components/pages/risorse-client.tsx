@@ -203,6 +203,12 @@ export function RisorseClient({ resources, userId }: { resources: Resource[]; us
                 : ""}
             </p>
 
+            {selected.coverImage && (
+              <div className="mb-6 overflow-hidden rounded-[12px]">
+                <img src={selected.coverImage} alt="" className="w-full object-cover" style={{ maxHeight: 320 }} />
+              </div>
+            )}
+
             {selected.html && (
               <div
                 onClick={handleContentClick}

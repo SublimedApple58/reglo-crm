@@ -84,6 +84,7 @@ export const news = pgTable("news", {
   body: text("body"),
   pinned: boolean("pinned").default(false),
   icon: text("icon"),
+  coverImage: text("cover_image"),
   authorId: text("author_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
@@ -129,6 +130,7 @@ export const resources = pgTable("resources", {
   pinned: boolean("pinned").default(false),
   icon: text("icon"),
   color: text("color"),
+  coverImage: text("cover_image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

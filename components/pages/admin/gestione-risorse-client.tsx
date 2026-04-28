@@ -31,6 +31,8 @@ import {
   DollarSign,
   Users,
   ImageIcon,
+  ImagePlus,
+  X as XIcon,
   Table,
   Rows3,
   Columns3,
@@ -74,6 +76,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   const [editCategory, setEditCategory] = useState(selected?.category ?? RESOURCE_CATEGORIES[0].label)
   const [editTags, setEditTags] = useState<string[]>(selected?.tags ?? [])
   const [editIcon, setEditIcon] = useState<string | null>(selected?.icon ?? null)
+  const [editCoverImage, setEditCoverImage] = useState<string | null>(selected?.coverImage ?? null)
   const [newTag, setNewTag] = useState("")
   const [, setTick] = useState(0)
 
@@ -121,6 +124,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
     setEditCategory(res.category)
     setEditTags(res.tags ?? [])
     setEditIcon(res.icon ?? null)
+    setEditCoverImage(res.coverImage ?? null)
     editor?.commands.setContent(res.html ?? "")
     setModified(false)
   }
@@ -137,12 +141,13 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         tags: editTags,
         pinned: selected.pinned ?? false,
         icon: editIcon ?? undefined,
+        coverImage: editCoverImage,
       })
       setModified(false)
       setResources((prev) =>
         prev.map((r) =>
           r.id === selected.id
-            ? { ...r, title: editTitle, category: editCategory, html, tags: editTags, icon: editIcon }
+            ? { ...r, title: editTitle, category: editCategory, html, tags: editTags, icon: editIcon, coverImage: editCoverImage }
             : r
         )
       )
@@ -169,6 +174,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         pinned: false,
         icon: null,
         color: null,
+        coverImage: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -177,6 +183,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       setEditTitle("Nuova risorsa")
       setEditCategory(RESOURCE_CATEGORIES[0].label)
       setEditTags([])
+      setEditCoverImage(null)
       editor?.commands.setContent("")
       setModified(false)
     })
@@ -346,12 +353,24 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
               <ToolbarBtn icon={LinkIcon} action={() => setShowInternalLink(true)} title="Link interno" />
               <div className="mx-1 h-5 w-px bg-border-1" />
               <ImageUploadBtn editor={editor} onModified={() => setModified(true)} />
+              <CoverImageBtn coverImage={editCoverImage} onChange={(url) => { setEditCoverImage(url); setModified(true) }} />
               <div className="mx-1 h-5 w-px bg-border-1" />
               <TableToolbar editor={editor} />
             </div>
 
             {/* Editor content */}
             <div className="flex-1 overflow-y-auto p-6">
+              {editCoverImage && (
+                <div className="relative mb-4 overflow-hidden rounded-[12px]">
+                  <img src={editCoverImage} alt="" className="w-full object-cover" style={{ maxHeight: 260 }} />
+                  <button
+                    onClick={() => { setEditCoverImage(null); setModified(true) }}
+                    className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                  >
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               <EditorContent editor={editor} />
             </div>
 
@@ -692,6 +711,45 @@ function ImageUploadBtn({ editor, onModified }: { editor: ReturnType<typeof useE
         className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
       >
         <ImageIcon className="h-4 w-4" />
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = "" }}
+      />
+    </>
+  )
+}
+
+function CoverImageBtn({ coverImage, onChange }: { coverImage: string | null; onChange: (url: string | null) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) return
+    const formData = new FormData()
+    formData.append("file", file)
+    const res = await fetch("/api/upload", { method: "POST", body: formData })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Errore caricamento copertina: ${data.error ?? res.statusText}`)
+      return
+    }
+    const { url } = await res.json()
+    onChange(url)
+  }
+
+  return (
+    <>
+      <button
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => fileRef.current?.click()}
+        title={coverImage ? "Cambia copertina" : "Aggiungi copertina"}
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
+        style={{ color: coverImage ? "#EC4899" : "#64748B" }}
+      >
+        <ImagePlus className="h-4 w-4" />
       </button>
       <input
         ref={fileRef}
