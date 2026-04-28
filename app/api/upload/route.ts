@@ -21,13 +21,19 @@ export async function POST(request: Request) {
     )
   }
 
-  // Editor image upload (no autoscuolaId) — upload to R2 and return presigned URL
+  // Editor image upload (no autoscuolaId) — upload to R2 and return permanent proxy URL
   if (!autoscuolaId) {
     const timestamp = Date.now()
-    const key = `editor/${timestamp}-${file.name}`
-    const buffer = Buffer.from(await file.arrayBuffer())
-    await uploadToR2(key, buffer, file.type)
-    const url = await generatePresignedDownloadUrl(key)
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+    const key = `editor/${timestamp}-${safeName}`
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      await uploadToR2(key, buffer, file.type)
+    } catch (err) {
+      console.error("R2 editor image upload failed:", err)
+      return NextResponse.json({ error: "Upload fallito" }, { status: 500 })
+    }
+    const url = `/api/editor-image/${key}`
     return NextResponse.json({ url })
   }
 
