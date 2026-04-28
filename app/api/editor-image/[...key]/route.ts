@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server"
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
+import { NodeHttpHandler } from "@smithy/node-http-handler"
 
 const r2 = new S3Client({
   region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${(process.env.R2_ACCOUNT_ID ?? "").trim()}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    accessKeyId: (process.env.R2_ACCESS_KEY_ID ?? "").trim(),
+    secretAccessKey: (process.env.R2_SECRET_ACCESS_KEY ?? "").trim(),
   },
+  requestHandler: new NodeHttpHandler(),
 })
 
 export async function GET(
