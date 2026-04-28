@@ -26,16 +26,18 @@ export async function GET(
 
   try {
     const command = new GetObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
+      Bucket: (process.env.R2_BUCKET_NAME ?? "").trim(),
       Key: objectKey,
     })
     const response = await r2.send(command)
+    const bytes = await response.Body!.transformToByteArray()
 
-    const headers = new Headers()
-    if (response.ContentType) headers.set("Content-Type", response.ContentType)
-    headers.set("Cache-Control", "public, max-age=31536000, immutable")
-
-    return new NextResponse(response.Body as ReadableStream, { headers })
+    return new NextResponse(Buffer.from(bytes), {
+      headers: {
+        "Content-Type": response.ContentType ?? "application/octet-stream",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    })
   } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
