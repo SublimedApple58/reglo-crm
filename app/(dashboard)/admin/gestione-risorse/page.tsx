@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { getResources } from "@/lib/actions/data"
+import { getResources, getResourceCategories } from "@/lib/actions/data"
 import { GestioneRisorseClient } from "@/components/pages/admin/gestione-risorse-client"
 
 export default async function GestioneRisorsePage() {
@@ -10,6 +10,6 @@ export default async function GestioneRisorsePage() {
   const role = (session.user as Record<string, unknown>).role as string
   if (role !== "admin" && role !== "both") redirect("/")
 
-  const resources = await getResources()
-  return <GestioneRisorseClient resources={resources} />
+  const [resources, resourceCategories] = await Promise.all([getResources(), getResourceCategories()])
+  return <GestioneRisorseClient resources={resources} initialCategories={resourceCategories} />
 }

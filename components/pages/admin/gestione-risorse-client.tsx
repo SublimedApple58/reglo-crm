@@ -56,11 +56,13 @@ import { TableRow } from "@tiptap/extension-table-row"
 import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
-import { upsertResource, deleteResource, getResources } from "@/lib/actions/data"
+import { upsertResource, deleteResource, getResources, upsertResourceCategory, deleteResourceCategory } from "@/lib/actions/data"
 import { searchGlobal } from "@/lib/actions/autoscuole"
-import type { Resource } from "@/lib/db/schema"
+import type { Resource, ResourceCategory } from "@/lib/db/schema"
 
-export function GestioneRisorseClient({ resources: initial }: { resources: Resource[] }) {
+type CategoryDef = { id: string; label: string; icon: string; color: string }
+
+export function GestioneRisorseClient({ resources: initial, initialCategories }: { resources: Resource[]; initialCategories?: ResourceCategory[] }) {
   const router = useRouter()
   const [resources, setResources] = useState(initial)
   const [selectedId, setSelectedId] = useState<number | null>(resources[0]?.id ?? null)
@@ -69,15 +71,19 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   const [isPending, startTransition] = useTransition()
   const [showPreview, setShowPreview] = useState(false)
   const [showInternalLink, setShowInternalLink] = useState(false)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [categories, setCategories] = useState<CategoryDef[]>(
+    initialCategories && initialCategories.length > 0
+      ? initialCategories.map((c) => ({ id: c.label, label: c.label, icon: c.icon ?? "file-text", color: c.color ?? "#64748B" }))
+      : RESOURCE_CATEGORIES.map((c) => ({ id: c.label, label: c.label, icon: c.icon, color: c.color }))
+  )
 
   const selected = resources.find((r) => r.id === selectedId)
 
   const [editTitle, setEditTitle] = useState(selected?.title ?? "")
-  const [editCategory, setEditCategory] = useState(selected?.category ?? RESOURCE_CATEGORIES[0].label)
-  const [editTags, setEditTags] = useState<string[]>(selected?.tags ?? [])
+  const [editCategory, setEditCategory] = useState(selected?.category ?? categories[0]?.label ?? "")
   const [editIcon, setEditIcon] = useState<string | null>(selected?.icon ?? null)
   const [editCoverImage, setEditCoverImage] = useState<string | null>(selected?.coverImage ?? null)
-  const [newTag, setNewTag] = useState("")
   const [, setTick] = useState(0)
 
   const editor = useEditor({
@@ -122,7 +128,6 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
     setSelectedId(id)
     setEditTitle(res.title)
     setEditCategory(res.category)
-    setEditTags(res.tags ?? [])
     setEditIcon(res.icon ?? null)
     setEditCoverImage(res.coverImage ?? null)
     editor?.commands.setContent(res.html ?? "")
@@ -138,7 +143,6 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         category: editCategory,
         title: editTitle,
         html,
-        tags: editTags,
         pinned: selected.pinned ?? false,
         icon: editIcon ?? undefined,
         coverImage: editCoverImage,
@@ -147,7 +151,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       setResources((prev) =>
         prev.map((r) =>
           r.id === selected.id
-            ? { ...r, title: editTitle, category: editCategory, html, tags: editTags, icon: editIcon, coverImage: editCoverImage }
+            ? { ...r, title: editTitle, category: editCategory, html, icon: editIcon, coverImage: editCoverImage }
             : r
         )
       )
@@ -157,15 +161,14 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
   function handleCreate() {
     startTransition(async () => {
       const newId = await upsertResource({
-        category: RESOURCE_CATEGORIES[0].label,
+        category: categories[0]?.label ?? "",
         title: "Nuova risorsa",
         html: "",
-        tags: [],
         pinned: false,
       })
       const newResource: Resource = {
         id: newId,
-        category: RESOURCE_CATEGORIES[0].label,
+        category: categories[0]?.label ?? "",
         title: "Nuova risorsa",
         excerpt: null,
         html: "",
@@ -181,8 +184,7 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       setResources((prev) => [newResource, ...prev])
       setSelectedId(newId)
       setEditTitle("Nuova risorsa")
-      setEditCategory(RESOURCE_CATEGORIES[0].label)
-      setEditTags([])
+      setEditCategory(categories[0]?.label ?? "")
       setEditCoverImage(null)
       editor?.commands.setContent("")
       setModified(false)
@@ -201,14 +203,6 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
         setSelectedId(null)
       }
     })
-  }
-
-  function addTag() {
-    if (newTag.trim() && !editTags.includes(newTag.trim())) {
-      setEditTags([...editTags, newTag.trim()])
-      setNewTag("")
-      setModified(true)
-    }
   }
 
   const filteredDocs = resources.filter((r) => {
@@ -384,39 +378,21 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
                 }}
                 className="h-7 rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none"
               >
-                {RESOURCE_CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.label}>
+                {categories.map((c) => (
+                  <option key={c.label} value={c.label}>
                     {c.label}
                   </option>
                 ))}
               </select>
 
-              <div className="flex flex-1 flex-wrap items-center gap-1">
-                <Tag className="h-3.5 w-3.5 text-ink-400" />
-                {editTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="flex items-center gap-1 rounded-[4px] bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-600"
-                  >
-                    {tag}
-                    <button
-                      onClick={() => {
-                        setEditTags(editTags.filter((t) => t !== tag))
-                        setModified(true)
-                      }}
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                ))}
-                <input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addTag()}
-                  placeholder="+ tag"
-                  className="w-16 text-[11px] text-ink-500 outline-none placeholder:text-ink-400"
-                />
-              </div>
+              <div className="flex-1" />
+
+              <button
+                onClick={() => setShowCategoryManager(true)}
+                className="text-[11px] font-medium text-pink hover:underline"
+              >
+                Gestisci categorie
+              </button>
             </div>
           </div>
         ) : (
@@ -427,6 +403,14 @@ export function GestioneRisorseClient({ resources: initial }: { resources: Resou
       </div>
 
       {/* Internal link dialog */}
+      {showCategoryManager && (
+        <ResourceCategoryManager
+          categories={categories}
+          onUpdate={setCategories}
+          onClose={() => setShowCategoryManager(false)}
+        />
+      )}
+
       {showInternalLink && (
         <InternalLinkDialog
           resources={resources}
@@ -885,6 +869,120 @@ function InternalLinkDialog({
           )}
 
           {loading && <div className="p-4 text-center text-[13px] text-ink-400">Ricerca...</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ResourceCategoryManager({
+  categories,
+  onUpdate,
+  onClose,
+}: {
+  categories: CategoryDef[]
+  onUpdate: (cats: CategoryDef[]) => void
+  onClose: () => void
+}) {
+  const [items, setItems] = useState(categories)
+  const [newLabel, setNewLabel] = useState("")
+  const [newColor, setNewColor] = useState("#64748B")
+  const [newIcon, setNewIcon] = useState("file-text")
+  const [isPending, startTransition] = useTransition()
+
+  function handleAdd() {
+    if (!newLabel.trim()) return
+    const label = newLabel.trim()
+    if (items.some((c) => c.label === label)) return
+    startTransition(async () => {
+      await upsertResourceCategory({ label, color: newColor, icon: newIcon })
+      const updated = [...items, { id: label, label, icon: newIcon, color: newColor }]
+      setItems(updated)
+      onUpdate(updated)
+      setNewLabel("")
+    })
+  }
+
+  function handleDelete(label: string) {
+    startTransition(async () => {
+      const { getResourceCategories } = await import("@/lib/actions/data")
+      const dbCats = await getResourceCategories()
+      const cat = dbCats.find((c) => c.label === label)
+      if (cat) await deleteResourceCategory(cat.id)
+      const updated = items.filter((c) => c.label !== label)
+      setItems(updated)
+      onUpdate(updated)
+    })
+  }
+
+  const iconOptions = [
+    { value: "file-text", label: "Documento" },
+    { value: "phone", label: "Telefono" },
+    { value: "mail", label: "Email" },
+    { value: "shield", label: "Scudo" },
+    { value: "book-open", label: "Libro" },
+    { value: "users", label: "Utenti" },
+    { value: "building", label: "Edificio" },
+    { value: "dollar-sign", label: "Dollaro" },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-[440px] rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[18px] font-bold text-ink-900">Gestisci categorie</h2>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-400 hover:bg-surface-2">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mb-4 space-y-2">
+          {items.map((cat) => (
+            <div key={cat.label} className="flex items-center gap-3 rounded-[10px] border border-border-1 px-3 py-2">
+              <span className="h-4 w-4 rounded-full" style={{ backgroundColor: cat.color }} />
+              <span className="flex-1 text-[13px] font-medium text-ink-900">{cat.label}</span>
+              <span className="text-[11px] text-ink-400">{cat.icon}</span>
+              <button
+                onClick={() => handleDelete(cat.label)}
+                disabled={isPending}
+                className="text-[11px] text-red-500 hover:underline disabled:opacity-50"
+              >
+                Elimina
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder="Nuova categoria…"
+            className="h-8 flex-1 rounded-[8px] border border-border-1 px-3 text-[13px] outline-none focus:border-pink"
+          />
+          <select
+            value={newIcon}
+            onChange={(e) => setNewIcon(e.target.value)}
+            className="h-8 rounded-[8px] border border-border-1 px-1.5 text-[11px] text-ink-700 outline-none"
+          >
+            {iconOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <input
+            type="color"
+            value={newColor}
+            onChange={(e) => setNewColor(e.target.value)}
+            className="h-8 w-8 cursor-pointer rounded-[6px] border border-border-1"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newLabel.trim() || isPending}
+            className="h-8 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+          >
+            Aggiungi
+          </button>
         </div>
       </div>
     </div>

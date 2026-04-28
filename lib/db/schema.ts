@@ -146,6 +146,15 @@ export const blockedProvinces = pgTable("blocked_provinces", {
   province: varchar("province", { length: 2 }).primaryKey(),
 })
 
+// Resource categories (dynamic CRUD)
+export const resourceCategories = pgTable("resource_categories", {
+  id: serial("id").primaryKey(),
+  label: text("label").notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
 // News categories (dynamic CRUD)
 export const newsCategories = pgTable("news_categories", {
   id: serial("id").primaryKey(),
@@ -241,6 +250,7 @@ export type Resource = typeof resources.$inferSelect
 export type Document = typeof documents.$inferSelect
 export type BlockedProvince = typeof blockedProvinces.$inferSelect
 export type NewsCategory = typeof newsCategories.$inferSelect
+export type ResourceCategory = typeof resourceCategories.$inferSelect
 export type NewsRead = typeof newsReads.$inferSelect
 export type Comment = typeof comments.$inferSelect
 export type HomeCard = typeof homeCards.$inferSelect

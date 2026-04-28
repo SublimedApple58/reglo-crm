@@ -20,12 +20,17 @@ import { RESOURCE_CATEGORIES } from "@/lib/constants"
 import { getComments, createComment, deleteComment } from "@/lib/actions/data"
 import type { Resource } from "@/lib/db/schema"
 
+type CategoryDef = { id: string; label: string; icon: string; color: string }
+
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   phone: Phone,
   mail: Mail,
   shield: Shield,
   "file-text": FileText,
   "book-open": BookOpen,
+  users: () => null, // fallback
+  building: () => null,
+  "dollar-sign": () => null,
 }
 
 function ResourceIcon({ icon, color, size = "md" }: { icon: string | null; color: string; size?: "sm" | "md" }) {
@@ -36,7 +41,10 @@ function ResourceIcon({ icon, color, size = "md" }: { icon: string | null; color
   return <span style={{ color }}><FileText className={cls} /></span>
 }
 
-export function RisorseClient({ resources, userId }: { resources: Resource[]; userId?: string }) {
+export function RisorseClient({ resources, userId, categories: catsProp }: { resources: Resource[]; userId?: string; categories?: CategoryDef[] }) {
+  const categories: CategoryDef[] = catsProp && catsProp.length > 0
+    ? catsProp
+    : RESOURCE_CATEGORIES.map((c) => ({ id: c.label, label: c.label, icon: c.icon, color: c.color }))
   const router = useRouter()
 
   const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -88,14 +96,14 @@ export function RisorseClient({ resources, userId }: { resources: Resource[]; us
         <h3 className="mb-3 px-2 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
           Categorie
         </h3>
-        {RESOURCE_CATEGORIES.map((cat) => {
+        {categories.map((cat) => {
           const Icon = ICON_MAP[cat.icon] ?? FileText
           const isActive = selectedCategory === cat.label
           const count = resources.filter((r) => r.category === cat.label).length
 
           return (
             <button
-              key={cat.id}
+              key={cat.label}
               onClick={() =>
                 setSelectedCategory(isActive ? null : cat.label)
               }
@@ -154,19 +162,7 @@ export function RisorseClient({ resources, userId }: { resources: Resource[]; us
                     {doc.pinned && <Pin className="h-3 w-3 shrink-0 text-pink" />}
                   </div>
                   {doc.excerpt && (
-                    <p className="mb-1.5 line-clamp-2 text-[12px] text-ink-500">{doc.excerpt}</p>
-                  )}
-                  {doc.tags && doc.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {doc.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-[4px] bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-500"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                    <p className="line-clamp-2 text-[12px] text-ink-500">{doc.excerpt}</p>
                   )}
                 </div>
               </button>

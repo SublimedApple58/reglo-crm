@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { news, commissions, commissionLines, resources, users, autoscuole, comments, newsReads, newsCategories, homeCards } from "@/lib/db/schema"
+import { news, commissions, commissionLines, resources, users, autoscuole, comments, newsReads, newsCategories, resourceCategories, homeCards } from "@/lib/db/schema"
 import { eq, desc, and, sql, asc } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
@@ -253,6 +253,36 @@ export async function upsertNewsCategory(data: { id?: number; label: string; col
 
 export async function deleteNewsCategory(id: number) {
   await db.delete(newsCategories).where(eq(newsCategories.id, id))
+}
+
+// ── Resource Categories ───────────────────────────────────────────────
+
+export async function getResourceCategories() {
+  return db.select().from(resourceCategories).orderBy(asc(resourceCategories.label))
+}
+
+export async function upsertResourceCategory(data: { id?: number; label: string; color?: string; icon?: string }) {
+  if (data.id) {
+    const { id, ...rest } = data
+    await db.update(resourceCategories).set(rest).where(eq(resourceCategories.id, id))
+    revalidatePath("/risorse")
+    revalidatePath("/admin/gestione-risorse")
+    return id
+  }
+  const [result] = await db.insert(resourceCategories).values({
+    label: data.label,
+    color: data.color ?? null,
+    icon: data.icon ?? null,
+  }).returning()
+  revalidatePath("/risorse")
+  revalidatePath("/admin/gestione-risorse")
+  return result.id
+}
+
+export async function deleteResourceCategory(id: number) {
+  await db.delete(resourceCategories).where(eq(resourceCategories.id, id))
+  revalidatePath("/risorse")
+  revalidatePath("/admin/gestione-risorse")
 }
 
 // ── Home Cards ────────────────────────────────────────────────────────
