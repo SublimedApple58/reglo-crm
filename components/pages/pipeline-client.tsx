@@ -6,11 +6,8 @@ import { useRouter } from "next/navigation"
 import {
   Search,
   Filter,
-  Clock,
   X,
   Plus,
-  Users,
-  Phone,
   HelpCircle,
 } from "lucide-react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
@@ -521,36 +518,12 @@ function KanbanColumn({
                       <p className="mb-2 text-[12px] text-ink-500">{item.email}</p>
                     )}
 
-                    {/* Footer: pipeline value + follow-up */}
-                    {(item.pipelineValue || item.followUpAt || item.lastContact !== null) && (
-                      <div className="flex items-center justify-between pt-1">
-                        {item.pipelineValue ? (
-                          <span className="text-[11.5px] font-semibold text-ink-500">
-                            €{item.pipelineValue.toLocaleString("it-IT")}
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                        {item.followUpAt ? (() => {
-                          const fu = new Date(item.followUpAt)
-                          const now = new Date()
-                          const diffDays = Math.ceil((fu.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                          const isExpired = diffDays < 0
-                          return (
-                            <span
-                              className="flex items-center gap-1 text-[10.5px] font-medium"
-                              style={{ color: isExpired ? "#EF4444" : "#10B981" }}
-                            >
-                              <Clock className="h-3 w-3" />
-                              {isExpired ? `−${Math.abs(diffDays)}g` : `${diffDays}g`}
-                            </span>
-                          )
-                        })() : item.lastContact !== null ? (
-                          <span className="flex items-center gap-1 text-[10.5px] text-ink-400">
-                            <Clock className="h-3 w-3" />
-                            {item.lastContact}g
-                          </span>
-                        ) : null}
+                    {/* Footer: pipeline value */}
+                    {item.pipelineValue && (
+                      <div className="pt-1">
+                        <span className="text-[11.5px] font-semibold text-ink-500">
+                          €{item.pipelineValue.toLocaleString("it-IT")}
+                        </span>
                       </div>
                     )}
                   </Link>
