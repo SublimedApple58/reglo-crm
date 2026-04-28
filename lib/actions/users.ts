@@ -113,6 +113,16 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return { success: true }
 }
 
+export async function updateAvatar(avatarUrl: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+
+  await db.update(users).set({ avatar: avatarUrl }).where(eq(users.id, session.user.id))
+
+  revalidatePath("/profilo")
+  revalidatePath("/")
+}
+
 export async function getUser(id: string) {
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1)
   return user ?? null

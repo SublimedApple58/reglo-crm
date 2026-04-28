@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { User, Mail, MapPin, Shield } from "lucide-react"
-import { changePassword } from "@/lib/actions/users"
+import { useState, useTransition, useRef } from "react"
+import { User, Mail, MapPin, Shield, Camera } from "lucide-react"
+import { changePassword, updateAvatar } from "@/lib/actions/users"
 
 type UserInfo = {
   id: string
@@ -19,6 +19,9 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const initials = user.name
     .split(" ")
@@ -62,13 +65,47 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
 
       {/* Avatar + Name */}
       <div className="mb-6 flex items-center gap-4">
-        {user.avatar ? (
-          <img src={user.avatar} alt="" className="h-16 w-16 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink text-[18px] font-bold text-white">
-            {initials}
-          </div>
-        )}
+        <div className="relative">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink text-[18px] font-bold text-white">
+              {initials}
+            </div>
+          )}
+          <button
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={uploadingAvatar}
+            className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-pink text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+          >
+            <Camera className="h-3.5 w-3.5" />
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file || !file.type.startsWith("image/")) return
+              e.target.value = ""
+              setUploadingAvatar(true)
+              try {
+                const formData = new FormData()
+                formData.append("file", file)
+                const res = await fetch("/api/upload", { method: "POST", body: formData })
+                if (!res.ok) throw new Error("Upload fallito")
+                const { url } = await res.json()
+                await updateAvatar(url)
+                setAvatarUrl(url)
+              } catch {
+                alert("Errore durante il caricamento della foto")
+              } finally {
+                setUploadingAvatar(false)
+              }
+            }}
+          />
+        </div>
         <div>
           <h2 className="text-[18px] font-bold text-ink-900">{user.name}</h2>
           <p className="text-[13px] text-ink-500">{user.email}</p>
