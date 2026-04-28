@@ -7,7 +7,10 @@ import { NEWS_CATEGORIES } from "@/lib/constants"
 import { getComments, createComment, deleteComment, markNewsAsRead } from "@/lib/actions/data"
 import type { News } from "@/lib/db/schema"
 
-export function BachecaClient({ news, userId }: { news: News[]; userId?: string }) {
+type CategoryDef = { id: string; color: string }
+
+export function BachecaClient({ news, userId, categories: catsProp }: { news: News[]; userId?: string; categories?: CategoryDef[] }) {
+  const categories: CategoryDef[] = catsProp && catsProp.length > 0 ? catsProp : [...NEWS_CATEGORIES]
   const router = useRouter()
 
   const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -54,7 +57,7 @@ export function BachecaClient({ news, userId }: { news: News[]; userId?: string 
             >
               Tutti
             </button>
-            {NEWS_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setFilter(cat.id)}
@@ -74,7 +77,7 @@ export function BachecaClient({ news, userId }: { news: News[]; userId?: string 
           {filtered.map((item) => {
             const isSelected = item.id === selectedId
             const catColor =
-              NEWS_CATEGORIES.find((c) => c.id === item.category)?.color ?? "#64748B"
+              categories.find((c) => c.id === item.category)?.color ?? "#64748B"
             return (
               <button
                 key={item.id}
@@ -130,10 +133,10 @@ export function BachecaClient({ news, userId }: { news: News[]; userId?: string 
                 className="mb-2 inline-block rounded-[4px] px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
                 style={{
                   backgroundColor:
-                    (NEWS_CATEGORIES.find((c) => c.id === selected.category)?.color ??
+                    (categories.find((c) => c.id === selected.category)?.color ??
                       "#64748B") + "15",
                   color:
-                    NEWS_CATEGORIES.find((c) => c.id === selected.category)?.color ?? "#64748B",
+                    categories.find((c) => c.id === selected.category)?.color ?? "#64748B",
                 }}
               >
                 {selected.category}
