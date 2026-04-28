@@ -31,10 +31,23 @@ async function migrate() {
     console.log(`\n📄 ${file}`)
     const migrationSQL = readFileSync(join(migrationsDir, file), "utf-8")
 
-    const statements = migrationSQL
+    // Split by drizzle-kit breakpoints first, then by semicolons for custom SQL files
+    const rawBlocks = migrationSQL
       .split("--> statement-breakpoint")
       .map((s) => s.trim())
       .filter(Boolean)
+
+    const statements: string[] = []
+    for (const block of rawBlocks) {
+      // If block contains multiple statements (semicolons), split them
+      const parts = block
+        .split(/;\s*$/m)
+        .map((s) => s.trim())
+        .filter(Boolean)
+      for (const part of parts) {
+        statements.push(part.endsWith(";") ? part : part + ";")
+      }
+    }
 
     for (const statement of statements) {
       try {

@@ -4,14 +4,8 @@
 UPDATE pipeline_stages SET label = 'Email' WHERE id = 'email';
 
 -- 2. Migrate autoscuole from "in_attesa" → "nuove_features" and "non_chiusa" → "no_show"
-UPDATE autoscuole SET "stageId" = 'nuove_features' WHERE "stageId" = 'in_attesa';
-UPDATE autoscuole SET "stageId" = 'no_show' WHERE "stageId" = 'non_chiusa';
-
--- 3. Update activity references
-UPDATE activities SET "stageFrom" = 'nuove_features' WHERE "stageFrom" = 'in_attesa';
-UPDATE activities SET "stageTo" = 'nuove_features' WHERE "stageTo" = 'in_attesa';
-UPDATE activities SET "stageFrom" = 'no_show' WHERE "stageFrom" = 'non_chiusa';
-UPDATE activities SET "stageTo" = 'no_show' WHERE "stageTo" = 'non_chiusa';
+UPDATE autoscuole SET stage_id = 'nuove_features' WHERE stage_id = 'in_attesa';
+UPDATE autoscuole SET stage_id = 'no_show' WHERE stage_id = 'non_chiusa';
 
 -- 4. Delete old stages
 DELETE FROM pipeline_stages WHERE id = 'in_attesa';
