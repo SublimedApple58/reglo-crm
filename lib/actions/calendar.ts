@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { oauthTokens, activities, autoscuole } from "@/lib/db/schema"
+import { oauthTokens, activities, autoscuole, users } from "@/lib/db/schema"
 import { eq, and, inArray } from "drizzle-orm"
 import { getGoogleCalendarClient, getGoogleTasksClient } from "@/lib/google/client"
 import { revalidatePath } from "next/cache"
@@ -235,6 +235,53 @@ export async function rsvpCalendarEvent(
     eventId,
     requestBody: { attendees: updated },
   })
+}
+
+export async function getCalendarEventsForUser(userId: string, timeMin: string, timeMax: string) {
+  const session = await auth()
+  if (!session?.user) return []
+
+  const calendar = await getGoogleCalendarClient(userId)
+  if (!calendar) return []
+
+  try {
+    const res = await calendar.events.list({
+      calendarId: "primary",
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 250,
+    })
+
+    return (res.data.items ?? []).map((event) => ({
+      id: `${userId}__${event.id!}`,
+      title: event.summary ?? "(Senza titolo)",
+      start: event.start?.dateTime ?? event.start?.date ?? "",
+      end: event.end?.dateTime ?? event.end?.date ?? "",
+      allDay: !event.start?.dateTime,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export async function getSalesWithGoogle() {
+  const session = await auth()
+  if (!session?.user) return []
+
+  const results = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      color: users.color,
+    })
+    .from(users)
+    .innerJoin(oauthTokens, and(eq(oauthTokens.userId, users.id), eq(oauthTokens.provider, "google")))
+    .where(eq(users.active, true))
+
+  // Exclude current user
+  return results.filter((u) => u.id !== session.user.id)
 }
 
 // ── Google Tasks ──────────────────────────────────────────────────────

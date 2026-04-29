@@ -7,7 +7,7 @@ import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import { Video, ExternalLink, X, Plus, Users, Calendar, Clock, Trash2, Pencil, Search, Building } from "lucide-react"
 import Link from "next/link"
-import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, rsvpCalendarEvent, createGoogleTask } from "@/lib/actions/calendar"
+import { getCalendarEvents, getCalendarEventsForUser, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, rsvpCalendarEvent, createGoogleTask } from "@/lib/actions/calendar"
 import { searchAutoscuole, setFollowUp } from "@/lib/actions/autoscuole"
 import { EVENT_PRESETS } from "@/lib/constants"
 import { DateTimePicker } from "@/components/date-time-picker"
@@ -43,12 +43,16 @@ type AutoscuolaResult = {
   email: string | null
 }
 
+type SalesUser = { id: string; name: string; color: string | null }
+
 export function CalendarioClient({
   initialEvents,
   userEmail,
+  salesUsers = [],
 }: {
   initialEvents: CalendarEvent[]
   userEmail: string
+  salesUsers?: SalesUser[]
 }) {
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -89,6 +93,12 @@ export function CalendarioClient({
 
   // RSVP state
   const [isRsvpPending, startRsvpTransition] = useTransition()
+
+  // Sales overlay
+  const [activeSales, setActiveSales] = useState<Set<string>>(new Set())
+  const [salesEvents, setSalesEvents] = useState<Record<string, { id: string; title: string; start: string; end: string; allDay: boolean }[]>>({})
+  const [loadingSales, setLoadingSales] = useState<Set<string>>(new Set())
+  const currentDateRange = useRef<{ start: string; end: string } | null>(null)
 
   // "Nuovo evento" button menu
   const [showNewEventMenu, setShowNewEventMenu] = useState(false)
@@ -301,13 +311,49 @@ export function CalendarioClient({
     }
   }, [])
 
-  const handleDatesSet = useCallback(async (arg: DatesSetArg) => {
-    const fetched = await getCalendarEvents(
-      arg.start.toISOString(),
-      arg.end.toISOString()
+  const fetchSalesEvents = useCallback(async (salesIds: Set<string>, start: string, end: string) => {
+    const newSalesEvents: Record<string, typeof salesEvents[string]> = {}
+    await Promise.all(
+      Array.from(salesIds).map(async (userId) => {
+        setLoadingSales((prev) => new Set(prev).add(userId))
+        try {
+          newSalesEvents[userId] = await getCalendarEventsForUser(userId, start, end)
+        } catch {
+          newSalesEvents[userId] = []
+        }
+        setLoadingSales((prev) => { const next = new Set(prev); next.delete(userId); return next })
+      })
     )
-    setEvents(fetched)
+    setSalesEvents((prev) => ({ ...prev, ...newSalesEvents }))
   }, [])
+
+  const handleDatesSet = useCallback(async (arg: DatesSetArg) => {
+    const start = arg.start.toISOString()
+    const end = arg.end.toISOString()
+    currentDateRange.current = { start, end }
+    const fetched = await getCalendarEvents(start, end)
+    setEvents(fetched)
+    // Refetch active sales events for new date range
+    if (activeSales.size > 0) {
+      fetchSalesEvents(activeSales, start, end)
+    }
+  }, [activeSales, fetchSalesEvents])
+
+  const toggleSales = useCallback((userId: string) => {
+    setActiveSales((prev) => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+        setSalesEvents((se) => { const copy = { ...se }; delete copy[userId]; return copy })
+      } else {
+        next.add(userId)
+        if (currentDateRange.current) {
+          fetchSalesEvents(new Set([userId]), currentDateRange.current.start, currentDateRange.current.end)
+        }
+      }
+      return next
+    })
+  }, [fetchSalesEvents])
 
   const DETAIL_W = 340
   const handleEventClick = useCallback((info: EventClickArg) => {
@@ -503,6 +549,24 @@ export function CalendarioClient({
       startEditable: true,
       classNames: ["reglo-draft-event"],
     }] : []),
+    // Sales overlay events
+    ...Object.entries(salesEvents).flatMap(([userId, evts]) => {
+      const user = salesUsers.find((u) => u.id === userId)
+      const color = user?.color ?? "#94A3B8"
+      return evts.map((e) => ({
+        id: e.id,
+        title: `${user?.name?.split(" ")[0] ?? "?"} · ${e.title}`,
+        start: e.start,
+        end: e.end,
+        allDay: e.allDay,
+        backgroundColor: color + "30",
+        borderColor: color,
+        textColor: color,
+        editable: false,
+        durationEditable: false,
+        startEditable: false,
+      }))
+    }),
   ]
 
   // Determine RSVP state for current user on selected event
@@ -549,7 +613,8 @@ export function CalendarioClient({
         </div>
       </div>
 
-      {/* Calendar */}
+      {/* Calendar + sidebar */}
+      <div className="flex min-h-0 flex-1">
       <div className="flex-1 overflow-hidden bg-white">
         <style>{`
           /* ── Base ──────────────────────────────────── */
@@ -882,6 +947,52 @@ export function CalendarioClient({
             month: "Mese",
           }}
         />
+      </div>
+
+      {/* Sales sidebar */}
+      {salesUsers.length > 0 && (
+        <div className="w-[200px] shrink-0 border-l border-border-1 bg-surface p-4">
+          <h3 className="mb-3 text-[11px] font-semibold tracking-wider text-ink-400 uppercase">
+            Calendari team
+          </h3>
+          <div className="space-y-1">
+            {salesUsers.map((user) => {
+              const isActive = activeSales.has(user.id)
+              const isLoading = loadingSales.has(user.id)
+              const color = user.color ?? "#94A3B8"
+              return (
+                <button
+                  key={user.id}
+                  onClick={() => toggleSales(user.id)}
+                  disabled={isLoading}
+                  className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-surface-2 disabled:opacity-60"
+                  style={{ backgroundColor: isActive ? color + "10" : undefined }}
+                >
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors"
+                    style={{
+                      borderColor: color,
+                      backgroundColor: isActive ? color : "transparent",
+                    }}
+                  >
+                    {isActive && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="truncate text-[12.5px] font-medium text-ink-700">
+                    {user.name}
+                  </span>
+                  {isLoading && (
+                    <span className="ml-auto h-3 w-3 animate-spin rounded-full border-2 border-ink-300 border-t-transparent" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Event detail popover */}
