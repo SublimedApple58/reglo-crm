@@ -49,10 +49,12 @@ export function CalendarioClient({
   initialEvents,
   userEmail,
   salesUsers = [],
+  currentUser,
 }: {
   initialEvents: CalendarEvent[]
   userEmail: string
   salesUsers?: SalesUser[]
+  currentUser?: { name: string; color: string | null }
 }) {
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -94,6 +96,8 @@ export function CalendarioClient({
   // RSVP state
   const [isRsvpPending, startRsvpTransition] = useTransition()
 
+  // Calendar visibility
+  const [showMyCalendar, setShowMyCalendar] = useState(true)
   // Sales overlay
   const [activeSales, setActiveSales] = useState<Set<string>>(new Set())
   const [salesEvents, setSalesEvents] = useState<Record<string, { id: string; title: string; start: string; end: string; allDay: boolean }[]>>({})
@@ -517,7 +521,7 @@ export function CalendarioClient({
 
   // Build FullCalendar events including draft
   const fcEvents = [
-    ...events.filter((e) => !e.allDay).map((e) => {
+    ...(showMyCalendar ? events.filter((e) => !e.allDay) : []).map((e) => {
       const isBeingEdited = detailEditMode && selectedEvent?.id === e.id
       return {
         id: e.id,
@@ -535,7 +539,7 @@ export function CalendarioClient({
       }
     }),
     // Draft event
-    ...(draft ? [{
+    ...(draft && showMyCalendar ? [{
       id: DRAFT_ID,
       title: (draftPreset !== "custom" ? computedTitle : draftTitle) || "(Senza titolo)",
       start: draft.start,
@@ -950,12 +954,42 @@ export function CalendarioClient({
       </div>
 
       {/* Sales sidebar */}
-      {salesUsers.length > 0 && (
+      {(salesUsers.length > 0 || currentUser) && (
         <div className="w-[200px] shrink-0 border-l border-border-1 bg-surface p-4">
           <h3 className="mb-3 text-[11px] font-semibold tracking-wider text-ink-400 uppercase">
-            Calendari team
+            Calendari
           </h3>
           <div className="space-y-1">
+            {/* Current user */}
+            {currentUser && (
+              <button
+                onClick={() => setShowMyCalendar((v) => !v)}
+                className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-surface-2"
+                style={{ backgroundColor: showMyCalendar ? "#EC489910" : undefined }}
+              >
+                <span
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors"
+                  style={{
+                    borderColor: "#EC4899",
+                    backgroundColor: showMyCalendar ? "#EC4899" : "transparent",
+                  }}
+                >
+                  {showMyCalendar && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                <span className="truncate text-[12.5px] font-semibold text-ink-900">
+                  {currentUser.name} <span className="font-normal text-ink-400">(tu)</span>
+                </span>
+              </button>
+            )}
+
+            {salesUsers.length > 0 && currentUser && (
+              <div className="my-1.5 h-px bg-border-1" />
+            )}
+
             {salesUsers.map((user) => {
               const isActive = activeSales.has(user.id)
               const isLoading = loadingSales.has(user.id)

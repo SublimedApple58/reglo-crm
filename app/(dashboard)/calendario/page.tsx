@@ -32,7 +32,12 @@ export default async function CalendarioPage() {
     getSalesWithGoogle(),
   ])
 
+  const currentUser = {
+    name: session.user.name ?? "Tu",
+    color: (session.user as Record<string, unknown>).color as string | null,
+  }
+
   return (
-    <CalendarioClient initialEvents={events} userEmail={session.user.email} salesUsers={salesUsers} />
+    <CalendarioClient initialEvents={events} userEmail={session.user.email} salesUsers={salesUsers} currentUser={currentUser} />
   )
 }
