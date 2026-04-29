@@ -519,7 +519,7 @@ function KanbanColumn({
                     )}
 
                     {/* Footer: pipeline value */}
-                    {item.pipelineValue && (
+                    {item.pipelineValue != null && item.pipelineValue > 0 && (
                       <div className="pt-1">
                         <span className="text-[11.5px] font-semibold text-ink-500">
                           €{item.pipelineValue.toLocaleString("it-IT")}
