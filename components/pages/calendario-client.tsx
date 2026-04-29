@@ -82,6 +82,9 @@ export function CalendarioClient({
   const draftTitleRef = useRef<HTMLInputElement>(null)
   const draftPopoverRef = useRef<HTMLDivElement>(null)
 
+  // Owner of draft event (null = self, userId = another user)
+  const [draftForUser, setDraftForUser] = useState<string | null>(null)
+
   // Preset state
   const [draftPreset, setDraftPreset] = useState<EventPresetId>("custom")
 
@@ -114,6 +117,7 @@ export function CalendarioClient({
     setDraft(null)
     setDraftPopoverPos(null)
     setDraftTitle("")
+    setDraftForUser(null)
     setDraftGuests([])
     setDraftGuestInput("")
     setDraftMeetLink(true)
@@ -363,6 +367,8 @@ export function CalendarioClient({
   const handleEventClick = useCallback((info: EventClickArg) => {
     // Ignore clicks on draft event
     if (info.event.id === DRAFT_ID) return
+    // Ignore clicks on sales overlay events
+    if (info.event.id.includes("__")) return
 
     // Close any draft
     clearDraft()
@@ -457,9 +463,16 @@ export function CalendarioClient({
     setDraftAutoscuolaText("")
     setDraftAutoscuola(null)
 
+    // Pre-set owner: if exactly one other calendar is active (and mine is off), default to them
+    if (activeSales.size === 1 && !showMyCalendar) {
+      setDraftForUser(Array.from(activeSales)[0])
+    } else {
+      setDraftForUser(null)
+    }
+
     // Wait for draft event to render, then position popover
     setTimeout(updateDraftPopoverPos, 80)
-  }, [updateDraftPopoverPos])
+  }, [updateDraftPopoverPos, activeSales, showMyCalendar])
 
   // Draft event drag/resize -> update draft times
   const handleEventChange = useCallback((info: EventChangeArg) => {
@@ -502,14 +515,19 @@ export function CalendarioClient({
           guests: draftGuests,
           addMeetLink: draftMeetLink,
           autoscuolaId: draftAutoscuola?.id,
+          forUserId: draftForUser ?? undefined,
         })
         clearDraft()
         refreshEvents()
+        // Refresh the target user's events if creating for someone else
+        if (draftForUser && currentDateRange.current) {
+          fetchSalesEvents(new Set([draftForUser]), currentDateRange.current.start, currentDateRange.current.end)
+        }
       } catch {
         // ignore
       }
     })
-  }, [draft, draftPreset, computedTitle, draftTitle, draftNotes, draftGuests, draftMeetLink, draftAutoscuola, refreshEvents, clearDraft])
+  }, [draft, draftPreset, computedTitle, draftTitle, draftNotes, draftGuests, draftMeetLink, draftAutoscuola, draftForUser, refreshEvents, clearDraft, fetchSalesEvents])
 
   // RSVP handler
   const handleRsvp = useCallback((eventId: string, status: "accepted" | "declined" | "tentative") => {
@@ -1388,6 +1406,40 @@ export function CalendarioClient({
             </div>
 
           <div className="flex flex-col gap-4">
+            {/* Owner selector */}
+            {salesUsers.length > 0 && (
+              <div>
+                <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Calendario di</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDraftForUser(null)}
+                    className="rounded-[999px] px-2.5 py-1 text-[11.5px] font-semibold transition-colors"
+                    style={{
+                      backgroundColor: !draftForUser ? "#EC4899" : "#F8FAFC",
+                      color: !draftForUser ? "white" : "#64748B",
+                    }}
+                  >
+                    {currentUser?.name?.split(" ")[0] ?? "Tu"} (tu)
+                  </button>
+                  {salesUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => setDraftForUser(u.id)}
+                      className="rounded-[999px] px-2.5 py-1 text-[11.5px] font-semibold transition-colors"
+                      style={{
+                        backgroundColor: draftForUser === u.id ? (u.color ?? "#64748B") : "#F8FAFC",
+                        color: draftForUser === u.id ? "white" : "#64748B",
+                      }}
+                    >
+                      {u.name.split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Preset pills */}
             <div>
               <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Tipo evento</label>

@@ -98,12 +98,23 @@ export async function createCalendarEvent(data: {
   guests: string[]
   addMeetLink: boolean
   autoscuolaId?: string
+  forUserId?: string
 }) {
   const session = await auth()
   if (!session?.user) throw new Error("Non autorizzato")
 
-  const calendar = await getGoogleCalendarClient(session.user.id)
+  // If creating for another user, use their calendar and add current user as guest
+  const targetUserId = data.forUserId ?? session.user.id
+  const calendar = await getGoogleCalendarClient(targetUserId)
   if (!calendar) throw new Error("Google non connesso")
+
+  // If creating for someone else, add current user's email as guest
+  const allGuests = [...data.guests]
+  if (data.forUserId && data.forUserId !== session.user.id && session.user.email) {
+    if (!allGuests.includes(session.user.email)) {
+      allGuests.push(session.user.email)
+    }
+  }
 
   const event = await calendar.events.insert({
     calendarId: "primary",
@@ -113,7 +124,7 @@ export async function createCalendarEvent(data: {
       description: data.description || undefined,
       start: { dateTime: data.startDateTime, timeZone: "Europe/Rome" },
       end: { dateTime: data.endDateTime, timeZone: "Europe/Rome" },
-      attendees: data.guests
+      attendees: allGuests
         .filter((g) => g.trim())
         .map((email) => ({ email: email.trim() })),
       conferenceData: data.addMeetLink
