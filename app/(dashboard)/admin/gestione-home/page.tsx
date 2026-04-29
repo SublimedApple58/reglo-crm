@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { getHomeCards } from "@/lib/actions/data"
+import { getHomeCards, getResources } from "@/lib/actions/data"
 import { GestioneHomeClient } from "@/components/pages/admin/gestione-home-client"
 
 export default async function GestioneHomePage() {
@@ -10,7 +10,7 @@ export default async function GestioneHomePage() {
   const role = (session.user as Record<string, unknown>).role as string
   if (role !== "admin" && role !== "both") redirect("/")
 
-  const cards = await getHomeCards()
+  const [cards, resources] = await Promise.all([getHomeCards(), getResources()])
 
-  return <GestioneHomeClient cards={cards} />
+  return <GestioneHomeClient cards={cards} resources={resources.map((r) => ({ id: r.id, title: r.title, category: r.category }))} />
 }
