@@ -86,8 +86,13 @@ export function RisorseClient({ resources, userId, categories: catsProp }: { res
   }, [router])
   const searchParams = useSearchParams()
   const initialCat = searchParams.get("cat")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCat)
-  const [selectedId, setSelectedId] = useState<number | null>(resources[0]?.id ?? null)
+  const initialIdParam = searchParams.get("id")
+  // Support both ?id=X and #X formats
+  const hashId = typeof window !== "undefined" ? window.location.hash.replace("#", "") : ""
+  const initialId = initialIdParam || hashId || null
+  const initialResource = initialId ? resources.find((r) => r.id === parseInt(initialId)) : null
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialResource?.category ?? initialCat)
+  const [selectedId, setSelectedId] = useState<number | null>(initialResource?.id ?? resources[0]?.id ?? null)
   const [search, setSearch] = useState("")
   const [fullscreen, setFullscreen] = useState(false)
 
