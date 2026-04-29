@@ -557,7 +557,7 @@ export function CalendarioClient({
       }
     }),
     // Draft event
-    ...(draft && showMyCalendar ? [{
+    ...(draft ? [{
       id: DRAFT_ID,
       title: (draftPreset !== "custom" ? computedTitle : draftTitle) || "(Senza titolo)",
       start: draft.start,
