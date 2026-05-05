@@ -342,16 +342,23 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
       .limit(1)
 
     if (autoscuola) {
-      const start = new Date(followUpAt)
-      const end = new Date(start.getTime() + 15 * 60 * 1000)
+      // followUpAt is a local time string like "2024-03-15T10:00" from the client.
+      // Pass it without UTC conversion so Google Calendar interprets it
+      // using timeZone: "Europe/Rome" specified in createCalendarEvent.
+      const startLocal = followUpAt.length === 16 ? followUpAt + ":00" : followUpAt
+      // Compute end time (+15 min) by parsing components to avoid UTC conversion
+      const startDate = new Date(followUpAt)
+      const endDate = new Date(startDate.getTime() + 15 * 60 * 1000)
+      const pad = (n: number) => n.toString().padStart(2, "0")
+      const endLocal = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}:00`
 
       let eventId: string | null = null
       try {
         const result = await createCalendarEvent({
           title: `Follow-up con ${autoscuola.name}`,
           description: `Link CRM: ${process.env.NEXTAUTH_URL ?? ""}/autoscuola/${autoscuolaId}`,
-          startDateTime: start.toISOString(),
-          endDateTime: end.toISOString(),
+          startDateTime: startLocal,
+          endDateTime: endLocal,
           guests: [],
           addMeetLink: false,
           autoscuolaId,
@@ -369,7 +376,7 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
           userId: session.user.id,
           type: "meeting",
           title: `Follow-up con ${autoscuola.name}`,
-          scheduledAt: start,
+          scheduledAt: startDate,
         })
       }
 

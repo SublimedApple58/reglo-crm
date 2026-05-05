@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useCallback, useMemo, useTransition } from "react"
+import { useState, useCallback, useMemo, useTransition, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Search,
   Filter,
@@ -65,16 +65,29 @@ export function PipelineClient({
   isAdmin?: boolean
 }) {
   const router = useRouter()
-  const [search, setSearch] = useState("")
+  const searchParams = useSearchParams()
+
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "")
   const [autoscuole, setAutoscuole] = useState(initialAutoscuole)
   const [showFilters, setShowFilters] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   const [newOppStage, setNewOppStage] = useState<string | null>(null)
-  const [filters, setFilters] = useState<ActiveFilters>({
-    stages: [],
-    province: null,
-    assignedTo: null,
-  })
+  const [filters, setFilters] = useState<ActiveFilters>(() => ({
+    stages: searchParams.get("stages")?.split(",").filter(Boolean) ?? [],
+    province: searchParams.get("province") || null,
+    assignedTo: searchParams.get("assignedTo") || null,
+  }))
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (search) params.set("search", search)
+    if (filters.stages.length > 0) params.set("stages", filters.stages.join(","))
+    if (filters.province) params.set("province", filters.province)
+    if (filters.assignedTo) params.set("assignedTo", filters.assignedTo)
+    const qs = params.toString()
+    router.replace(qs ? `?${qs}` : "/pipeline", { scroll: false })
+  }, [search, filters, router])
 
   // Unique provinces
   const provinces = useMemo(() => {

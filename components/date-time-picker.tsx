@@ -42,15 +42,20 @@ export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePic
   const [viewMonth, setViewMonth] = useState(stagingDate.getMonth())
   const [viewYear, setViewYear] = useState(stagingDate.getFullYear())
 
-  // Reset staging when picker opens
+  // Reset staging when picker opens, snapping minutes to nearest 15-min slot
   useEffect(() => {
     if (open) {
-      setStaging(value)
       const d = parseLocal(value)
+      if (!dateOnly) {
+        const snapped = Math.round(d.getMinutes() / 15) * 15
+        d.setMinutes(snapped >= 60 ? 0 : snapped)
+        if (snapped >= 60) d.setHours(d.getHours() + 1)
+      }
+      setStaging(toLocalISO(d))
       setViewMonth(d.getMonth())
       setViewYear(d.getFullYear())
     }
-  }, [open, value])
+  }, [open, value, dateOnly])
 
   // Close on click outside
   useEffect(() => {

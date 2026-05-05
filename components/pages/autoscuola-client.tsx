@@ -3,6 +3,7 @@
 import { useState, useTransition, useCallback, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
+  ArrowLeft,
   Building,
   MapPin,
   Users,
@@ -186,6 +187,13 @@ export function AutoscuolaClient({
       <div className="flex flex-col overflow-y-auto">
         {/* Header */}
         <div className="border-b border-border-1 px-7 py-5">
+          <button
+            onClick={() => router.back()}
+            className="mb-3 flex items-center gap-1.5 text-[12.5px] font-medium text-ink-500 transition-colors hover:text-ink-700"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Indietro
+          </button>
           <div className="mb-4 flex items-start gap-4">
             <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-gradient-to-br from-surface-2 to-border-2">
               <Building className="h-6 w-6 text-ink-400" />

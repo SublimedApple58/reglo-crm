@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { getAutoscuole } from "@/lib/actions/autoscuole"
@@ -26,5 +27,9 @@ export default async function PipelinePage() {
 
   const salesUsers = team.map((t) => ({ id: t.user.id, name: t.user.name }))
 
-  return <PipelineClient autoscuole={autoscuoleFlat} stages={[...STAGES]} salesUsers={salesUsers} isAdmin={isAdmin} />
+  return (
+    <Suspense>
+      <PipelineClient autoscuole={autoscuoleFlat} stages={[...STAGES]} salesUsers={salesUsers} isAdmin={isAdmin} />
+    </Suspense>
+  )
 }
