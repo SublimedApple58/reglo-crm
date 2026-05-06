@@ -906,23 +906,94 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
     })
   }
 
+  const [editing, setEditing] = useState(!notes)
+
   return (
     <div className="max-w-[560px]">
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Aggiungi note su questa autoscuola…"
-        className="mb-3 w-full resize-none rounded-[12px] border border-border-1 bg-surface p-4 text-[13px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
-        rows={8}
-      />
-      <button
-        onClick={handleSave}
-        disabled={isPending}
-        className="rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
-      >
-        Salva note
-      </button>
+      {editing ? (
+        <>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Aggiungi note su questa autoscuola…"
+            className="mb-3 w-full resize-none rounded-[12px] border border-border-1 bg-surface p-4 text-[13px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+            rows={8}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                handleSave()
+                setEditing(false)
+              }}
+              disabled={isPending}
+              className="rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            >
+              Salva note
+            </button>
+            {autoscuola.notes && (
+              <button
+                onClick={() => { setNotes(autoscuola.notes ?? ""); setEditing(false) }}
+                className="rounded-[999px] border border-border-1 px-5 py-2 text-[13px] font-medium text-ink-600 hover:bg-surface-2"
+              >
+                Annulla
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <div>
+          <div className="mb-3 whitespace-pre-wrap rounded-[12px] border border-border-1 bg-surface p-4 text-[13px] leading-relaxed text-ink-900">
+            <Linkify text={notes} />
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded-[999px] border border-border-1 px-5 py-2 text-[13px] font-medium text-ink-600 hover:bg-surface-2"
+          >
+            Modifica
+          </button>
+        </div>
+      )}
     </div>
+  )
+}
+
+const URL_REGEX = /https?:\/\/[^\s<>)"']+/g
+
+function Linkify({ text }: { text: string }) {
+  const parts: (string | { url: string; key: number })[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  let key = 0
+
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index))
+    }
+    parts.push({ url: match[0], key: key++ })
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+
+  return (
+    <>
+      {parts.map((part) =>
+        typeof part === "string" ? (
+          part
+        ) : (
+          <a
+            key={part.key}
+            href={part.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-pink underline decoration-pink/40 hover:decoration-pink"
+          >
+            {part.url}
+          </a>
+        )
+      )}
+    </>
   )
 }
 
