@@ -959,6 +959,15 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
 
 const URL_REGEX = /https?:\/\/[^\s<>)"']+/g
 
+function getYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.hostname === "youtu.be") return u.pathname.slice(1).split("/")[0]
+    if (u.hostname.includes("youtube.com") && u.searchParams.has("v")) return u.searchParams.get("v")
+  } catch {}
+  return null
+}
+
 function Linkify({ text }: { text: string }) {
   const parts: (string | { url: string; key: number })[] = []
   let lastIndex = 0
@@ -978,10 +987,23 @@ function Linkify({ text }: { text: string }) {
 
   return (
     <>
-      {parts.map((part) =>
-        typeof part === "string" ? (
-          part
-        ) : (
+      {parts.map((part) => {
+        if (typeof part === "string") return part
+        const ytId = getYouTubeId(part.url)
+        if (ytId) {
+          return (
+            <span key={part.key} className="my-2 block">
+              <iframe
+                src={`https://www.youtube.com/embed/${ytId}`}
+                className="w-full rounded-[10px]"
+                style={{ aspectRatio: "16/9" }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </span>
+          )
+        }
+        return (
           <a
             key={part.key}
             href={part.url}
@@ -992,7 +1014,7 @@ function Linkify({ text }: { text: string }) {
             {part.url}
           </a>
         )
-      )}
+      })}
     </>
   )
 }
