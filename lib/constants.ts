@@ -3,10 +3,12 @@ export const STAGES = [
   { id: "non_interessato", label: "Non interessato", color: "#EF4444", tone: "red", order: 1 },
   { id: "follow_up", label: "Follow up", color: "#3B82F6", tone: "blue", order: 2 },
   { id: "email", label: "Email", color: "#8B5CF6", tone: "violet", order: 3 },
-  { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 4 },
-  { id: "no_show", label: "No show", color: "#F97316", tone: "orange", order: 5 },
-  { id: "cliente", label: "Cliente", color: "#EC4899", tone: "pink", order: 6 },
-  { id: "nuove_features", label: "Nuove features", color: "#8B5CF6", tone: "violet", order: 7 },
+  { id: "in_attesa", label: "In attesa", color: "#7C3AED", tone: "violet", order: 4 },
+  { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 5 },
+  { id: "no_show", label: "No show", color: "#F97316", tone: "orange", order: 6 },
+  { id: "cliente", label: "Cliente", color: "#EC4899", tone: "pink", order: 7 },
+  { id: "non_chiuso", label: "Non chiuso", color: "#DC2626", tone: "red", order: 8 },
+  { id: "nuove_features", label: "Nuove features", color: "#8B5CF6", tone: "violet", order: 9 },
 ] as const
 
 export const STAGE_DESCRIPTIONS: Record<string, string> = {
@@ -14,9 +16,11 @@ export const STAGE_DESCRIPTIONS: Record<string, string> = {
   non_interessato: "Perso o disinteressato",
   follow_up: "Follow-up telefonico",
   email: "In attesa di risposta email",
+  in_attesa: "Ha fatto l'appuntamento ma sta aspettando nuove features o deve decidere",
   appuntamento: "Demo fissata su calendario",
   no_show: "Non si è presentato all'appuntamento",
   cliente: "Contratto e fattura OK",
+  non_chiuso: "Trattativa non andata a buon fine",
   nuove_features: "Interessati a nuove features non ancora disponibili",
 }
 
