@@ -918,12 +918,19 @@ function DocumentiTab({
 }
 
 function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [notes, setNotes] = useState(autoscuola.notes ?? "")
 
+  // Sync local state when server data changes (e.g. after refresh)
+  useEffect(() => {
+    setNotes(autoscuola.notes ?? "")
+  }, [autoscuola.notes])
+
   function handleSave() {
-    startTransition(() => {
-      updateAutoscuola(autoscuola.id, { notes })
+    startTransition(async () => {
+      await updateAutoscuola(autoscuola.id, { notes })
+      router.refresh()
     })
   }
 
