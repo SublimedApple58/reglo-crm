@@ -4,6 +4,7 @@ import { getAutoscuola, getActivities } from "@/lib/actions/autoscuole"
 import { getDocuments } from "@/lib/actions/documents"
 import { getContractRequest } from "@/lib/actions/contracts"
 import { hasGoogleConnected } from "@/lib/actions/calendar"
+import { getSalesTeam } from "@/lib/actions/data"
 import { AutoscuolaClient } from "@/components/pages/autoscuola-client"
 import { STAGES } from "@/lib/constants"
 
@@ -15,12 +16,13 @@ export default async function AutoscuolaPage(props: {
 
   const { id } = await props.params
 
-  const [result, activitiesResult, documentsResult, contractResult, googleConnected] = await Promise.all([
+  const [result, activitiesResult, documentsResult, contractResult, googleConnected, team] = await Promise.all([
     getAutoscuola(id),
     getActivities(id),
     getDocuments(id),
     getContractRequest(id),
     hasGoogleConnected(),
+    getSalesTeam(),
   ])
 
   if (!result) notFound()
@@ -41,6 +43,8 @@ export default async function AutoscuolaPage(props: {
   const role = u.role as string
   const isAdmin = role === "admin" || role === "both"
 
+  const salesUsers = team.map((t) => ({ id: t.user.id, name: t.user.name }))
+
   return (
     <AutoscuolaClient
       autoscuola={result.autoscuola}
@@ -52,6 +56,7 @@ export default async function AutoscuolaPage(props: {
       contractRequest={contractResult}
       isAdmin={isAdmin}
       googleConnected={googleConnected}
+      salesUsers={salesUsers}
     />
   )
 }

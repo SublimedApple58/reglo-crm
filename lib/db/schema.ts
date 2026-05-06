@@ -59,6 +59,8 @@ export const autoscuole = pgTable("autoscuole", {
   followUpAt: timestamp("follow_up_at"),
   interesseQuiz: boolean("interesse_quiz"),
   interesseRinnovo: boolean("interesse_rinnovo"),
+  setter: text("setter").references(() => users.id),
+  closer: text("closer").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

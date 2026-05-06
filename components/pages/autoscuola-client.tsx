@@ -80,6 +80,11 @@ function getFileIcon(contentType: string) {
   return File
 }
 
+type SalesUser = {
+  id: string
+  name: string
+}
+
 export function AutoscuolaClient({
   autoscuola,
   stage,
@@ -90,6 +95,7 @@ export function AutoscuolaClient({
   contractRequest,
   isAdmin = false,
   googleConnected = false,
+  salesUsers = [],
 }: {
   autoscuola: Autoscuola
   stage: PipelineStage
@@ -100,6 +106,7 @@ export function AutoscuolaClient({
   contractRequest: ContractRequestWithRelations
   isAdmin?: boolean
   googleConnected?: boolean
+  salesUsers?: SalesUser[]
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("attivita")
@@ -168,9 +175,6 @@ export function AutoscuolaClient({
       router.push("/pipeline")
     })
   }
-
-  const commissionRate = autoscuola.commissionRate ?? 0.15
-  const closeProbability = autoscuola.closeProbability ?? null
 
   const tabs = [
     { id: "attivita", label: "Attività" },
@@ -555,49 +559,17 @@ export function AutoscuolaClient({
           </div>
         )}
 
-        {/* Deal info — real data */}
+        {/* Setter / Closer */}
         <div className="border-b border-border-1 p-5">
           <h3 className="mb-3 text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
-            Deal
+            Ruoli trattativa
           </h3>
-          <div className="space-y-2.5">
-            <div className="flex justify-between text-[13px]">
-              <span className="text-ink-500">Pacchetto</span>
-              <span className="font-medium text-ink-900">{autoscuola.package ?? "–"}</span>
-            </div>
-            <div className="flex justify-between text-[13px]">
-              <span className="text-ink-500">Valore</span>
-              <span className="font-mono font-semibold text-ink-900">
-                {autoscuola.pipelineValue ? `€${autoscuola.pipelineValue.toLocaleString("it-IT")}` : "–"}
-              </span>
-            </div>
-            <div className="flex justify-between text-[13px]">
-              <span className="text-ink-500">Commissione ({Math.round(commissionRate * 100)}%)</span>
-              <span className="font-mono font-medium text-green">
-                {autoscuola.pipelineValue
-                  ? `€${Math.round(autoscuola.pipelineValue * commissionRate).toLocaleString("it-IT")}`
-                  : "–"}
-              </span>
-            </div>
-            <div className="flex justify-between text-[13px]">
-              <span className="text-ink-500">Prob. chiusura</span>
-              <span className="font-medium text-ink-900">
-                {closeProbability !== null ? `${closeProbability}%` : "–"}
-              </span>
-            </div>
-            {autoscuola.expectedCloseDate && (
-              <div className="flex justify-between text-[13px]">
-                <span className="text-ink-500">Chiusura prevista</span>
-                <span className="font-medium text-ink-900">
-                  {new Date(autoscuola.expectedCloseDate).toLocaleDateString("it-IT", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
-            )}
-          </div>
+          <SetterCloserSelects
+            autoscuolaId={autoscuola.id}
+            salesUsers={salesUsers}
+            initialSetter={autoscuola.setter}
+            initialCloser={autoscuola.closer}
+          />
         </div>
 
         {/* Follow-up */}
@@ -1814,6 +1786,69 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
           Rimuovi follow-up
         </button>
       )}
+    </div>
+  )
+}
+
+function SetterCloserSelects({
+  autoscuolaId,
+  salesUsers,
+  initialSetter,
+  initialCloser,
+}: {
+  autoscuolaId: string
+  salesUsers: SalesUser[]
+  initialSetter: string | null
+  initialCloser: string | null
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [setter, setSetter] = useState(initialSetter ?? "")
+  const [closer, setCloser] = useState(initialCloser ?? "")
+
+  function handleChange(field: "setter" | "closer", value: string) {
+    const dbValue = value || null
+    if (field === "setter") setSetter(value)
+    else setCloser(value)
+    startTransition(() => {
+      updateAutoscuola(autoscuolaId, { [field]: dbValue })
+    })
+  }
+
+  const selectClass =
+    "h-[34px] w-full cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2.5 text-[12.5px] text-ink-700 outline-none transition-colors focus:border-pink disabled:opacity-50"
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="mb-1.5 block text-[11.5px] font-medium text-ink-500">Setter</label>
+        <select
+          value={setter}
+          onChange={(e) => handleChange("setter", e.target.value)}
+          disabled={isPending}
+          className={selectClass}
+        >
+          <option value="">– Non assegnato –</option>
+          <option value="__none__">Nessuno dei sales</option>
+          {salesUsers.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="mb-1.5 block text-[11.5px] font-medium text-ink-500">Closer</label>
+        <select
+          value={closer}
+          onChange={(e) => handleChange("closer", e.target.value)}
+          disabled={isPending}
+          className={selectClass}
+        >
+          <option value="">– Non assegnato –</option>
+          <option value="__none__">Nessuno dei sales</option>
+          {salesUsers.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </select>
+      </div>
     </div>
   )
 }
