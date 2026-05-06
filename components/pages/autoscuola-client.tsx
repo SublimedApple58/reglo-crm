@@ -959,11 +959,17 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
 
 const URL_REGEX = /https?:\/\/[^\s<>)"']+/g
 
-function getYouTubeId(url: string): string | null {
+function getEmbedUrl(url: string): string | null {
   try {
     const u = new URL(url)
-    if (u.hostname === "youtu.be") return u.pathname.slice(1).split("/")[0]
-    if (u.hostname.includes("youtube.com") && u.searchParams.has("v")) return u.searchParams.get("v")
+    // YouTube
+    if (u.hostname === "youtu.be") return `https://www.youtube.com/embed/${u.pathname.slice(1).split("/")[0]}`
+    if (u.hostname.includes("youtube.com") && u.searchParams.has("v")) return `https://www.youtube.com/embed/${u.searchParams.get("v")}`
+    // Vimeo
+    const vimeoMatch = u.hostname.includes("vimeo.com") && u.pathname.match(/\/(\d+)/)
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
+    // Loom
+    if (u.hostname.includes("loom.com") && u.pathname.startsWith("/share/")) return `https://www.loom.com/embed/${u.pathname.replace("/share/", "")}`
   } catch {}
   return null
 }
@@ -989,12 +995,12 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((part) => {
         if (typeof part === "string") return part
-        const ytId = getYouTubeId(part.url)
-        if (ytId) {
+        const embedUrl = getEmbedUrl(part.url)
+        if (embedUrl) {
           return (
             <span key={part.key} className="my-2 block">
               <iframe
-                src={`https://www.youtube.com/embed/${ytId}`}
+                src={embedUrl}
                 className="w-full rounded-[10px]"
                 style={{ aspectRatio: "16/9" }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1003,19 +1009,74 @@ function Linkify({ text }: { text: string }) {
             </span>
           )
         }
-        return (
-          <a
-            key={part.key}
-            href={part.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-pink underline decoration-pink/40 hover:decoration-pink"
-          >
-            {part.url}
-          </a>
-        )
+        return <LinkPreviewCard key={part.key} url={part.url} />
       })}
     </>
+  )
+}
+
+function LinkPreviewCard({ url }: { url: string }) {
+  const [preview, setPreview] = useState<{ title: string | null; description: string | null; image: string | null; siteName: string | null } | null>(null)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    import("@/lib/actions/link-preview").then(({ fetchLinkPreview }) =>
+      fetchLinkPreview(url).then((data) => {
+        if (!cancelled) {
+          setPreview(data)
+          setLoaded(true)
+        }
+      })
+    )
+    return () => { cancelled = true }
+  }, [url])
+
+  // Still loading — show plain link
+  if (!loaded) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="text-pink underline decoration-pink/40 hover:decoration-pink">
+        {url}
+      </a>
+    )
+  }
+
+  // No OG data — plain link
+  if (!preview) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="text-pink underline decoration-pink/40 hover:decoration-pink">
+        {url}
+      </a>
+    )
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="my-2 flex overflow-hidden rounded-[10px] border border-border-1 bg-surface-2/50 transition-colors hover:bg-surface-2"
+    >
+      {preview.image && (
+        <img
+          src={preview.image}
+          alt=""
+          className="h-[90px] w-[120px] shrink-0 object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+        />
+      )}
+      <div className="flex min-w-0 flex-col justify-center px-3 py-2">
+        {preview.siteName && (
+          <p className="mb-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-ink-400">{preview.siteName}</p>
+        )}
+        {preview.title && (
+          <p className="truncate text-[12.5px] font-semibold text-ink-900">{preview.title}</p>
+        )}
+        {preview.description && (
+          <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-ink-500">{preview.description}</p>
+        )}
+      </div>
+    </a>
   )
 }
 
