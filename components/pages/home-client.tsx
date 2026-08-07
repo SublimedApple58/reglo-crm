@@ -40,7 +40,7 @@ function parseFollowUpLink(task: GoogleTask): { name: string; href: string } | n
   return { name: titleMatch[1], href: `/autoscuola/${linkMatch[1]}` }
 }
 
-function TasksWidget({ tasks }: { tasks: GoogleTask[] }) {
+function TasksWidget({ tasks, phoneMap = {} }: { tasks: GoogleTask[]; phoneMap?: Record<string, { name: string; phone: string | null }> }) {
   const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
 
@@ -84,17 +84,17 @@ function TasksWidget({ tasks }: { tasks: GoogleTask[] }) {
     <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
       <div className="flex items-center justify-between border-b border-border-1 px-5 py-3.5">
         <div className="flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-pink" />
+          <ListChecks className="h-4 w-4 text-brand" />
           <h4 className="text-[14px] font-bold text-ink-900">Le mie attività</h4>
           {pendingTasks.length > 0 && (
-            <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink/10 px-1.5 font-mono text-[10px] font-semibold text-pink">
+            <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand/10 px-1.5 font-mono text-[10px] font-semibold text-brand">
               {pendingTasks.length}
             </span>
           )}
         </div>
         <Link
           href="/attivita"
-          className="flex items-center gap-1 text-[12px] font-medium text-pink hover:underline"
+          className="flex items-center gap-1 text-[12px] font-medium text-brand hover:underline"
         >
           Vedi tutte
           <ChevronRight className="h-3 w-3" />
@@ -107,7 +107,7 @@ function TasksWidget({ tasks }: { tasks: GoogleTask[] }) {
               <>
                 <p className="text-[10.5px] font-semibold tracking-[0.3px] text-ink-400 uppercase">Oggi</p>
                 {showToday.map((task) => (
-                  <TaskRow key={task.id} task={task} onComplete={handleComplete} isPending={isPending} />
+                  <TaskRow key={task.id} task={task} onComplete={handleComplete} isPending={isPending} phoneMap={phoneMap} />
                 ))}
               </>
             )}
@@ -117,7 +117,7 @@ function TasksWidget({ tasks }: { tasks: GoogleTask[] }) {
                   Prossimi giorni
                 </p>
                 {showFuture.map((task) => (
-                  <TaskRow key={task.id} task={task} onComplete={handleComplete} isPending={isPending} />
+                  <TaskRow key={task.id} task={task} onComplete={handleComplete} isPending={isPending} phoneMap={phoneMap} />
                 ))}
               </>
             )}
@@ -162,7 +162,7 @@ function MeetingRow({ event }: { event: UpcomingEvent }) {
           href={event.meetLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-7 items-center gap-1 rounded-[999px] bg-pink/10 px-2.5 text-[11px] font-semibold text-pink hover:bg-pink/20"
+          className="flex h-7 items-center gap-1 rounded-[999px] bg-brand/10 px-2.5 text-[11px] font-semibold text-brand hover:bg-brand/20"
         >
           <Video className="h-3 w-3" />
           Meet
@@ -183,12 +183,12 @@ function MeetingsWidget({ events }: { events: UpcomingEvent[] }) {
     <div className="flex flex-col overflow-hidden rounded-[18px] border border-border-1 bg-surface">
       <div className="flex items-center justify-between border-b border-border-1 px-5 py-3.5">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-pink" />
+          <Calendar className="h-4 w-4 text-brand" />
           <h4 className="text-[14px] font-bold text-ink-900">Prossimi meeting</h4>
         </div>
         <Link
           href="/calendario"
-          className="flex items-center gap-1 text-[12px] font-medium text-pink hover:underline"
+          className="flex items-center gap-1 text-[12px] font-medium text-brand hover:underline"
         >
           Vedi tutto
           <ChevronRight className="h-3 w-3" />
@@ -228,7 +228,7 @@ function MeetingsWidget({ events }: { events: UpcomingEvent[] }) {
   )
 }
 
-function TaskRow({ task, onComplete, isPending }: { task: GoogleTask; onComplete: (id: string) => void; isPending: boolean }) {
+function TaskRow({ task, onComplete, isPending, phoneMap = {} }: { task: GoogleTask; onComplete: (id: string) => void; isPending: boolean; phoneMap?: Record<string, { name: string; phone: string | null }> }) {
   const badge = getTaskDueBadge(task.due)
   const followUp = parseFollowUpLink(task)
   const displayTitle = task.title.replace(/\s*\(\d{2}:\d{2}\)$/, "")
@@ -238,7 +238,7 @@ function TaskRow({ task, onComplete, isPending }: { task: GoogleTask; onComplete
       <button
         onClick={() => onComplete(task.id)}
         disabled={isPending}
-        className="mt-0.5 shrink-0 text-ink-300 hover:text-pink transition-colors"
+        className="mt-0.5 shrink-0 text-ink-300 hover:text-brand transition-colors"
       >
         <Circle className="h-[16px] w-[16px]" />
       </button>
@@ -246,9 +246,18 @@ function TaskRow({ task, onComplete, isPending }: { task: GoogleTask; onComplete
         {followUp ? (
           <p className="truncate text-[13px] font-semibold text-ink-900">
             Follow-up con{" "}
-            <Link href={followUp.href} className="text-pink hover:underline">
+            <Link href={followUp.href} className="text-brand hover:underline">
               {followUp.name}
             </Link>
+            {(() => {
+              const id = followUp.href.split("/autoscuola/")[1]
+              const phone = id ? phoneMap[id]?.phone : null
+              return phone ? (
+                <a href={`tel:${phone}`} className="ml-1.5 text-[12px] font-semibold text-teal-700 hover:underline">
+                  {phone}
+                </a>
+              ) : null
+            })()}
           </p>
         ) : (
           <p className="truncate text-[13px] font-semibold text-ink-900">
@@ -271,6 +280,9 @@ for (const [regione, provs] of Object.entries(REGIONI_PROVINCE)) {
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
+// AdvancedMarker richiede un Map ID registrato su Google Cloud; DEMO_MAP_ID è il
+// fallback ufficiale Google che abilita gli Advanced Markers senza registrazione.
+const GOOGLE_MAPS_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID"
 
 const DEFAULT_SHORTCUTS = [
   { label: "Script Chiamate", emoji: "📞", href: "/risorse?cat=Script+chiamate" },
@@ -318,6 +330,7 @@ export function HomeClient({
   googleConnected = false,
   upcomingEvents = [],
   googleTasks = [],
+  taskPhoneMap = {},
 }: {
   userName: string
   stagesWithCounts: { id: string; label: string; color: string; count: number }[]
@@ -328,6 +341,7 @@ export function HomeClient({
   googleConnected?: boolean
   upcomingEvents?: UpcomingEvent[]
   googleTasks?: GoogleTask[]
+  taskPhoneMap?: Record<string, { name: string; phone: string | null }>
 }) {
   const firstName = userName.split(" ")[0]
   const shortcuts = homeCards && homeCards.length > 0
@@ -357,7 +371,7 @@ export function HomeClient({
       <p className="mb-8 max-w-[640px] text-[14px] leading-relaxed text-ink-500">
         In questo Crm troverete tutto quello di cui avete realmente bisogno, tutto in un unico posto,<br />
         pensato da noi per voi, se avete delle modifiche da richiedere scrivete a:{" "}
-        <a href="mailto:gabriele.ruzzu@reglo.it" className="font-medium text-pink hover:underline">gabriele.ruzzu@reglo.it</a>
+        <a href="mailto:gabriele.ruzzu@reglo.it" className="font-medium text-brand hover:underline">gabriele.ruzzu@reglo.it</a>
       </p>
 
       {/* Shortcuts */}
@@ -386,7 +400,7 @@ export function HomeClient({
               defaultZoom={isAdmin ? 5.5 : 6}
               gestureHandling="none"
               disableDefaultUI={true}
-              mapId="reglo-home-map"
+              mapId={GOOGLE_MAPS_MAP_ID}
               style={{ width: "100%", height: "100%" }}
               clickableIcons={false}
             >
@@ -394,10 +408,10 @@ export function HomeClient({
                 <Polygon
                   key={i}
                   paths={hull}
-                  strokeColor="#EC4899"
+                  strokeColor="#1a1a2e"
                   strokeOpacity={0.7}
                   strokeWeight={2}
-                  fillColor="#EC4899"
+                  fillColor="#1a1a2e"
                   fillOpacity={0.08}
                 />
               ))}
@@ -420,7 +434,7 @@ export function HomeClient({
         ) : (
           <div
             className="flex h-full w-full items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)" }}
+            style={{ background: "linear-gradient(135deg, #222222 0%, #1e293b 50%, #222222 100%)" }}
           >
             <p className="text-[14px] text-white/40">Mappa territorio</p>
           </div>
@@ -445,7 +459,7 @@ export function HomeClient({
             </p>
             <button
               onClick={() => signIn("google", { callbackUrl: "/" })}
-              className="flex h-[34px] items-center gap-2 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
+              className="flex h-[34px] items-center gap-2 rounded-[999px] bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand/90"
             >
               Collega Google
             </button>
@@ -454,7 +468,7 @@ export function HomeClient({
 
         {/* Tasks Widget */}
         {googleConnected ? (
-          <TasksWidget tasks={googleTasks} />
+          <TasksWidget tasks={googleTasks} phoneMap={taskPhoneMap} />
         ) : (
           <div className="flex flex-col items-center justify-center overflow-hidden rounded-[18px] border border-border-1 bg-surface px-6 py-8 text-center">
             <ListChecks className="mb-3 h-10 w-10 text-ink-300" />
@@ -464,7 +478,7 @@ export function HomeClient({
             </p>
             <button
               onClick={() => signIn("google", { callbackUrl: "/" })}
-              className="flex h-[34px] items-center gap-2 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
+              className="flex h-[34px] items-center gap-2 rounded-[999px] bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand/90"
             >
               Collega Google
             </button>

@@ -44,9 +44,9 @@ export function GestioneSalesClient({
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
 
   const statCards = [
-    { label: "Sales attivi", value: stats.activeSales, icon: Users, color: "#EC4899" },
+    { label: "Sales attivi", value: stats.activeSales, icon: Users, color: "#1a1a2e" },
     { label: "Autoscuole", value: stats.totalAutoscuole, icon: Building, color: "#3B82F6" },
-    { label: "Contratti MTD", value: totalContracts, icon: FileText, color: "#10B981" },
+    { label: "Contratti MTD", value: totalContracts, icon: FileText, color: "#22C55E" },
     {
       label: "Commissioni MTD",
       value: `€${totalCommissions.toLocaleString("it-IT")}`,
@@ -66,7 +66,7 @@ export function GestioneSalesClient({
         </div>
         <button
           onClick={() => setShowNewUser(true)}
-          className="flex h-9 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[13px] font-semibold text-white hover:bg-pink/90"
+          className="flex h-9 items-center gap-1.5 rounded-[999px] bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand/90"
         >
           <Plus className="h-3.5 w-3.5" />
           Nuovo Sales
@@ -169,7 +169,7 @@ export function GestioneSalesClient({
                     <div className="flex items-center justify-center gap-2">
                       <div className="h-2 w-16 overflow-hidden rounded-full bg-surface-2">
                         <div
-                          className="h-full rounded-full bg-pink"
+                          className="h-full rounded-full bg-brand"
                           style={{ width: `${quotaPercent}%` }}
                         />
                       </div>
@@ -180,8 +180,8 @@ export function GestioneSalesClient({
                     <span
                       className="rounded-[999px] px-2 py-0.5 text-[10px] font-semibold"
                       style={{
-                        backgroundColor: row.user.active ? "#ECFDF5" : "#FEF2F2",
-                        color: row.user.active ? "#10B981" : "#EF4444",
+                        backgroundColor: row.user.active ? "#F0FDF4" : "#faf0ed",
+                        color: row.user.active ? "#22C55E" : "#c13515",
                       }}
                     >
                       {row.user.active ? "Attivo" : "Inattivo"}
@@ -368,7 +368,7 @@ function UserFormDialog({
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               required
             />
           </div>
@@ -379,7 +379,7 @@ function UserFormDialog({
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               type="email"
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               required
             />
           </div>
@@ -391,7 +391,7 @@ function UserFormDialog({
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 type="password"
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 required
                 minLength={8}
               />
@@ -404,7 +404,7 @@ function UserFormDialog({
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
             <div>
@@ -412,7 +412,7 @@ function UserFormDialog({
               <input
                 value={form.territory}
                 onChange={(e) => setForm({ ...form, territory: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
           </div>
@@ -423,7 +423,7 @@ function UserFormDialog({
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value as "sales" | "admin" | "both" })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
               >
                 <option value="sales">Sales</option>
                 <option value="admin">Admin</option>
@@ -436,7 +436,7 @@ function UserFormDialog({
                 value={form.quota}
                 onChange={(e) => setForm({ ...form, quota: Number(e.target.value) })}
                 type="number"
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               />
             </div>
           </div>
@@ -473,7 +473,7 @@ function UserFormDialog({
             <button
               type="submit"
               disabled={isPending}
-              className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+              className="h-9 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
               {isPending ? "Salvataggio..." : isEdit ? "Salva" : "Crea"}
             </button>

@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-inter);
-  --font-heading: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -40,36 +40,38 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-pill: 9999px;
+  --radius-card-primary: 35px;
 
-  /* Reglo design system colors */
-  --color-pink: #EC4899;
-  --color-pink-50: #FDF2F8;
-  --color-pink-100: #FCE7F3;
+  /* Reglo design system colors (Airbnb navy, allineati a reglo/assets/styles/globals.css) */
+  --color-brand: #1a1a2e;
+  --color-brand-50: #eeeef4;
+  --color-brand-100: #e2e2e8;
   --color-yellow: #FACC15;
   --color-yellow-50: #FFFBEB;
   --color-yellow-600: #CA8A04;
-  --color-green: #10B981;
-  --color-green-50: #ECFDF5;
-  --color-red: #EF4444;
-  --color-red-50: #FEF2F2;
-  --color-ink-900: #0F172A;
-  --color-ink-700: #1E293B;
-  --color-ink-600: #475569;
-  --color-ink-500: #64748B;
-  --color-ink-400: #94A3B8;
-  --color-ink-300: #CBD5E1;
+  --color-green: #22C55E;
+  --color-green-50: #F0FDF4;
+  --color-red: #c13515;
+  --color-red-50: #faf0ed;
+  --color-ink-900: #222222;
+  --color-ink-700: #33334d;
+  --color-ink-600: #4b4b55;
+  --color-ink-500: #6a6a6a;
+  --color-ink-400: #929292;
+  --color-ink-300: #dddddd;
   --color-surface: #FFFFFF;
-  --color-surface-2: #F8FAFC;
-  --color-bg: #FAFAF9;
-  --color-border-1: #E2E8F0;
-  --color-border-2: #F1F5F9;
+  --color-surface-2: #f7f7f7;
+  --color-bg: #FFFFFF;
+  --color-border-1: #dddddd;
+  --color-border-2: #f2f2f2;
   --color-orange: #F97316;
   --color-blue: #3B82F6;
   --color-violet: #8B5CF6;
@@ -77,42 +79,62 @@
 }
 
 :root {
-  --background: #FAFAF9;
-  --foreground: #0F172A;
+  --background: #FFFFFF;
+  --foreground: #222222;
   --card: #FFFFFF;
-  --card-foreground: #0F172A;
+  --card-foreground: #222222;
   --popover: #FFFFFF;
-  --popover-foreground: #0F172A;
-  --primary: #EC4899;
+  --popover-foreground: #222222;
+  --primary: #1a1a2e;
   --primary-foreground: #FFFFFF;
-  --secondary: #F8FAFC;
-  --secondary-foreground: #0F172A;
-  --muted: #F8FAFC;
-  --muted-foreground: #64748B;
-  --accent: #F8FAFC;
-  --accent-foreground: #0F172A;
-  --destructive: #EF4444;
-  --border: #E2E8F0;
-  --input: #E2E8F0;
-  --ring: #EC4899;
-  --chart-1: #EC4899;
-  --chart-2: #3B82F6;
-  --chart-3: #10B981;
-  --chart-4: #F59E0B;
-  --chart-5: #8B5CF6;
-  --radius: 0.75rem;
-  --sidebar: #FAFAF9;
-  --sidebar-foreground: #0F172A;
-  --sidebar-primary: #EC4899;
+  --secondary: #f7f7f7;
+  --secondary-foreground: #222222;
+  --muted: #f7f7f7;
+  --muted-foreground: #6a6a6a;
+  --accent: #f7f7f7;
+  --accent-foreground: #222222;
+  --destructive: #c13515;
+  --positive: #22C55E;
+  --border: #dddddd;
+  --input: #dddddd;
+  --ring: #222222;
+  --chart-1: #1a1a2e;
+  --chart-2: #6a6a6a;
+  --chart-3: #22C55E;
+  --chart-4: #eeeef4;
+  --chart-5: #f2f2f2;
+  --radius: 0.875rem;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #222222;
+  --sidebar-primary: #1a1a2e;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #FDF2F8;
-  --sidebar-accent-foreground: #EC4899;
-  --sidebar-border: #E2E8F0;
-  --sidebar-ring: #EC4899;
+  --sidebar-accent: #f7f7f7;
+  --sidebar-accent-foreground: #222222;
+  --sidebar-border: #dddddd;
+  --sidebar-ring: #222222;
 
-  --shadow-sm: 0 1px 2px rgba(15,23,42,0.04);
-  --shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
-  --shadow-lg: 0 10px 25px -3px rgba(15,23,42,0.08), 0 4px 6px rgba(15,23,42,0.04);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
+
+  /* Ombre allineate a reglo */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-card-primary: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-panel: rgba(0, 0, 0, 0.02) 0 0 0 1px, rgba(0, 0, 0, 0.04) 0 2px 6px 0, rgba(0, 0, 0, 0.1) 0 4px 8px 0;
+  --shadow-cta: 0 6px 12px rgba(26, 26, 46, 0.18);
+  --shadow-accent: 0 10px 20px rgba(26, 26, 46, 0.18);
+  --shadow-dropdown: rgba(0, 0, 0, 0.14) 0 8px 32px;
+  --shadow-drawer: 0 -6px 18px rgba(0, 0, 0, 0.12);
+  --shadow-toast-success: 0 8px 16px rgba(22, 163, 74, 0.3);
+  --shadow-toast-danger: 0 8px 16px rgba(220, 38, 38, 0.3);
+  --shadow-toast-info: 0 8px 16px rgba(15, 23, 42, 0.3);
+
+  /* Motion allineato a reglo */
+  --motion-micro: 100ms;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-emphasis: 350ms;
+  --motion-dramatic: 500ms;
 }
 
 @layer base {
@@ -123,7 +145,7 @@
     @apply bg-background text-foreground;
   }
   html, body, * {
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   }
 }
 
@@ -136,11 +158,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #dddddd;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #929292;
 }
 
 /* Tiptap table styles */
@@ -152,19 +174,19 @@
 }
 .ProseMirror td,
 .ProseMirror th {
-  border: 1px solid #E2E8F0;
+  border: 1px solid #dddddd;
   padding: 8px 12px;
   vertical-align: top;
   position: relative;
   min-width: 80px;
 }
 .ProseMirror th {
-  background-color: #F8FAFC;
+  background-color: #f7f7f7;
   font-weight: 600;
-  color: #0F172A;
+  color: #222222;
 }
 .ProseMirror .selectedCell {
-  background-color: #FDF2F8;
+  background-color: #eeeef4;
 }
 .ProseMirror .column-resize-handle {
   position: absolute;
@@ -172,7 +194,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background-color: #EC4899;
+  background-color: #1a1a2e;
   cursor: col-resize;
   z-index: 10;
 }
@@ -192,31 +214,31 @@
   border-radius: 999px;
 }
 .kanban-scroll:hover::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #dddddd;
 }
 .kanban-scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
 .kanban-scroll:hover {
-  scrollbar-color: #CBD5E1 transparent;
+  scrollbar-color: #dddddd transparent;
 }
 
 /* Internal links (href starts with /) */
 .reglo-links a[href^="/"] {
-  color: #EC4899;
+  color: #1a1a2e;
   text-decoration: underline;
-  text-decoration-color: rgba(236, 72, 153, 0.3);
+  text-decoration-color: rgba(26, 26, 46, 0.3);
   text-underline-offset: 2px;
-  background-color: rgba(236, 72, 153, 0.08);
+  background-color: rgba(26, 26, 46, 0.06);
   padding: 1px 4px;
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--motion-fast);
 }
 .reglo-links a[href^="/"]:hover {
-  background-color: rgba(236, 72, 153, 0.15);
+  background-color: rgba(26, 26, 46, 0.12);
 }
 
 /* External links */

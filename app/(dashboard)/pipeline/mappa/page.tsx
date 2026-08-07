@@ -39,13 +39,13 @@ export default async function MapPage() {
         userId: t.territory.userId,
         region: t.territory.region,
         salesName: t.user.name,
-        salesColor: autoscuoleFlat.find((a) => a.salesId === t.territory.userId)?.salesColor ?? "#94A3B8",
+        salesColor: autoscuoleFlat.find((a) => a.salesId === t.territory.userId)?.salesColor ?? "#929292",
       }))
     : (territories as { userId: string; region: string }[]).map((t) => ({
         userId: t.userId,
         region: t.region,
         salesName: session.user.name ?? "",
-        salesColor: "#EC4899",
+        salesColor: "#1a1a2e",
       }))
 
   return <MapClient autoscuole={autoscuoleFlat} isAdmin={isAdmin} salesTerritories={salesTerritoryList} />

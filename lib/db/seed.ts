@@ -41,14 +41,14 @@ async function seed() {
 
   // 1. Pipeline Stages (structural — always needed)
   const stages = [
-    { id: "da_chiamare", label: "Da chiamare", color: "#64748B", tone: "slate", order: 0 },
-    { id: "non_interessato", label: "Non interessato", color: "#EF4444", tone: "red", order: 1 },
-    { id: "follow_up", label: "Follow up", color: "#3B82F6", tone: "blue", order: 2 },
-    { id: "email", label: "Email", color: "#8B5CF6", tone: "violet", order: 3 },
-    { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 4 },
-    { id: "no_show", label: "No show", color: "#F97316", tone: "orange", order: 5 },
-    { id: "cliente", label: "Cliente", color: "#EC4899", tone: "pink", order: 6 },
-    { id: "nuove_features", label: "Nuove features", color: "#8B5CF6", tone: "violet", order: 7 },
+    { id: "da_chiamare", label: "Da chiamare", color: "#6a6a6a", tone: "slate", order: 0 },
+    { id: "non_interessato", label: "Non interessato", color: "#c13515", tone: "red", order: 1 },
+    { id: "follow_up", label: "Follow up", color: "#2563EB", tone: "blue", order: 2 },
+    { id: "email", label: "Email", color: "#0E7490", tone: "teal", order: 3 },
+    { id: "appuntamento", label: "Appuntamento", color: "#16A34A", tone: "green", order: 4 },
+    { id: "no_show", label: "No show", color: "#D97706", tone: "orange", order: 5 },
+    { id: "cliente", label: "Cliente", color: "#1a1a2e", tone: "navy", order: 6 },
+    { id: "nuove_features", label: "Nuove features", color: "#A855F7", tone: "violet", order: 7 },
   ]
   await db.insert(schema.pipelineStages).values(stages)
   console.log("✅ Pipeline stages seeded")
@@ -65,7 +65,7 @@ async function seed() {
       phone: "+39 06 0000 0001",
       role: "admin" as const,
       territory: "Italia",
-      color: "#EC4899",
+      color: "#1a1a2e",
       active: true,
       quota: 0,
     },
@@ -77,7 +77,7 @@ async function seed() {
       phone: "+39 06 9876 5432",
       role: "both" as const,
       territory: "Lazio",
-      color: "#EC4899",
+      color: "#1a1a2e",
       active: true,
       quota: 5750,
     },

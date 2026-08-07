@@ -81,7 +81,7 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [categories, setCategories] = useState<CategoryDef[]>(
     initialCategories && initialCategories.length > 0
-      ? initialCategories.map((c) => ({ id: c.label, label: c.label, icon: c.icon ?? "file-text", color: c.color ?? "#64748B" }))
+      ? initialCategories.map((c) => ({ id: c.label, label: c.label, icon: c.icon ?? "file-text", color: c.color ?? "#6a6a6a" }))
       : RESOURCE_CATEGORIES.map((c) => ({ id: c.label, label: c.label, icon: c.icon, color: c.color }))
   )
 
@@ -124,7 +124,7 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
+          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-brand [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-brand [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
       },
     },
   })
@@ -229,13 +229,13 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cerca…"
-                className="h-8 w-full rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-pink"
+                className="h-8 w-full rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-brand"
               />
             </div>
             <button
               onClick={handleCreate}
               disabled={isPending}
-              className="flex h-8 w-8 items-center justify-center rounded-[999px] bg-pink text-white hover:bg-pink/90 disabled:opacity-50"
+              className="flex h-8 w-8 items-center justify-center rounded-[999px] bg-brand text-white hover:bg-brand/90 disabled:opacity-50"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -248,9 +248,9 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
                 onClick={() => selectResource(doc.id)}
                 className="flex w-full items-start gap-3 border-b border-border-2 px-4 py-3 text-left transition-colors"
                 style={{
-                  backgroundColor: doc.id === selectedId ? "#FDF2F8" : "transparent",
+                  backgroundColor: doc.id === selectedId ? "#eeeef4" : "transparent",
                   borderLeftWidth: 3,
-                  borderLeftColor: doc.id === selectedId ? "#EC4899" : "transparent",
+                  borderLeftColor: doc.id === selectedId ? "#1a1a2e" : "transparent",
                 }}
               >
                 {doc.icon ? (
@@ -261,7 +261,7 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-[13px] font-semibold text-ink-900">{doc.title}</p>
-                    {doc.pinned && <Pin className="h-3 w-3 shrink-0 text-pink" />}
+                    {doc.pinned && <Pin className="h-3 w-3 shrink-0 text-brand" />}
                   </div>
                   <p className="text-[11px] text-ink-400">{doc.category}</p>
                 </div>
@@ -314,7 +314,7 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
               <button
                 onClick={handleSave}
                 disabled={isPending}
-                className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+                className="flex h-8 items-center gap-1.5 rounded-[999px] bg-brand px-4 text-[12px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
                 Salva
@@ -396,7 +396,7 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
 
               <button
                 onClick={() => setShowCategoryManager(true)}
-                className="text-[11px] font-medium text-pink hover:underline"
+                className="text-[11px] font-medium text-brand hover:underline"
               >
                 Gestisci categorie
               </button>
@@ -447,7 +447,7 @@ export function GestioneRisorseClient({ resources: initial, initialCategories }:
               </button>
             </div>
             <div
-              className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_hr]:my-4 [&_hr]:border-border-1 [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
+              className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-brand [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-brand [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_hr]:my-4 [&_hr]:border-border-1 [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
               dangerouslySetInnerHTML={{ __html: editor?.getHTML() ?? "" }}
             />
           </div>
@@ -615,8 +615,8 @@ function TableToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null 
         title="Tabella"
         className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
         style={{
-          backgroundColor: isInTable ? "#FDF2F8" : open ? "#F1F5F9" : "transparent",
-          color: isInTable ? "#EC4899" : "#64748B",
+          backgroundColor: isInTable ? "#eeeef4" : open ? "#f2f2f2" : "transparent",
+          color: isInTable ? "#1a1a2e" : "#6a6a6a",
         }}
       >
         <Table className="h-4 w-4" />
@@ -632,7 +632,7 @@ function TableToolbar({ editor }: { editor: ReturnType<typeof useEditor> | null 
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => { item.action(); setOpen(false) }}
                 className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2"
-                style={{ color: (item as { danger?: boolean }).danger ? "#EF4444" : "#475569" }}
+                style={{ color: (item as { danger?: boolean }).danger ? "#c13515" : "#4b4b55" }}
               >
                 <item.icon className="h-3.5 w-3.5 shrink-0" />
                 {item.label}
@@ -666,8 +666,8 @@ function ToolbarBtn({
       title={title}
       className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors disabled:opacity-30"
       style={{
-        backgroundColor: active ? "#FDF2F8" : "transparent",
-        color: active ? "#EC4899" : "#64748B",
+        backgroundColor: active ? "#eeeef4" : "transparent",
+        color: active ? "#1a1a2e" : "#6a6a6a",
       }}
     >
       <Icon className="h-4 w-4" />
@@ -699,7 +699,7 @@ function ImageUploadBtn({ editor, onModified }: { editor: ReturnType<typeof useE
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileRef.current?.click()}
         title="Inserisci immagine"
-        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#6a6a6a] transition-colors"
       >
         <ImageIcon className="h-4 w-4" />
       </button>
@@ -738,7 +738,7 @@ function CoverImageBtn({ coverImage, onChange }: { coverImage: string | null; on
         onClick={() => fileRef.current?.click()}
         title={coverImage ? "Cambia copertina" : "Aggiungi copertina"}
         className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-        style={{ color: coverImage ? "#EC4899" : "#64748B" }}
+        style={{ color: coverImage ? "#1a1a2e" : "#6a6a6a" }}
       >
         <ImagePlus className="h-4 w-4" />
       </button>
@@ -915,7 +915,7 @@ function ResourceCategoryManager({
 }) {
   const [items, setItems] = useState(categories)
   const [newLabel, setNewLabel] = useState("")
-  const [newColor, setNewColor] = useState("#64748B")
+  const [newColor, setNewColor] = useState("#6a6a6a")
   const [newIcon, setNewIcon] = useState("file-text")
   const [isPending, startTransition] = useTransition()
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -974,8 +974,8 @@ function ResourceCategoryManager({
                   onClick={() => setReassignTo(cat.label)}
                   className="flex w-full items-center gap-2.5 rounded-[8px] border px-3 py-2 text-left text-[13px] transition-colors"
                   style={{
-                    borderColor: reassignTo === cat.label ? "#EC4899" : "#E2E8F0",
-                    backgroundColor: reassignTo === cat.label ? "#FDF2F8" : "white",
+                    borderColor: reassignTo === cat.label ? "#1a1a2e" : "#dddddd",
+                    backgroundColor: reassignTo === cat.label ? "#eeeef4" : "white",
                   }}
                 >
                   <CategoryIcon icon={cat.icon} color={cat.color} size={14} />
@@ -1032,7 +1032,7 @@ function ResourceCategoryManager({
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               placeholder="Nome categoria…"
-              className="h-9 flex-1 rounded-[8px] border border-border-1 bg-white px-3 text-[13px] outline-none focus:border-pink"
+              className="h-9 flex-1 rounded-[8px] border border-border-1 bg-white px-3 text-[13px] outline-none focus:border-brand"
             />
             <input
               type="color"
@@ -1048,9 +1048,9 @@ function ResourceCategoryManager({
                 onClick={() => setNewIcon(opt.value)}
                 className="flex h-8 w-8 items-center justify-center rounded-[8px] border transition-colors"
                 style={{
-                  borderColor: newIcon === opt.value ? newColor : "#E2E8F0",
+                  borderColor: newIcon === opt.value ? newColor : "#dddddd",
                   backgroundColor: newIcon === opt.value ? newColor + "18" : "white",
-                  color: newIcon === opt.value ? newColor : "#94A3B8",
+                  color: newIcon === opt.value ? newColor : "#929292",
                 }}
               >
                 <opt.Icon className="h-4 w-4" />
@@ -1060,7 +1060,7 @@ function ResourceCategoryManager({
           <button
             onClick={handleAdd}
             disabled={!newLabel.trim() || isPending}
-            className="h-9 w-full rounded-[999px] bg-pink text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            className="h-9 w-full rounded-[999px] bg-brand text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
           >
             Aggiungi categoria
           </button>

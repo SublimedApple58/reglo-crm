@@ -9,12 +9,14 @@ import {
   X,
   Plus,
   HelpCircle,
+  Clock,
 } from "lucide-react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { createAutoscuola } from "@/lib/actions/autoscuole"
-import { STAGES, SALES_COLORS, STAGE_DESCRIPTIONS } from "@/lib/constants"
+import { STAGES, SALES_COLORS, STAGE_DESCRIPTIONS, REGIONI_PROVINCE, TRIAL_DAYS } from "@/lib/constants"
 import { formatProvince } from "@/lib/utils"
 import { updateAutoscuolaStage } from "@/lib/actions/autoscuole"
+import { LostReasonDialog } from "@/components/lost-reason-dialog"
 
 type AutoscuolaFlat = {
   id: string
@@ -28,6 +30,8 @@ type AutoscuolaFlat = {
   pipelineValue: number | null
   lastContact: number | null
   followUpAt: Date | null
+  trialStartAt: Date | null
+  groupId: string | null
   stageName: string
   stageColor: string
   salesName: string | null
@@ -49,6 +53,7 @@ type SalesUser = {
 
 type ActiveFilters = {
   stages: string[]
+  region: string | null
   province: string | null
   assignedTo: string | null
 }
@@ -72,8 +77,11 @@ export function PipelineClient({
   const [showFilters, setShowFilters] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   const [newOppStage, setNewOppStage] = useState<string | null>(null)
+  const [pendingLostMove, setPendingLostMove] = useState<{ id: string; name: string } | null>(null)
+  const [isLostPending, startLostTransition] = useTransition()
   const [filters, setFilters] = useState<ActiveFilters>(() => ({
     stages: searchParams.get("stages")?.split(",").filter(Boolean) ?? [],
+    region: searchParams.get("region") || null,
     province: searchParams.get("province") || null,
     assignedTo: searchParams.get("assignedTo") || null,
   }))
@@ -83,6 +91,7 @@ export function PipelineClient({
     const params = new URLSearchParams()
     if (search) params.set("search", search)
     if (filters.stages.length > 0) params.set("stages", filters.stages.join(","))
+    if (filters.region) params.set("region", filters.region)
     if (filters.province) params.set("province", filters.province)
     if (filters.assignedTo) params.set("assignedTo", filters.assignedTo)
     const qs = params.toString()
@@ -95,7 +104,7 @@ export function PipelineClient({
     return Array.from(set).sort()
   }, [autoscuole])
 
-  const hasActiveFilters = filters.stages.length > 0 || filters.province !== null || filters.assignedTo !== null
+  const hasActiveFilters = filters.stages.length > 0 || filters.region !== null || filters.province !== null || filters.assignedTo !== null
 
   const filtered = autoscuole.filter((a) => {
     if (search) {
@@ -108,6 +117,7 @@ export function PipelineClient({
         return false
     }
     if (filters.stages.length > 0 && !filters.stages.includes(a.stageId)) return false
+    if (filters.region && !(REGIONI_PROVINCE[filters.region] ?? []).includes(a.province)) return false
     if (filters.province && a.province !== filters.province) return false
     if (filters.assignedTo !== null) {
       if (filters.assignedTo === "__unassigned__") {
@@ -119,29 +129,55 @@ export function PipelineClient({
     return true
   })
 
-  const handleDragEnd = useCallback(
-    async (result: DropResult) => {
-      if (!result.destination) return
-      const { draggableId, destination } = result
-      const newStageId = destination.droppableId
-
+  const applyStageMove = useCallback(
+    (autoscuolaId: string, newStageId: string) => {
       setAutoscuole((prev) =>
         prev.map((a) =>
-          a.id === draggableId
+          a.id === autoscuolaId
             ? {
                 ...a,
                 stageId: newStageId,
                 stageName: stages.find((s) => s.id === newStageId)?.label ?? a.stageName,
                 stageColor: stages.find((s) => s.id === newStageId)?.color ?? a.stageColor,
+                // Il server setta trial_start_at al primo passaggio a Cliente: rispecchialo subito
+                trialStartAt: newStageId === "cliente" && !a.trialStartAt ? new Date() : a.trialStartAt,
               }
             : a
         )
       )
-
-      await updateAutoscuolaStage(draggableId, newStageId)
     },
     [stages]
   )
+
+  const handleDragEnd = useCallback(
+    async (result: DropResult) => {
+      if (!result.destination) return
+      const { draggableId, destination, source } = result
+      const newStageId = destination.droppableId
+      if (newStageId === source.droppableId) return
+
+      // "Non chiuso" richiede una motivazione: nessun optimistic update finché non confermata
+      if (newStageId === "non_chiuso") {
+        const target = autoscuole.find((a) => a.id === draggableId)
+        setPendingLostMove({ id: draggableId, name: target?.name ?? "" })
+        return
+      }
+
+      applyStageMove(draggableId, newStageId)
+      await updateAutoscuolaStage(draggableId, newStageId)
+    },
+    [autoscuole, applyStageMove]
+  )
+
+  function handleConfirmLostMove(reason: string) {
+    if (!pendingLostMove) return
+    const { id } = pendingLostMove
+    startLostTransition(async () => {
+      await updateAutoscuolaStage(id, "non_chiuso", { lostReason: reason })
+      applyStageMove(id, "non_chiuso")
+      setPendingLostMove(null)
+    })
+  }
 
   function toggleStageFilter(stageId: string) {
     setFilters((f) => ({
@@ -153,7 +189,7 @@ export function PipelineClient({
   }
 
   function clearFilters() {
-    setFilters({ stages: [], province: null, assignedTo: null })
+    setFilters({ stages: [], region: null, province: null, assignedTo: null })
   }
 
   return (
@@ -166,7 +202,7 @@ export function PipelineClient({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cerca autoscuola…"
-            className="h-8 w-[220px] rounded-[999px] border border-border-1 bg-surface pl-8 pr-3 text-[12.5px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink"
+            className="h-8 w-[220px] rounded-[999px] border border-border-1 bg-surface pl-8 pr-3 text-[12.5px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand"
           />
         </div>
 
@@ -175,16 +211,16 @@ export function PipelineClient({
             onClick={() => setShowFilters(!showFilters)}
             className="flex h-8 items-center gap-1.5 rounded-[999px] border px-3 text-[12px] font-medium transition-colors"
             style={{
-              borderColor: hasActiveFilters ? "#EC4899" : undefined,
-              color: hasActiveFilters ? "#EC4899" : "#475569",
-              backgroundColor: hasActiveFilters ? "#FDF2F8" : undefined,
+              borderColor: hasActiveFilters ? "#1a1a2e" : undefined,
+              color: hasActiveFilters ? "#1a1a2e" : "#4b4b55",
+              backgroundColor: hasActiveFilters ? "#eeeef4" : undefined,
             }}
           >
             <Filter className="h-3.5 w-3.5" />
             Filtri
             {hasActiveFilters && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-pink text-[9px] font-bold text-white">
-                {filters.stages.length + (filters.province ? 1 : 0) + (filters.assignedTo !== null ? 1 : 0)}
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white">
+                {filters.stages.length + (filters.region ? 1 : 0) + (filters.province ? 1 : 0) + (filters.assignedTo !== null ? 1 : 0)}
               </span>
             )}
           </button>
@@ -196,6 +232,14 @@ export function PipelineClient({
               salesUsers={salesUsers}
               filters={filters}
               onToggleStage={toggleStageFilter}
+              onSetRegion={(r) =>
+                setFilters((f) => ({
+                  ...f,
+                  region: r,
+                  // Se la provincia selezionata non appartiene alla nuova regione, azzerala
+                  province: r && f.province && !(REGIONI_PROVINCE[r] ?? []).includes(f.province) ? null : f.province,
+                }))
+              }
               onSetProvince={(p) => setFilters((f) => ({ ...f, province: p }))}
               onSetAssignedTo={(a) => setFilters((f) => ({ ...f, assignedTo: a }))}
               onClose={() => setShowFilters(false)}
@@ -212,7 +256,7 @@ export function PipelineClient({
                 <span
                   key={sid}
                   className="flex items-center gap-1 rounded-[999px] px-2 py-0.5 text-[11px] font-medium"
-                  style={{ backgroundColor: (stage?.color ?? "#64748B") + "15", color: stage?.color }}
+                  style={{ backgroundColor: (stage?.color ?? "#6a6a6a") + "15", color: stage?.color }}
                 >
                   {stage?.label}
                   <button onClick={() => toggleStageFilter(sid)}>
@@ -221,6 +265,14 @@ export function PipelineClient({
                 </span>
               )
             })}
+            {filters.region && (
+              <span className="flex items-center gap-1 rounded-[999px] bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-ink-600">
+                {filters.region}
+                <button onClick={() => setFilters((f) => ({ ...f, region: null }))}>
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            )}
             {filters.province && (
               <span className="flex items-center gap-1 rounded-[999px] bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-ink-600">
                 {filters.province}
@@ -241,7 +293,7 @@ export function PipelineClient({
             )}
             <button
               onClick={clearFilters}
-              className="ml-1 text-[11px] font-medium text-pink hover:underline"
+              className="ml-1 text-[11px] font-medium text-brand hover:underline"
             >
               Resetta
             </button>
@@ -261,7 +313,7 @@ export function PipelineClient({
           </button>
           <button
             onClick={() => setNewOppStage("da_chiamare")}
-            className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-pink/90"
+            className="flex h-8 items-center gap-1.5 rounded-[999px] bg-brand px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-brand/90"
           >
             <Plus className="h-3.5 w-3.5" />
             Nuova opp.
@@ -281,6 +333,16 @@ export function PipelineClient({
 
       {/* Legend dialog */}
       {showLegend && <LegendDialog onClose={() => setShowLegend(false)} />}
+
+      {/* Lost reason dialog — obbligatorio per "Non chiuso" */}
+      {pendingLostMove && (
+        <LostReasonDialog
+          autoscuolaName={pendingLostMove.name}
+          isPending={isLostPending}
+          onConfirm={handleConfirmLostMove}
+          onClose={() => setPendingLostMove(null)}
+        />
+      )}
     </div>
   )
 }
@@ -291,6 +353,7 @@ function FilterPopover({
   salesUsers,
   filters,
   onToggleStage,
+  onSetRegion,
   onSetProvince,
   onSetAssignedTo,
   onClose,
@@ -300,10 +363,20 @@ function FilterPopover({
   salesUsers: SalesUser[]
   filters: ActiveFilters
   onToggleStage: (stageId: string) => void
+  onSetRegion: (r: string | null) => void
   onSetProvince: (p: string | null) => void
   onSetAssignedTo: (a: string | null) => void
   onClose: () => void
 }) {
+  // Solo le regioni con almeno un'autoscuola nei dati caricati
+  const regions = Object.keys(REGIONI_PROVINCE).filter((r) =>
+    REGIONI_PROVINCE[r].some((p) => provinces.includes(p))
+  )
+  // La regione selezionata restringe le opzioni Provincia
+  const visibleProvinces = filters.region
+    ? provinces.filter((p) => (REGIONI_PROVINCE[filters.region!] ?? []).includes(p))
+    : provinces
+
   return (
     <div className="absolute left-0 top-full z-50 mt-2 w-[280px] rounded-[14px] border border-border-1 bg-surface p-4 shadow-lg">
       {/* Stage filters */}
@@ -318,8 +391,8 @@ function FilterPopover({
                 onClick={() => onToggleStage(stage.id)}
                 className="rounded-[999px] px-2.5 py-1 text-[11px] font-semibold transition-colors"
                 style={{
-                  backgroundColor: isActive ? stage.color : "#F8FAFC",
-                  color: isActive ? "white" : "#64748B",
+                  backgroundColor: isActive ? stage.color : "#f7f7f7",
+                  color: isActive ? "white" : "#6a6a6a",
                 }}
               >
                 {stage.label}
@@ -329,16 +402,31 @@ function FilterPopover({
         </div>
       </div>
 
+      {/* Region filter */}
+      <div className="mb-4">
+        <h4 className="mb-2 text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Regione</h4>
+        <select
+          value={filters.region ?? ""}
+          onChange={(e) => onSetRegion(e.target.value || null)}
+          className="h-8 w-full rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none focus:border-brand"
+        >
+          <option value="">Tutte</option>
+          {regions.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Province filter */}
       <div className="mb-4">
         <h4 className="mb-2 text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Provincia</h4>
         <select
           value={filters.province ?? ""}
           onChange={(e) => onSetProvince(e.target.value || null)}
-          className="h-8 w-full rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none focus:border-pink"
+          className="h-8 w-full rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none focus:border-brand"
         >
           <option value="">Tutte</option>
-          {provinces.map((p) => (
+          {visibleProvinces.map((p) => (
             <option key={p} value={p}>{formatProvince(p)}</option>
           ))}
         </select>
@@ -350,7 +438,7 @@ function FilterPopover({
         <select
           value={filters.assignedTo ?? ""}
           onChange={(e) => onSetAssignedTo(e.target.value || null)}
-          className="h-8 w-full rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none focus:border-pink"
+          className="h-8 w-full rounded-[8px] border border-border-1 px-2 text-[12px] text-ink-700 outline-none focus:border-brand"
         >
           <option value="">Tutti</option>
           <option value="__unassigned__">Non assegnate</option>
@@ -387,7 +475,7 @@ function KanbanView({
 }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex h-full gap-3 overflow-x-auto px-4 py-4" style={{ backgroundColor: "#F1F5F9" }}>
+      <div className="flex h-full gap-3 overflow-x-auto px-4 py-4" style={{ backgroundColor: "#f2f2f2" }}>
         {stages.map((stage) => (
           <KanbanColumn
             key={stage.id}
@@ -404,7 +492,7 @@ function KanbanView({
 }
 
 function getSalesColor(salesName: string | null, salesUsers: SalesUser[]): string {
-  if (!salesName) return "#94A3B8"
+  if (!salesName) return "#929292"
   const idx = salesUsers.findIndex((u) => u.name === salesName)
   return SALES_COLORS[idx >= 0 ? idx % SALES_COLORS.length : 0]
 }
@@ -492,9 +580,32 @@ function KanbanColumn({
                         : undefined,
                     }}
                   >
+                    {/* Trial countdown badge — prima dell'evidenza colore "cliente" */}
+                    {item.stageId === "cliente" && item.trialStartAt && (() => {
+                      const daysLeft = TRIAL_DAYS - Math.floor((Date.now() - new Date(item.trialStartAt).getTime()) / 86400000)
+                      return daysLeft > 0 ? (
+                        <span className="mb-1.5 inline-flex items-center gap-1 rounded-[999px] bg-yellow-50 px-2 py-0.5 text-[10.5px] font-bold text-yellow-600">
+                          <Clock className="h-3 w-3" />
+                          Prova: {daysLeft} {daysLeft === 1 ? "giorno" : "giorni"}
+                        </span>
+                      ) : (
+                        <span className="mb-1.5 inline-flex items-center gap-1 rounded-[999px] bg-surface-2 px-2 py-0.5 text-[10.5px] font-bold text-ink-500">
+                          <Clock className="h-3 w-3" />
+                          Prova terminata
+                        </span>
+                      )
+                    })()}
                     {/* Name */}
                     <p className="mb-0.5 text-[14px] font-bold leading-snug text-ink-900">
                       {item.name.replace("Autoscuola ", "")}
+                      {item.groupId && (
+                        <span
+                          className="ml-1.5 inline-block rounded-[4px] bg-brand-50 px-1.5 py-0.5 align-middle text-[9.5px] font-bold text-brand"
+                          title="Gruppo multi-sede"
+                        >
+                          ⧉ Gruppo
+                        </span>
+                      )}
                     </p>
                     {/* Owner / Town */}
                     <p className="mb-2.5 text-[12.5px] text-ink-500">
@@ -546,7 +657,7 @@ function KanbanColumn({
             {hiddenCount > 0 && (
               <button
                 onClick={() => setVisibleCount((c) => c + LOAD_MORE_COUNT)}
-                className="shrink-0 rounded-[8px] border border-dashed border-[#CBD5E1] py-2 text-center text-[11px] font-medium text-ink-400 transition-colors hover:border-ink-400 hover:text-ink-600"
+                className="shrink-0 rounded-[8px] border border-dashed border-[#dddddd] py-2 text-center text-[11px] font-medium text-ink-400 transition-colors hover:border-ink-400 hover:text-ink-600"
               >
                 +{hiddenCount} altre
               </button>
@@ -601,7 +712,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="Autoscuola XYZ"
               required
             />
@@ -611,7 +722,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
             <input
               value={form.owner}
               onChange={(e) => setForm({ ...form, owner: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="Mario Rossi"
             />
           </div>
@@ -621,7 +732,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
               <input
                 value={form.province}
                 onChange={(e) => setForm({ ...form, province: e.target.value.toUpperCase().slice(0, 2) })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="RM"
                 maxLength={2}
                 required
@@ -632,7 +743,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
               <input
                 value={form.town}
                 onChange={(e) => setForm({ ...form, town: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="Roma"
                 required
               />
@@ -644,7 +755,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="+39 06 1234 5678"
               />
             </div>
@@ -653,7 +764,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
               <input
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="info@autoscuola.it"
                 type="email"
               />
@@ -664,7 +775,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
             <select
               value={form.stageId}
               onChange={(e) => setForm({ ...form, stageId: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
             >
               {STAGES.map((s) => (
                 <option key={s.id} value={s.id}>{s.label}</option>
@@ -682,7 +793,7 @@ function NewOppDialog({ defaultStage, onClose }: { defaultStage: string; onClose
             <button
               type="submit"
               disabled={isPending}
-              className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+              className="h-9 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
               {isPending ? "Creazione..." : "Crea opportunità"}
             </button>

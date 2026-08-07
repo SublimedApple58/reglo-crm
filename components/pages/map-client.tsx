@@ -37,6 +37,9 @@ type MapAutoscuola = {
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
+// AdvancedMarker richiede un Map ID registrato su Google Cloud; DEMO_MAP_ID è il
+// fallback ufficiale Google che abilita gli Advanced Markers senza registrazione.
+const GOOGLE_MAPS_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID"
 
 // ── Individual marker with hover InfoWindow ──────────────────────────
 function AutoscuolaMarker({
@@ -95,7 +98,7 @@ function AutoscuolaMarker({
               style={{
                 fontSize: "12.5px",
                 fontWeight: 600,
-                color: "#0f172a",
+                color: "#222222",
                 margin: 0,
               }}
             >
@@ -104,7 +107,7 @@ function AutoscuolaMarker({
             <p
               style={{
                 fontSize: "11px",
-                color: "#94a3b8",
+                color: "#929292",
                 margin: "2px 0 6px",
               }}
             >
@@ -112,7 +115,7 @@ function AutoscuolaMarker({
             </p>
             <StageChip stageId={a.stageId} size="sm" />
             {isAdmin && a.salesName && (
-              <p style={{ fontSize: "10.5px", color: "#94a3b8", marginTop: 4 }}>
+              <p style={{ fontSize: "10.5px", color: "#929292", marginTop: 4 }}>
                 Assegnata a {a.salesName}
               </p>
             )}
@@ -249,7 +252,7 @@ function ClusteredMarkers({
             const c = leaf.properties.stageColor
             colorCounts[c] = (colorCounts[c] ?? 0) + 1
           }
-          const dominantColor = Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "#EC4899"
+          const dominantColor = Object.entries(colorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "#1a1a2e"
 
           return (
             <ClusterMarker
@@ -291,14 +294,14 @@ function CssFallbackMap({
   setHoveredId: (id: string | null) => void
 }) {
   return (
-    <div className="relative bg-[#E7ECEE]">
+    <div className="relative bg-surface-2">
       <div className="relative h-full w-full overflow-hidden">
         {/* Background grid */}
         <div
           className="absolute inset-0"
           style={{
             backgroundImage:
-              "radial-gradient(circle, #CBD5E1 1px, transparent 1px)",
+              "radial-gradient(circle, #dddddd 1px, transparent 1px)",
             backgroundSize: "30px 30px",
             opacity: 0.3,
           }}
@@ -370,7 +373,7 @@ function CssFallbackMap({
 
         {/* Note about Google Maps */}
         <div className="absolute top-4 right-4 rounded-[10px] border border-border-1 bg-white/90 px-3 py-2 text-[11px] text-ink-500 backdrop-blur-sm">
-          <MapPin className="mb-1 inline h-3 w-3 text-pink" /> Aggiungi
+          <MapPin className="mb-1 inline h-3 w-3 text-brand" /> Aggiungi
           GOOGLE_MAPS_API_KEY per la mappa interattiva
         </div>
       </div>
@@ -528,7 +531,7 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
       }
       return [...regionSet].map((region) => ({
         name: region,
-        color: "#EC4899",
+        color: "#1a1a2e",
         paths: boundaries[region] ?? [],
       })).filter((t) => t.paths.length > 0)
     }
@@ -539,7 +542,7 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
       if (!a.salesId) continue
       const region = PROVINCE_TO_REGIONE[a.province]
       if (!region) continue
-      if (!salesRegions[a.salesId]) salesRegions[a.salesId] = { name: a.salesName!, color: a.salesColor ?? "#94A3B8", regions: new Set() }
+      if (!salesRegions[a.salesId]) salesRegions[a.salesId] = { name: a.salesName!, color: a.salesColor ?? "#929292", regions: new Set() }
       salesRegions[a.salesId].regions.add(region)
     }
 
@@ -585,9 +588,9 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
               onClick={() => { setSelectedRegione(null); setSelectedProvince(null) }}
               className="rounded-[999px] px-2.5 py-1 text-[11px] font-semibold transition-colors"
               style={{
-                backgroundColor: !selectedRegione && !selectedProvince ? "#EC4899" : "#F8FAFC",
-                color: !selectedRegione && !selectedProvince ? "white" : "#64748B",
-                border: `1px solid ${!selectedRegione && !selectedProvince ? "#EC4899" : "#E2E8F0"}`,
+                backgroundColor: !selectedRegione && !selectedProvince ? "#1a1a2e" : "#f7f7f7",
+                color: !selectedRegione && !selectedProvince ? "white" : "#6a6a6a",
+                border: `1px solid ${!selectedRegione && !selectedProvince ? "#1a1a2e" : "#dddddd"}`,
               }}
             >
               Tutte
@@ -601,9 +604,9 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
                   onClick={() => { setSelectedProvince(selectedProvince === p ? null : p); setSelectedRegione(null) }}
                   className="rounded-[999px] px-2.5 py-1 text-[11px] font-semibold transition-colors"
                   style={{
-                    backgroundColor: selectedProvince === p ? "#EC4899" : "#F8FAFC",
-                    color: selectedProvince === p ? "white" : "#64748B",
-                    border: `1px solid ${selectedProvince === p ? "#EC4899" : "#E2E8F0"}`,
+                    backgroundColor: selectedProvince === p ? "#1a1a2e" : "#f7f7f7",
+                    color: selectedProvince === p ? "white" : "#6a6a6a",
+                    border: `1px solid ${selectedProvince === p ? "#1a1a2e" : "#dddddd"}`,
                   }}
                 >
                   {p}
@@ -620,9 +623,9 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
                   }}
                   className="rounded-[999px] px-2.5 py-1 text-[11px] font-semibold transition-colors"
                   style={{
-                    backgroundColor: selectedRegione === r ? "#EC4899" : "#F8FAFC",
-                    color: selectedRegione === r ? "white" : "#64748B",
-                    border: `1px solid ${selectedRegione === r ? "#EC4899" : "#E2E8F0"}`,
+                    backgroundColor: selectedRegione === r ? "#1a1a2e" : "#f7f7f7",
+                    color: selectedRegione === r ? "white" : "#6a6a6a",
+                    border: `1px solid ${selectedRegione === r ? "#1a1a2e" : "#dddddd"}`,
                   }}
                 >
                   {r}
@@ -640,9 +643,9 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
                   onClick={() => setSelectedProvince(selectedProvince === p ? null : p)}
                   className="rounded-[999px] px-2 py-0.5 text-[10.5px] font-medium transition-colors"
                   style={{
-                    backgroundColor: selectedProvince === p ? "#EC489930" : "#F1F5F9",
-                    color: selectedProvince === p ? "#EC4899" : "#64748B",
-                    border: `1px solid ${selectedProvince === p ? "#EC4899" : "#E2E8F0"}`,
+                    backgroundColor: selectedProvince === p ? "#1a1a2e30" : "#f2f2f2",
+                    color: selectedProvince === p ? "#1a1a2e" : "#6a6a6a",
+                    border: `1px solid ${selectedProvince === p ? "#1a1a2e" : "#dddddd"}`,
                   }}
                 >
                   {p}
@@ -658,7 +661,7 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca…"
-              className="h-8 w-full rounded-[999px] border border-border-1 bg-surface pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-pink"
+              className="h-8 w-full rounded-[999px] border border-border-1 bg-surface pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-brand"
             />
           </div>
         </div>
@@ -701,7 +704,7 @@ export function MapClient({ autoscuole, isAdmin = false, salesTerritories = [] }
               defaultZoom={6}
               gestureHandling="greedy"
               disableDefaultUI={true}
-              mapId="reglo-map"
+              mapId={GOOGLE_MAPS_MAP_ID}
               style={{ width: "100%", height: "100%" }}
             >
               {/* Territory outlines */}

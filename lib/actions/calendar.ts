@@ -46,20 +46,21 @@ export async function getCalendarEvents(timeMin: string, timeMax: string) {
 
     // Bulk lookup: which events are linked to autoscuole via activities?
     const eventIds = items.map((e) => e.id!).filter(Boolean)
-    let autoscuolaMap: Record<string, { id: string; name: string }> = {}
+    let autoscuolaMap: Record<string, { id: string; name: string; phone: string | null }> = {}
     if (eventIds.length > 0) {
       const linked = await db
         .select({
           calendarEventId: activities.calendarEventId,
           autoscuolaId: autoscuole.id,
           autoscuolaName: autoscuole.name,
+          autoscuolaPhone: autoscuole.phone,
         })
         .from(activities)
         .innerJoin(autoscuole, eq(activities.autoscuolaId, autoscuole.id))
         .where(inArray(activities.calendarEventId, eventIds))
       for (const row of linked) {
         if (row.calendarEventId) {
-          autoscuolaMap[row.calendarEventId] = { id: row.autoscuolaId, name: row.autoscuolaName }
+          autoscuolaMap[row.calendarEventId] = { id: row.autoscuolaId, name: row.autoscuolaName, phone: row.autoscuolaPhone }
         }
       }
     }
@@ -251,6 +252,8 @@ export async function rsvpCalendarEvent(
 export async function getCalendarEventsForUser(userId: string, timeMin: string, timeMax: string) {
   const session = await auth()
   if (!session?.user) return []
+  const role = (session.user as Record<string, unknown>).role
+  if (role !== "admin" && role !== "both") return []
 
   const calendar = await getGoogleCalendarClient(userId)
   if (!calendar) return []
@@ -280,6 +283,8 @@ export async function getCalendarEventsForUser(userId: string, timeMin: string, 
 export async function getSalesWithGoogle() {
   const session = await auth()
   if (!session?.user) return []
+  const role = (session.user as Record<string, unknown>).role
+  if (role !== "admin" && role !== "both") return []
 
   const results = await db
     .select({

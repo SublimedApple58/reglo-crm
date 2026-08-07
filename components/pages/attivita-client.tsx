@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
-import { CheckCircle2, Circle, ListChecks, Calendar, Plus, X } from "lucide-react"
+import { CheckCircle2, Circle, ListChecks, Calendar, Plus, X, Phone } from "lucide-react"
 import { completeGoogleTask, uncompleteGoogleTask, createGoogleTask } from "@/lib/actions/calendar"
 import type { GoogleTask } from "@/lib/actions/calendar"
 import { DateTimePicker } from "@/components/date-time-picker"
@@ -66,9 +66,11 @@ const GROUP_ORDER = ["overdue", "today", "tomorrow", "this_week", "later", "no_d
 export function AttivitaClient({
   tasks: initialTasks,
   googleConnected,
+  phoneMap = {},
 }: {
   tasks: GoogleTask[]
   googleConnected: boolean
+  phoneMap?: Record<string, { name: string; phone: string | null }>
 }) {
   const [filter, setFilter] = useState<Filter>("todo")
   const [toggledIds, setToggledIds] = useState<Map<string, "completed" | "needsAction">>(new Map())
@@ -157,7 +159,7 @@ export function AttivitaClient({
         </p>
         <button
           onClick={() => signIn("google", { callbackUrl: "/attivita" })}
-          className="flex h-[38px] items-center gap-2 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90"
+          className="flex h-[38px] items-center gap-2 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand/90"
         >
           Collega Google
         </button>
@@ -175,8 +177,8 @@ export function AttivitaClient({
     <div className="mx-auto max-w-[820px] px-9 pt-7 pb-[60px]">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-pink/10">
-          <ListChecks className="h-[18px] w-[18px] text-pink" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand/10">
+          <ListChecks className="h-[18px] w-[18px] text-brand" />
         </div>
         <div>
           <h1 className="text-[22px] font-bold leading-tight tracking-[-0.4px] text-ink-900">
@@ -184,7 +186,7 @@ export function AttivitaClient({
           </h1>
         </div>
         {pendingCount > 0 && (
-          <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-pink/10 px-2 font-mono text-[11px] font-semibold text-pink">
+          <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-brand/10 px-2 font-mono text-[11px] font-semibold text-brand">
             {pendingCount}
           </span>
         )}
@@ -194,7 +196,7 @@ export function AttivitaClient({
               setShowNewForm((v) => !v)
               setTimeout(() => titleRef.current?.focus(), 50)
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-pink text-white transition-colors hover:bg-pink/90"
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-brand text-white transition-colors hover:bg-brand/90"
           >
             {showNewForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           </button>
@@ -212,7 +214,7 @@ export function AttivitaClient({
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              className="h-9 flex-1 rounded-[8px] border border-ink-200 px-3 text-[13px] text-ink-900 placeholder:text-ink-400 focus:border-pink focus:outline-none"
+              className="h-9 flex-1 rounded-[8px] border border-ink-200 px-3 text-[13px] text-ink-900 placeholder:text-ink-400 focus:border-brand focus:outline-none"
             />
             <div className="shrink-0">
               <DateTimePicker
@@ -224,7 +226,7 @@ export function AttivitaClient({
             <button
               onClick={handleCreate}
               disabled={!newTitle.trim() || isPending}
-              className="h-9 rounded-[8px] bg-pink px-4 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+              className="h-9 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
               Crea
             </button>
@@ -241,7 +243,7 @@ export function AttivitaClient({
             className="flex-1 rounded-[8px] py-1.5 text-[12.5px] font-semibold transition-colors"
             style={{
               backgroundColor: filter === f.key ? "white" : "transparent",
-              color: filter === f.key ? "#1E293B" : "#94A3B8",
+              color: filter === f.key ? "#33334d" : "#929292",
               boxShadow: filter === f.key ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
             }}
           >
@@ -273,7 +275,7 @@ export function AttivitaClient({
                       <button
                         onClick={() => handleToggle(task)}
                         disabled={isPending}
-                        className={`mt-0.5 shrink-0 transition-colors ${isDone ? "text-pink" : "text-ink-300 hover:text-pink"}`}
+                        className={`mt-0.5 shrink-0 transition-colors ${isDone ? "text-brand" : "text-ink-300 hover:text-brand"}`}
                       >
                         {isDone ? (
                           <CheckCircle2 className="h-[18px] w-[18px]" />
@@ -285,9 +287,22 @@ export function AttivitaClient({
                         {followUp ? (
                           <p className={`text-[13.5px] font-semibold ${isDone ? "line-through text-ink-400" : "text-ink-900"}`}>
                             Follow-up con{" "}
-                            <Link href={followUp.href} className="text-pink hover:underline">
+                            <Link href={followUp.href} className="text-brand hover:underline">
                               {followUp.name}
                             </Link>
+                            {(() => {
+                              const id = followUp.href.split("/autoscuola/")[1]
+                              const phone = id ? phoneMap[id]?.phone : null
+                              return phone ? (
+                                <a
+                                  href={`tel:${phone}`}
+                                  className="ml-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-teal-700 hover:underline"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  {phone}
+                                </a>
+                              ) : null
+                            })()}
                           </p>
                         ) : (
                           <p className={`text-[13.5px] font-semibold ${isDone ? "line-through text-ink-400" : "text-ink-900"}`}>

@@ -1,14 +1,14 @@
 export const STAGES = [
-  { id: "da_chiamare", label: "Da chiamare", color: "#64748B", tone: "slate", order: 0 },
-  { id: "non_interessato", label: "Non interessato", color: "#EF4444", tone: "red", order: 1 },
-  { id: "follow_up", label: "Follow up", color: "#3B82F6", tone: "blue", order: 2 },
-  { id: "email", label: "Email", color: "#8B5CF6", tone: "violet", order: 3 },
+  { id: "da_chiamare", label: "Da chiamare", color: "#6a6a6a", tone: "slate", order: 0 },
+  { id: "non_interessato", label: "Non interessato", color: "#c13515", tone: "red", order: 1 },
+  { id: "follow_up", label: "Follow up", color: "#2563EB", tone: "blue", order: 2 },
+  { id: "email", label: "Email", color: "#0E7490", tone: "teal", order: 3 },
   { id: "in_attesa", label: "In attesa", color: "#7C3AED", tone: "violet", order: 4 },
-  { id: "appuntamento", label: "Appuntamento", color: "#10B981", tone: "green", order: 5 },
-  { id: "no_show", label: "No show", color: "#F97316", tone: "orange", order: 6 },
-  { id: "cliente", label: "Cliente", color: "#EC4899", tone: "pink", order: 7 },
-  { id: "non_chiuso", label: "Non chiuso", color: "#DC2626", tone: "red", order: 8 },
-  { id: "nuove_features", label: "Nuove features", color: "#8B5CF6", tone: "violet", order: 9 },
+  { id: "appuntamento", label: "Appuntamento", color: "#16A34A", tone: "green", order: 5 },
+  { id: "no_show", label: "No show", color: "#D97706", tone: "orange", order: 6 },
+  { id: "cliente", label: "Cliente", color: "#1a1a2e", tone: "navy", order: 7 },
+  { id: "non_chiuso", label: "Non chiuso", color: "#7f1d1d", tone: "red", order: 8 },
+  { id: "nuove_features", label: "Nuove features", color: "#A855F7", tone: "violet", order: 9 },
 ] as const
 
 export const STAGE_DESCRIPTIONS: Record<string, string> = {
@@ -26,6 +26,9 @@ export const STAGE_DESCRIPTIONS: Record<string, string> = {
 
 export type StageId = (typeof STAGES)[number]["id"]
 
+// Durata del mese di prova (giorni) — countdown badge in pipeline
+export const TRIAL_DAYS = 30
+
 export const ROLES = ["sales", "admin", "both"] as const
 export type Role = (typeof ROLES)[number]
 
@@ -41,17 +44,17 @@ export const PROVINCES_LAZIO = [
 export const PROVINCES = PROVINCES_LAZIO
 
 export const RESOURCE_CATEGORIES = [
-  { id: "script", label: "Script chiamate", icon: "phone", color: "#EC4899" },
-  { id: "template", label: "Template email", icon: "mail", color: "#3B82F6" },
-  { id: "obiezioni", label: "Gestione obiezioni", icon: "shield", color: "#F97316" },
-  { id: "listino", label: "Listino", icon: "file-text", color: "#10B981" },
-  { id: "playbook", label: "Playbook", icon: "book-open", color: "#8B5CF6" },
+  { id: "script", label: "Script chiamate", icon: "phone", color: "#1a1a2e" },
+  { id: "template", label: "Template email", icon: "mail", color: "#2563EB" },
+  { id: "obiezioni", label: "Gestione obiezioni", icon: "shield", color: "#D97706" },
+  { id: "listino", label: "Listino", icon: "file-text", color: "#16A34A" },
+  { id: "playbook", label: "Playbook", icon: "book-open", color: "#7C3AED" },
 ] as const
 
 export const NEWS_CATEGORIES = [
-  { id: "COMMISSIONI", color: "#EC4899" },
-  { id: "PRODOTTO", color: "#3B82F6" },
-  { id: "MOBILE", color: "#10B981" },
+  { id: "COMMISSIONI", color: "#1a1a2e" },
+  { id: "PRODOTTO", color: "#2563EB" },
+  { id: "MOBILE", color: "#16A34A" },
 ] as const
 
 export const COMMISSION_TIERS = [
@@ -120,6 +123,6 @@ export const EVENT_PRESETS = [
 export type EventPresetId = (typeof EVENT_PRESETS)[number]["id"]
 
 export const SALES_COLORS = [
-  "#EC4899", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6",
-  "#EF4444", "#06B6D4", "#F97316", "#14B8A6",
+  "#1a1a2e", "#2563EB", "#16A34A", "#D97706", "#7C3AED",
+  "#c13515", "#0891B2", "#EA580C", "#0D9488",
 ] as const

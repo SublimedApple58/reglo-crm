@@ -111,7 +111,7 @@ export function Topbar() {
 
         <button
           onClick={() => setShowNewOpp(true)}
-          className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-pink/90"
+          className="flex h-8 items-center gap-1.5 rounded-[999px] bg-brand px-3.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-brand/90"
         >
           <Plus className="h-3.5 w-3.5" />
           Nuova opp.
@@ -191,7 +191,7 @@ function NotificationBell() {
       >
         <Bell className="h-[16px] w-[16px]" />
         {hasRecent && (
-          <span className="absolute right-[6px] top-[6px] h-[6px] w-[6px] rounded-full bg-pink" />
+          <span className="absolute right-[6px] top-[6px] h-[6px] w-[6px] rounded-full bg-brand" />
         )}
       </button>
 
@@ -281,7 +281,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="Autoscuola XYZ"
               required
             />
@@ -292,7 +292,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
             <input
               value={form.owner}
               onChange={(e) => setForm({ ...form, owner: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="Mario Rossi"
             />
           </div>
@@ -303,7 +303,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
               <input
                 value={form.province}
                 onChange={(e) => setForm({ ...form, province: e.target.value.toUpperCase().slice(0, 2) })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="RM"
                 maxLength={2}
                 required
@@ -314,7 +314,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
               <input
                 value={form.town}
                 onChange={(e) => setForm({ ...form, town: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="Roma"
                 required
               />
@@ -327,7 +327,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="+39 06 1234 5678"
               />
             </div>
@@ -336,7 +336,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
               <input
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 placeholder="info@autoscuola.it"
                 type="email"
               />
@@ -348,7 +348,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
             <select
               value={form.stageId}
               onChange={(e) => setForm({ ...form, stageId: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
             >
               {STAGES.map((s) => (
                 <option key={s.id} value={s.id}>{s.label}</option>
@@ -367,7 +367,7 @@ function NewOppDialog({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={isPending}
-              className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+              className="h-9 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
               {isPending ? "Creazione..." : "Crea opportunità"}
             </button>

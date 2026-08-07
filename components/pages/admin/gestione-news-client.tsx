@@ -56,7 +56,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [categories, setCategories] = useState<{ id: string; color: string }[]>(
     initialCategories && initialCategories.length > 0
-      ? initialCategories.map((c) => ({ id: c.label, color: c.color ?? "#64748B" }))
+      ? initialCategories.map((c) => ({ id: c.label, color: c.color ?? "#6a6a6a" }))
       : [...NEWS_CATEGORIES]
   )
 
@@ -87,7 +87,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
+          "prose prose-sm max-w-none min-h-[300px] focus:outline-none text-[14px] leading-relaxed text-ink-700 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:my-3 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:my-3 [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-brand [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-brand [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_table]:border-collapse [&_table]:my-4 [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_hr]:my-4 [&_hr]:border-border-1 [&_strong]:font-semibold [&_strong]:text-ink-900",
       },
     },
   })
@@ -197,12 +197,12 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca…"
-              className="h-8 w-full rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-pink"
+              className="h-8 w-full rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-brand"
             />
           </div>
           <button
             onClick={handleCreate}
-            className="flex h-8 w-8 items-center justify-center rounded-[999px] bg-pink text-white hover:bg-pink/90"
+            className="flex h-8 w-8 items-center justify-center rounded-[999px] bg-brand text-white hover:bg-brand/90"
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
@@ -210,16 +210,16 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
 
         <div className="flex-1 overflow-y-auto">
           {filtered.map((item) => {
-            const catColor = categories.find((c) => c.id === item.category)?.color ?? "#64748B"
+            const catColor = categories.find((c) => c.id === item.category)?.color ?? "#6a6a6a"
             return (
               <button
                 key={item.id}
                 onClick={() => selectNews(item.id)}
                 className="flex w-full items-start gap-3 border-b border-border-2 px-4 py-3 text-left transition-colors"
                 style={{
-                  backgroundColor: item.id === selectedId ? "#FDF2F8" : "transparent",
+                  backgroundColor: item.id === selectedId ? "#eeeef4" : "transparent",
                   borderLeftWidth: 3,
-                  borderLeftColor: item.id === selectedId ? "#EC4899" : "transparent",
+                  borderLeftColor: item.id === selectedId ? "#1a1a2e" : "transparent",
                 }}
               >
                 {item.icon ? (
@@ -230,7 +230,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center gap-1.5">
                     <p className="truncate text-[13px] font-semibold text-ink-900">{item.title}</p>
-                    {item.pinned && <Pin className="h-3 w-3 shrink-0 text-pink" />}
+                    {item.pinned && <Pin className="h-3 w-3 shrink-0 text-brand" />}
                   </div>
                   <span
                     className="rounded-[4px] px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase"
@@ -285,7 +285,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
             <button
               onClick={handleSave}
               disabled={isPending}
-              className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+              className="flex h-8 items-center gap-1.5 rounded-[999px] bg-brand px-4 text-[12px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
               <Save className="h-3.5 w-3.5" />
               Salva
@@ -318,8 +318,8 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
                   title={item.title}
                   className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
                   style={{
-                    backgroundColor: item.active ? "#FDF2F8" : "transparent",
-                    color: item.active ? "#EC4899" : "#64748B",
+                    backgroundColor: item.active ? "#eeeef4" : "transparent",
+                    color: item.active ? "#1a1a2e" : "#6a6a6a",
                   }}
                 >
                   <item.icon className="h-4 w-4" />
@@ -374,7 +374,7 @@ export function GestioneNewsClient({ news: initial, userId, initialCategories }:
             </select>
             <button
               onClick={() => setShowCategoryManager(true)}
-              className="text-[11px] font-medium text-pink hover:underline"
+              className="text-[11px] font-medium text-brand hover:underline"
             >
               Gestisci etichette
             </button>
@@ -409,7 +409,7 @@ function CategoryManagerDialog({
 }) {
   const [items, setItems] = useState(categories)
   const [newLabel, setNewLabel] = useState("")
-  const [newColor, setNewColor] = useState("#64748B")
+  const [newColor, setNewColor] = useState("#6a6a6a")
   const [isPending, startTransition] = useTransition()
 
   function handleAdd() {
@@ -463,7 +463,7 @@ function CategoryManagerDialog({
             onChange={(e) => setNewLabel(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder="Nuova etichetta…"
-            className="h-8 flex-1 rounded-[8px] border border-border-1 px-3 text-[13px] outline-none focus:border-pink"
+            className="h-8 flex-1 rounded-[8px] border border-border-1 px-3 text-[13px] outline-none focus:border-brand"
           />
           <input
             type="color"
@@ -474,7 +474,7 @@ function CategoryManagerDialog({
           <button
             onClick={handleAdd}
             disabled={!newLabel.trim() || isPending}
-            className="h-8 rounded-[999px] bg-pink px-4 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            className="h-8 rounded-[999px] bg-brand px-4 text-[12px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
           >
             Aggiungi
           </button>
@@ -605,8 +605,8 @@ function NewsTableToolbar({ editor }: { editor: ReturnType<typeof useEditor> | n
         title="Tabella"
         className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
         style={{
-          backgroundColor: isInTable ? "#FDF2F8" : open ? "#F1F5F9" : "transparent",
-          color: isInTable ? "#EC4899" : "#64748B",
+          backgroundColor: isInTable ? "#eeeef4" : open ? "#f2f2f2" : "transparent",
+          color: isInTable ? "#1a1a2e" : "#6a6a6a",
         }}
       >
         <Table className="h-4 w-4" />
@@ -622,7 +622,7 @@ function NewsTableToolbar({ editor }: { editor: ReturnType<typeof useEditor> | n
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => { item.action(); setOpen(false) }}
                 className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12.5px] transition-colors hover:bg-surface-2"
-                style={{ color: (item as { danger?: boolean }).danger ? "#EF4444" : "#475569" }}
+                style={{ color: (item as { danger?: boolean }).danger ? "#c13515" : "#4b4b55" }}
               >
                 <item.icon className="h-3.5 w-3.5 shrink-0" />
                 {item.label}
@@ -696,7 +696,7 @@ function NewsImageBtn({ editor, onModified }: { editor: ReturnType<typeof useEdi
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileRef.current?.click()}
         title="Inserisci immagine"
-        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#64748B] transition-colors"
+        className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[#6a6a6a] transition-colors"
       >
         <ImageIcon className="h-4 w-4" />
       </button>
@@ -735,7 +735,7 @@ function CoverImageBtn({ coverImage, onChange }: { coverImage: string | null; on
         onClick={() => fileRef.current?.click()}
         title={coverImage ? "Cambia copertina" : "Aggiungi copertina"}
         className="flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors"
-        style={{ color: coverImage ? "#EC4899" : "#64748B" }}
+        style={{ color: coverImage ? "#1a1a2e" : "#6a6a6a" }}
       >
         <ImagePlus className="h-4 w-4" />
       </button>

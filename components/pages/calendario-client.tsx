@@ -5,7 +5,7 @@ import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
 import interactionPlugin from "@fullcalendar/interaction"
-import { Video, ExternalLink, X, Plus, Users, Calendar, Clock, Trash2, Pencil, Search, Building } from "lucide-react"
+import { Video, ExternalLink, X, Plus, Users, Calendar, Clock, Trash2, Pencil, Search, Building, Phone } from "lucide-react"
 import Link from "next/link"
 import { getCalendarEvents, getCalendarEventsForUser, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, rsvpCalendarEvent, createGoogleTask } from "@/lib/actions/calendar"
 import { searchAutoscuole, setFollowUp } from "@/lib/actions/autoscuole"
@@ -26,7 +26,7 @@ type CalendarEvent = {
   htmlLink: string | null
   attendees: { email: string; name: string | null; status: string | null; self: boolean }[]
   description: string | null
-  autoscuola: { id: string; name: string } | null
+  autoscuola: { id: string; name: string; phone: string | null } | null
 }
 
 type DraftEvent = {
@@ -547,9 +547,9 @@ export function CalendarioClient({
         start: isBeingEdited ? editStart : e.start,
         end: isBeingEdited ? editEnd : e.end,
         allDay: e.allDay,
-        backgroundColor: isBeingEdited ? "#EC489925" : (e.meetLink ? "#EC4899" : "#8B5CF6"),
-        borderColor: isBeingEdited ? "#EC4899" : "transparent",
-        textColor: isBeingEdited ? "#EC4899" : "#FFFFFF",
+        backgroundColor: isBeingEdited ? "#1a1a2e25" : (e.meetLink ? "#1a1a2e" : "#8B5CF6"),
+        borderColor: isBeingEdited ? "#1a1a2e" : "transparent",
+        textColor: isBeingEdited ? "#1a1a2e" : "#FFFFFF",
         editable: isBeingEdited,
         durationEditable: isBeingEdited,
         startEditable: isBeingEdited,
@@ -563,9 +563,9 @@ export function CalendarioClient({
       start: draft.start,
       end: draft.end,
       allDay: false,
-      backgroundColor: "#EC489925",
-      borderColor: "#EC4899",
-      textColor: "#EC4899",
+      backgroundColor: "#1a1a2e25",
+      borderColor: "#1a1a2e",
+      textColor: "#1a1a2e",
       editable: true,
       durationEditable: true,
       startEditable: true,
@@ -574,7 +574,7 @@ export function CalendarioClient({
     // Sales overlay events
     ...Object.entries(salesEvents).flatMap(([userId, evts]) => {
       const user = salesUsers.find((u) => u.id === userId)
-      const color = user?.color ?? "#94A3B8"
+      const color = user?.color ?? "#929292"
       return evts.map((e) => ({
         id: e.id,
         title: `${user?.name?.split(" ")[0] ?? "?"} · ${e.title}`,
@@ -601,8 +601,8 @@ export function CalendarioClient({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border-1 px-7 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-pink/10">
-            <Calendar className="h-5 w-5 text-pink" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-brand/10">
+            <Calendar className="h-5 w-5 text-brand" />
           </div>
           <div>
             <h1 className="text-[22px] font-bold tracking-[-0.4px] text-ink-900">
@@ -614,7 +614,7 @@ export function CalendarioClient({
         <div ref={newEventBtnRef} className="relative">
           <button
             onClick={() => setShowNewEventMenu(!showNewEventMenu)}
-            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90"
+            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
             Nuovo evento
@@ -641,11 +641,11 @@ export function CalendarioClient({
         <style>{`
           /* ── Base ──────────────────────────────────── */
           .fc {
-            --fc-border-color: #E2E8F0;
+            --fc-border-color: #dddddd;
             --fc-today-bg-color: transparent;
             --fc-page-bg-color: white;
             --fc-neutral-bg-color: white;
-            --fc-list-event-hover-bg-color: #FDF2F8;
+            --fc-list-event-hover-bg-color: #eeeef4;
             font-family: inherit;
             height: 100% !important;
             display: flex !important;
@@ -656,14 +656,14 @@ export function CalendarioClient({
           .fc .fc-toolbar {
             margin: 0 !important;
             padding: 12px 28px !important;
-            border-bottom: 1px solid #F1F5F9;
+            border-bottom: 1px solid #f2f2f2;
             background: white;
             flex-shrink: 0;
           }
           .fc .fc-toolbar-title {
             font-size: 15px !important;
             font-weight: 700 !important;
-            color: #0F172A;
+            color: #222222;
             letter-spacing: -0.3px;
           }
 
@@ -678,25 +678,25 @@ export function CalendarioClient({
             box-shadow: none !important;
           }
           .fc .fc-button:focus {
-            box-shadow: 0 0 0 2px #EC489930 !important;
+            box-shadow: 0 0 0 2px #1a1a2e30 !important;
           }
           .fc .fc-button-primary {
             background-color: #FFFFFF !important;
-            border: 1px solid #E2E8F0 !important;
+            border: 1px solid #dddddd !important;
             color: #334155 !important;
           }
           .fc .fc-button-primary:hover {
-            background-color: #F8FAFC !important;
-            border-color: #CBD5E1 !important;
+            background-color: #f7f7f7 !important;
+            border-color: #dddddd !important;
           }
           .fc .fc-button-primary:disabled {
             opacity: 0.5 !important;
           }
           .fc .fc-button-primary.fc-button-active,
           .fc .fc-button-primary:active {
-            background-color: #FDF2F8 !important;
-            border-color: #EC4899 !important;
-            color: #EC4899 !important;
+            background-color: #eeeef4 !important;
+            border-color: #1a1a2e !important;
+            color: #1a1a2e !important;
           }
           .fc .fc-prev-button,
           .fc .fc-next-button {
@@ -713,7 +713,7 @@ export function CalendarioClient({
           }
           .fc .fc-scrollgrid td,
           .fc .fc-scrollgrid th {
-            border-color: #F1F5F9 !important;
+            border-color: #f2f2f2 !important;
           }
           .fc .fc-scroller {
             overflow: auto !important;
@@ -732,7 +732,7 @@ export function CalendarioClient({
           }
           .fc .fc-col-header-cell {
             background-color: white !important;
-            border-bottom: 1px solid #E2E8F0 !important;
+            border-bottom: 1px solid #dddddd !important;
             border-left: none !important;
             border-right: none !important;
           }
@@ -741,7 +741,7 @@ export function CalendarioClient({
             font-weight: 600 !important;
             text-transform: uppercase !important;
             letter-spacing: 0.5px !important;
-            color: #94A3B8 !important;
+            color: #929292 !important;
             padding: 8px 0 !important;
             text-decoration: none !important;
           }
@@ -757,7 +757,7 @@ export function CalendarioClient({
           .fc .fc-timegrid-slot-label-cushion {
             font-size: 10px !important;
             font-weight: 500 !important;
-            color: #94A3B8 !important;
+            color: #929292 !important;
             padding: 2px 8px 0 0 !important;
           }
           /* Only show lines on :00 and :30 */
@@ -766,10 +766,10 @@ export function CalendarioClient({
             cursor: crosshair;
           }
           .fc tr[data-time$=":00:00"] > .fc-timegrid-slot-lane {
-            border-top: 1px solid #F1F5F9 !important;
+            border-top: 1px solid #f2f2f2 !important;
           }
           .fc tr[data-time$=":30:00"] > .fc-timegrid-slot-lane {
-            border-top: 1px dashed #F8FAFC !important;
+            border-top: 1px dashed #f7f7f7 !important;
           }
           /* Only show labels for :00 */
           .fc .fc-timegrid-slot-label-frame {
@@ -796,7 +796,7 @@ export function CalendarioClient({
             background-color: transparent !important;
           }
           .fc .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {
-            color: #EC4899 !important;
+            color: #1a1a2e !important;
           }
 
           /* ── Now indicator ────────────────────────── */
@@ -806,7 +806,7 @@ export function CalendarioClient({
           .fc .fc-timegrid-now-indicator-line {
             border: none !important;
             height: 2px !important;
-            background: linear-gradient(90deg, #EC4899 0%, #EC489960 70%, transparent 100%) !important;
+            background: linear-gradient(90deg, #1a1a2e 0%, #1a1a2e60 70%, transparent 100%) !important;
             z-index: 4 !important;
             overflow: visible !important;
           }
@@ -819,8 +819,8 @@ export function CalendarioClient({
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background-color: #EC4899;
-            box-shadow: 0 0 0 3px #EC489925, 0 0 8px #EC489940;
+            background-color: #1a1a2e;
+            box-shadow: 0 0 0 3px #1a1a2e25, 0 0 8px #1a1a2e40;
           }
           .fc .fc-timegrid-now-indicator-arrow {
             display: none !important;
@@ -856,16 +856,16 @@ export function CalendarioClient({
 
           /* ── Draft event ───────────────────────────── */
           .fc .reglo-draft-event {
-            background-color: #FDF2F8 !important;
-            border: 2px dashed #EC4899 !important;
-            border-left: 2px dashed #EC4899 !important;
+            background-color: #eeeef4 !important;
+            border: 2px dashed #1a1a2e !important;
+            border-left: 2px dashed #1a1a2e !important;
             border-radius: 6px !important;
-            box-shadow: 0 2px 12px #EC489920 !important;
+            box-shadow: 0 2px 12px #1a1a2e20 !important;
             cursor: move !important;
           }
           .fc .reglo-draft-event .fc-event-time,
           .fc .reglo-draft-event .fc-event-title {
-            color: #EC4899 !important;
+            color: #1a1a2e !important;
             font-weight: 600 !important;
             font-size: 10px !important;
           }
@@ -881,13 +881,13 @@ export function CalendarioClient({
             width: 20px;
             height: 3px;
             border-radius: 2px;
-            background-color: #EC4899;
+            background-color: #1a1a2e;
             opacity: 0.5;
           }
 
           /* ── Select highlight ──────────────────────── */
           .fc .fc-highlight {
-            background-color: #EC489910 !important;
+            background-color: #1a1a2e10 !important;
             border: none !important;
           }
 
@@ -907,7 +907,7 @@ export function CalendarioClient({
             text-decoration: none !important;
           }
           .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-            color: #EC4899 !important;
+            color: #1a1a2e !important;
           }
           .fc .fc-daygrid-day-frame {
             min-height: 80px !important;
@@ -916,15 +916,15 @@ export function CalendarioClient({
 
           /* ── Axis & column borders ─────────────────── */
           .fc .fc-timegrid-axis {
-            border-color: #F1F5F9 !important;
+            border-color: #f2f2f2 !important;
             width: 52px !important;
           }
           .fc .fc-timegrid-col {
-            border-color: #F1F5F9 !important;
+            border-color: #f2f2f2 !important;
           }
           .fc .fc-timegrid-axis-cushion {
             font-size: 10px !important;
-            color: #94A3B8 !important;
+            color: #929292 !important;
             font-weight: 500 !important;
           }
         `}</style>
@@ -983,13 +983,13 @@ export function CalendarioClient({
               <button
                 onClick={() => setShowMyCalendar((v) => !v)}
                 className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left transition-colors hover:bg-surface-2"
-                style={{ backgroundColor: showMyCalendar ? "#EC489910" : undefined }}
+                style={{ backgroundColor: showMyCalendar ? "#1a1a2e10" : undefined }}
               >
                 <span
                   className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors"
                   style={{
-                    borderColor: "#EC4899",
-                    backgroundColor: showMyCalendar ? "#EC4899" : "transparent",
+                    borderColor: "#1a1a2e",
+                    backgroundColor: showMyCalendar ? "#1a1a2e" : "transparent",
                   }}
                 >
                   {showMyCalendar && (
@@ -1011,7 +1011,7 @@ export function CalendarioClient({
             {salesUsers.map((user) => {
               const isActive = activeSales.has(user.id)
               const isLoading = loadingSales.has(user.id)
-              const color = user.color ?? "#94A3B8"
+              const color = user.color ?? "#929292"
               return (
                 <button
                   key={user.id}
@@ -1109,7 +1109,7 @@ export function CalendarioClient({
                     setEditDescription(selectedEvent.description ?? "")
                     setDetailEditMode(true)
                   }}
-                  className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors ${detailEditMode ? "bg-pink/10 text-pink" : "text-ink-400 hover:bg-surface-2 hover:text-ink-600"}`}
+                  className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-md transition-colors ${detailEditMode ? "bg-brand/10 text-brand" : "text-ink-400 hover:bg-surface-2 hover:text-ink-600"}`}
                   title="Modifica"
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -1144,7 +1144,7 @@ export function CalendarioClient({
                   <input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+                    className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
                     autoFocus
                   />
                 </div>
@@ -1211,7 +1211,7 @@ export function CalendarioClient({
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder="Aggiungi dettagli…"
                     rows={3}
-                    className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+                    className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
 
@@ -1238,7 +1238,7 @@ export function CalendarioClient({
                         refreshEvents()
                       })
                     }}
-                    className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+                    className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
                   >
                     {isSavingEdit ? "Salvataggio..." : "Salva modifiche"}
                   </button>
@@ -1282,11 +1282,20 @@ export function CalendarioClient({
                     </div>
                     <Link
                       href={`/autoscuola/${selectedEvent.autoscuola.id}`}
-                      className="flex items-center gap-2 rounded-[8px] bg-surface-2 px-3 py-2 text-[13px] font-medium text-pink transition-colors hover:bg-pink/10"
+                      className="flex items-center gap-2 rounded-[8px] bg-surface-2 px-3 py-2 text-[13px] font-medium text-brand transition-colors hover:bg-brand/10"
                     >
                       <Building className="h-3.5 w-3.5" />
                       {selectedEvent.autoscuola.name}
                     </Link>
+                    {selectedEvent.autoscuola.phone && (
+                      <a
+                        href={`tel:${selectedEvent.autoscuola.phone}`}
+                        className="mt-1.5 flex items-center gap-2 rounded-[8px] bg-surface-2 px-3 py-2 text-[13px] font-semibold text-ink-700 transition-colors hover:bg-border-2"
+                      >
+                        <Phone className="h-3.5 w-3.5 text-ink-500" />
+                        {selectedEvent.autoscuola.phone}
+                      </a>
+                    )}
                   </div>
                 )}
 
@@ -1331,7 +1340,7 @@ export function CalendarioClient({
                 <div className="flex items-center gap-2">
                   {selectedEvent.meetLink && (
                     <a href={selectedEvent.meetLink} target="_blank" rel="noopener noreferrer"
-                      className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-3.5 text-[12px] font-semibold text-white transition-colors hover:bg-pink/90">
+                      className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[999px] bg-brand px-3.5 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90">
                       <Video className="h-3.5 w-3.5" /> Partecipa
                     </a>
                   )}
@@ -1416,8 +1425,8 @@ export function CalendarioClient({
                     onClick={() => setDraftForUser(null)}
                     className="rounded-[999px] px-2.5 py-1 text-[11.5px] font-semibold transition-colors"
                     style={{
-                      backgroundColor: !draftForUser ? "#EC4899" : "#F8FAFC",
-                      color: !draftForUser ? "white" : "#64748B",
+                      backgroundColor: !draftForUser ? "#1a1a2e" : "#f7f7f7",
+                      color: !draftForUser ? "white" : "#6a6a6a",
                     }}
                   >
                     {currentUser?.name?.split(" ")[0] ?? "Tu"} (tu)
@@ -1429,8 +1438,8 @@ export function CalendarioClient({
                       onClick={() => setDraftForUser(u.id)}
                       className="rounded-[999px] px-2.5 py-1 text-[11.5px] font-semibold transition-colors"
                       style={{
-                        backgroundColor: draftForUser === u.id ? (u.color ?? "#64748B") : "#F8FAFC",
-                        color: draftForUser === u.id ? "white" : "#64748B",
+                        backgroundColor: draftForUser === u.id ? (u.color ?? "#6a6a6a") : "#f7f7f7",
+                        color: draftForUser === u.id ? "white" : "#6a6a6a",
                       }}
                     >
                       {u.name.split(" ")[0]}
@@ -1450,7 +1459,7 @@ export function CalendarioClient({
                     onClick={() => applyPreset(preset.id, draft)}
                     className={`h-7 cursor-pointer rounded-[999px] border px-3 text-[11.5px] font-semibold transition-all ${
                       draftPreset === preset.id
-                        ? "border-pink bg-pink/10 text-pink"
+                        ? "border-brand bg-brand/10 text-brand"
                         : "border-border-1 text-ink-500 hover:bg-surface-2"
                     }`}
                   >
@@ -1470,12 +1479,12 @@ export function CalendarioClient({
                   onChange={(e) => handleAutoscuolaTextChange(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !showAutoscuolaDropdown) handleDraftSubmit() }}
                   placeholder="Nome autoscuola (facoltativo)"
-                  className={`h-[38px] w-full rounded-[10px] border bg-surface pl-9 pr-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20 ${
-                    draftAutoscuola ? "border-pink/40" : "border-border-1"
+                  className={`h-[38px] w-full rounded-[10px] border bg-surface pl-9 pr-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20 ${
+                    draftAutoscuola ? "border-brand/40" : "border-border-1"
                   }`}
                 />
                 {draftAutoscuola && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-[4px] bg-pink/10 px-1.5 py-0.5 text-[10px] font-semibold text-pink">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-[4px] bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
                     Collegata
                   </span>
                 )}
@@ -1509,7 +1518,7 @@ export function CalendarioClient({
                   onChange={(e) => setDraftTitle(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleDraftSubmit() }}
                   placeholder="Meeting con…"
-                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
                 />
               </div>
             )}
@@ -1591,7 +1600,7 @@ export function CalendarioClient({
                 <div
                   onClick={() => setDraftMeetLink(!draftMeetLink)}
                   className="flex h-5 w-9 items-center rounded-full p-0.5 transition-colors"
-                  style={{ backgroundColor: draftMeetLink ? "#EC4899" : "#CBD5E1" }}
+                  style={{ backgroundColor: draftMeetLink ? "#1a1a2e" : "#dddddd" }}
                 >
                   <div
                     className="h-4 w-4 rounded-full bg-white shadow transition-transform"
@@ -1614,7 +1623,7 @@ export function CalendarioClient({
                   onChange={(e) => setDraftNotes(e.target.value)}
                   placeholder="Aggiungi dettagli…"
                   rows={3}
-                  className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+                  className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
                 />
               </div>
             )}
@@ -1630,7 +1639,7 @@ export function CalendarioClient({
               <button
                 onClick={handleDraftSubmit}
                 disabled={isPending || (draftPreset === "follow_up" && !draftAutoscuola)}
-                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
               >
                 {isPending ? "Creazione..." : draftPreset === "follow_up" ? "Crea follow-up" : "Crea evento"}
               </button>

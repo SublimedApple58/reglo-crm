@@ -8,7 +8,7 @@ export default async function RisorsePage() {
   if (!session?.user) redirect("/sign-in")
 
   const [resources, dbCategories] = await Promise.all([getResources(), getResourceCategories()])
-  const categories = dbCategories.map((c) => ({ id: c.label, label: c.label, icon: c.icon ?? "file-text", color: c.color ?? "#64748B" }))
+  const categories = dbCategories.map((c) => ({ id: c.label, label: c.label, icon: c.icon ?? "file-text", color: c.color ?? "#6a6a6a" }))
 
   return <RisorseClient resources={resources} userId={session.user.id} categories={categories} />
 }

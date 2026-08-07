@@ -168,8 +168,8 @@ export function AssegnazioniClient({
         <span
           className="flex items-center gap-1 rounded-[999px] px-2.5 py-0.5 text-[11px] font-semibold"
           style={{
-            backgroundColor: unassignedCount > 0 ? "#FEF2F2" : "#ECFDF5",
-            color: unassignedCount > 0 ? "#EF4444" : "#10B981",
+            backgroundColor: unassignedCount > 0 ? "#faf0ed" : "#F0FDF4",
+            color: unassignedCount > 0 ? "#c13515" : "#22C55E",
           }}
         >
           {unassignedCount > 0 ? (
@@ -187,7 +187,7 @@ export function AssegnazioniClient({
         <div className="flex-1" />
         <button
           onClick={() => setShowTerritoryAssign(true)}
-          className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[12.5px] font-semibold text-white hover:bg-pink/90"
+          className="flex h-8 items-center gap-1.5 rounded-[999px] bg-brand px-4 text-[12.5px] font-semibold text-white hover:bg-brand/90"
         >
           <MapPin className="h-3.5 w-3.5" />
           Assegna per territorio
@@ -200,7 +200,7 @@ export function AssegnazioniClient({
           <Link
             key={s.id}
             href={`/admin/assegnazioni/${s.id}`}
-            className="w-[180px] shrink-0 cursor-pointer rounded-[12px] border border-border-1 bg-surface p-3 transition-all hover:-translate-y-px hover:border-pink/30 hover:shadow-sm"
+            className="w-[180px] shrink-0 cursor-pointer rounded-[12px] border border-border-1 bg-surface p-3 transition-all hover:-translate-y-px hover:border-brand/30 hover:shadow-sm"
           >
             <div className="flex items-center gap-2">
               <div
@@ -233,7 +233,7 @@ export function AssegnazioniClient({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cerca…"
-            className="h-8 w-[220px] rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-pink"
+            className="h-8 w-[220px] rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-brand"
           />
         </div>
         <select
@@ -288,7 +288,7 @@ export function AssegnazioniClient({
           <button
             onClick={handleBulkAssign}
             disabled={!bulkTarget || isPending}
-            className="rounded-[999px] bg-pink px-4 py-1 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            className="rounded-[999px] bg-brand px-4 py-1 text-[12px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
           >
             Applica
           </button>
@@ -305,7 +305,7 @@ export function AssegnazioniClient({
                   type="checkbox"
                   checked={selected.size === displayed.length && displayed.length > 0}
                   onChange={toggleAll}
-                  className="accent-pink"
+                  className="accent-brand"
                 />
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold text-ink-400 uppercase">
@@ -336,7 +336,7 @@ export function AssegnazioniClient({
                     type="checkbox"
                     checked={selected.has(a.id)}
                     onChange={() => toggleSelect(a.id)}
-                    className="accent-pink"
+                    className="accent-brand"
                   />
                 </td>
                 <td className="px-4 py-2.5 text-[13px] font-semibold text-ink-900">{a.name}</td>
@@ -383,8 +383,8 @@ export function AssegnazioniClient({
                   onClick={() => { setTerritoryMode("regione"); setTerritoryTarget("") }}
                   className="flex-1 rounded-[6px] py-1.5 text-[12px] font-semibold transition-colors"
                   style={{
-                    backgroundColor: territoryMode === "regione" ? "#FDF2F8" : "transparent",
-                    color: territoryMode === "regione" ? "#EC4899" : "#64748B",
+                    backgroundColor: territoryMode === "regione" ? "#eeeef4" : "transparent",
+                    color: territoryMode === "regione" ? "#1a1a2e" : "#6a6a6a",
                   }}
                 >
                   Regione
@@ -393,8 +393,8 @@ export function AssegnazioniClient({
                   onClick={() => { setTerritoryMode("provincia"); setTerritoryTarget("") }}
                   className="flex-1 rounded-[6px] py-1.5 text-[12px] font-semibold transition-colors"
                   style={{
-                    backgroundColor: territoryMode === "provincia" ? "#FDF2F8" : "transparent",
-                    color: territoryMode === "provincia" ? "#EC4899" : "#64748B",
+                    backgroundColor: territoryMode === "provincia" ? "#eeeef4" : "transparent",
+                    color: territoryMode === "provincia" ? "#1a1a2e" : "#6a6a6a",
                   }}
                 >
                   Provincia
@@ -408,7 +408,7 @@ export function AssegnazioniClient({
                 <select
                   value={territoryTarget}
                   onChange={(e) => setTerritoryTarget(e.target.value)}
-                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
                 >
                   <option value="">Seleziona {territoryMode}…</option>
                   {territoryMode === "regione"
@@ -439,7 +439,7 @@ export function AssegnazioniClient({
                 <select
                   value={territorySales}
                   onChange={(e) => setTerritorySales(e.target.value)}
-                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
                 >
                   <option value="">Seleziona sales…</option>
                   {salesOptions.map((s) => (
@@ -471,7 +471,7 @@ export function AssegnazioniClient({
               <button
                 onClick={handleTerritoryAssign}
                 disabled={!territoryTarget || !territorySales || isPending}
-                className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+                className="h-9 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
               >
                 {isPending ? "Assegnazione..." : "Assegna"}
               </button>

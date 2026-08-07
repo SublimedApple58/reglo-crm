@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
-import { getAutoscuola, getActivities } from "@/lib/actions/autoscuole"
+import { getAutoscuola, getActivities, getGroupMembers } from "@/lib/actions/autoscuole"
 import { getDocuments } from "@/lib/actions/documents"
 import { getContractRequest } from "@/lib/actions/contracts"
-import { hasGoogleConnected } from "@/lib/actions/calendar"
+import { hasGoogleConnected, getSalesWithGoogle } from "@/lib/actions/calendar"
 import { getSalesTeam } from "@/lib/actions/data"
 import { AutoscuolaClient } from "@/components/pages/autoscuola-client"
 import { STAGES } from "@/lib/constants"
@@ -16,16 +16,19 @@ export default async function AutoscuolaPage(props: {
 
   const { id } = await props.params
 
-  const [result, activitiesResult, documentsResult, contractResult, googleConnected, team] = await Promise.all([
+  const [result, activitiesResult, documentsResult, contractResult, googleConnected, team, calendarSales] = await Promise.all([
     getAutoscuola(id),
     getActivities(id),
     getDocuments(id),
     getContractRequest(id),
     hasGoogleConnected(),
     getSalesTeam(),
+    getSalesWithGoogle(),
   ])
 
   if (!result) notFound()
+
+  const groupMembers = result.autoscuola.groupId ? await getGroupMembers(result.autoscuola.groupId) : []
 
   const activitiesFlat = activitiesResult.map((a) => ({
     ...a.activity,
@@ -57,6 +60,10 @@ export default async function AutoscuolaPage(props: {
       isAdmin={isAdmin}
       googleConnected={googleConnected}
       salesUsers={salesUsers}
+      currentUserId={session.user.id}
+      currentUserName={session.user.name ?? ""}
+      calendarSalesUsers={calendarSales}
+      groupMembers={groupMembers}
     />
   )
 }

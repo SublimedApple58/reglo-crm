@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { RESOURCE_CATEGORIES } from "@/lib/constants"
 import { getComments, createComment, deleteComment } from "@/lib/actions/data"
+import { Linkify } from "@/components/ui/linkify"
 import type { Resource } from "@/lib/db/schema"
 
 type CategoryDef = { id: string; label: string; icon: string; color: string }
@@ -127,8 +128,8 @@ export function RisorseClient({ resources, userId, categories: catsProp }: { res
               }
               className="flex items-center gap-2.5 rounded-[999px] px-3 py-2 text-left text-[13px] font-medium transition-colors"
               style={{
-                backgroundColor: isActive ? "#FDF2F8" : "transparent",
-                color: isActive ? "#EC4899" : "#1E293B",
+                backgroundColor: isActive ? "#eeeef4" : "transparent",
+                color: isActive ? "#1a1a2e" : "#33334d",
               }}
             >
               <span style={{ color: cat.color }}><Icon className="h-4 w-4 shrink-0" /></span>
@@ -148,7 +149,7 @@ export function RisorseClient({ resources, userId, categories: catsProp }: { res
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cerca risorsa…"
-              className="h-8 w-full rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-pink"
+              className="h-8 w-full rounded-[999px] border border-border-1 pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-brand"
             />
           </div>
         </div>
@@ -163,21 +164,21 @@ export function RisorseClient({ resources, userId, categories: catsProp }: { res
                 onClick={() => setSelectedId(doc.id)}
                 className="flex w-full items-center gap-3 border-b border-border-2 px-4 py-3 text-left transition-colors"
                 style={{
-                  backgroundColor: isSelected ? "#FDF2F8" : "transparent",
+                  backgroundColor: isSelected ? "#eeeef4" : "transparent",
                   borderLeftWidth: 3,
-                  borderLeftColor: isSelected ? "#EC4899" : "transparent",
+                  borderLeftColor: isSelected ? "#1a1a2e" : "transparent",
                 }}
               >
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: (doc.color ?? "#64748B") + "15" }}
+                  style={{ backgroundColor: (doc.color ?? "#6a6a6a") + "15" }}
                 >
-                  <ResourceIcon icon={doc.icon} color={doc.color ?? "#64748B"} />
+                  <ResourceIcon icon={doc.icon} color={doc.color ?? "#6a6a6a"} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center gap-1.5">
                     <p className="truncate text-[13px] font-semibold text-ink-900">{doc.title}</p>
-                    {doc.pinned && <Pin className="h-3 w-3 shrink-0 text-pink" />}
+                    {doc.pinned && <Pin className="h-3 w-3 shrink-0 text-brand" />}
                   </div>
                   {doc.excerpt && (
                     <p className="line-clamp-2 text-[12px] text-ink-500">{doc.excerpt}</p>
@@ -226,7 +227,7 @@ export function RisorseClient({ resources, userId, categories: catsProp }: { res
             {selected.html && (
               <div
                 onClick={handleContentClick}
-                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 reglo-links [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_hr]:my-4 [&_hr]:border-border-1 [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
+                className="prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 reglo-links [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-brand [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-brand [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_table]:my-4 [&_table]:border-collapse [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_hr]:my-4 [&_hr]:border-border-1 [&_mark]:bg-yellow-200 [&_mark]:px-0.5"
                 dangerouslySetInnerHTML={{ __html: selected.html }}
               />
             )}
@@ -308,7 +309,7 @@ function RisorseCommentsSection({ targetId, userId }: { targetId: number; userId
                 </button>
               )}
             </div>
-            <p className="text-[13px] leading-relaxed text-ink-700">{comment.body}</p>
+            <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-ink-700"><Linkify text={comment.body} /></p>
           </div>
         </div>
       ))}
@@ -319,12 +320,12 @@ function RisorseCommentsSection({ targetId, userId }: { targetId: number; userId
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Scrivi un commento…"
-          className="h-9 flex-1 rounded-[999px] border border-border-1 bg-surface px-4 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink"
+          className="h-9 flex-1 rounded-[999px] border border-border-1 bg-surface px-4 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand"
         />
         <button
           onClick={handleSubmit}
           disabled={!body.trim() || isPending}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-pink text-white hover:bg-pink/90 disabled:opacity-50"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white hover:bg-brand/90 disabled:opacity-50"
         >
           <Send className="h-3.5 w-3.5" />
         </button>

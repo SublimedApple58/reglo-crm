@@ -90,7 +90,7 @@ function SignInForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="nome@reglo.it"
-            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
             required
           />
         </div>
@@ -101,7 +101,7 @@ function SignInForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
             required
           />
         </div>
@@ -109,7 +109,7 @@ function SignInForm() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-1 h-[38px] rounded-[999px] bg-pink text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+          className="mt-1 h-[38px] rounded-[999px] bg-brand text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
         >
           {loading ? "Accesso in corso…" : "Accedi"}
         </button>
@@ -125,7 +125,7 @@ export default function SignInPage() {
         <div className="mb-2 flex items-center justify-center gap-1">
           <img src="/reglo-logo.png" alt="Reglo" className="h-9 w-9 rounded-[10px]" />
           <span className="text-[22px] font-bold tracking-tight text-ink-900">
-            reglo<span className="text-pink">.</span>
+            reglo<span className="text-brand">.</span>
           </span>
         </div>
         <p className="text-[13px] font-medium text-ink-500">CRM Sales</p>

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { HomeClient } from "@/components/pages/home-client"
-import { getPipelineCounts, getAutoscuole } from "@/lib/actions/autoscuole"
+import { getPipelineCounts, getAutoscuole, getAutoscuolePhoneMap } from "@/lib/actions/autoscuole"
 import { getHomeCards } from "@/lib/actions/data"
 import { hasGoogleConnected, getCalendarEvents, getGoogleTasks } from "@/lib/actions/calendar"
 import { STAGES } from "@/lib/constants"
@@ -24,6 +24,12 @@ export default async function HomePage() {
 
   // Fetch tasks if Google connected
   const googleTasks = googleConnected ? await getGoogleTasks() : []
+
+  // Telefoni per i follow-up (id autoscuola estratto dal link CRM nelle notes del task)
+  const taskAutoscuolaIds = googleTasks
+    .map((t) => t.notes?.match(/\/autoscuola\/([^\s]+)/)?.[1])
+    .filter((id): id is string => Boolean(id))
+  const taskPhoneMap = await getAutoscuolePhoneMap(taskAutoscuolaIds)
 
   // Fetch upcoming events if Google connected
   let upcomingEvents: { title: string; start: string; meetLink: string | null; location: string | null }[] = []
@@ -89,6 +95,7 @@ export default async function HomePage() {
       googleConnected={googleConnected}
       upcomingEvents={upcomingEvents}
       googleTasks={googleTasks}
+      taskPhoneMap={taskPhoneMap}
     />
   )
 }

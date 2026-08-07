@@ -31,7 +31,7 @@ export function GoogleConnectCard({ callbackUrl = "/calendario" }: { callbackUrl
       </p>
       <button
         onClick={() => signIn("google", { callbackUrl })}
-        className="flex h-[38px] items-center gap-2.5 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90"
+        className="flex h-[38px] items-center gap-2.5 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
       >
         Collega Google
       </button>

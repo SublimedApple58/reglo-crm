@@ -33,8 +33,8 @@ type RequestRow = {
 const STATUS_CONFIG = {
   pending: { label: "In attesa", color: "#F59E0B", bg: "#FEF3C7", icon: Clock },
   in_progress: { label: "In lavorazione", color: "#3B82F6", bg: "#DBEAFE", icon: Loader2 },
-  done: { label: "Completato", color: "#10B981", bg: "#D1FAE5", icon: CheckCircle2 },
-  rejected: { label: "Rimandato", color: "#EF4444", bg: "#FEE2E2", icon: XCircle },
+  done: { label: "Completato", color: "#22C55E", bg: "#D1FAE5", icon: CheckCircle2 },
+  rejected: { label: "Rimandato", color: "#c13515", bg: "#FEE2E2", icon: XCircle },
 } as const
 
 const FILTERS = [
@@ -192,7 +192,7 @@ function CompleteContractDialog({
                   const file = e.dataTransfer.files[0]
                   if (file) handleUpload(file, setContractFile, setUploadingContract)
                 }}
-                className="flex cursor-pointer flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-border-2 bg-surface-2/50 p-6 transition-colors hover:border-pink hover:bg-pink/5"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-border-2 bg-surface-2/50 p-6 transition-colors hover:border-brand hover:bg-brand/5"
               >
                 {uploadingContract ? (
                   <Loader2 className="mb-2 h-6 w-6 animate-spin text-ink-400" />
@@ -251,7 +251,7 @@ function CompleteContractDialog({
                   const file = e.dataTransfer.files[0]
                   if (file) handleUpload(file, setInvoiceFile, setUploadingInvoice)
                 }}
-                className="flex cursor-pointer flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-border-2 bg-surface-2/50 p-6 transition-colors hover:border-pink hover:bg-pink/5"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-[12px] border-2 border-dashed border-border-2 bg-surface-2/50 p-6 transition-colors hover:border-brand hover:bg-brand/5"
               >
                 {uploadingInvoice ? (
                   <Loader2 className="mb-2 h-6 w-6 animate-spin text-ink-400" />
@@ -284,7 +284,7 @@ function CompleteContractDialog({
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-border-1 accent-pink"
+              className="mt-0.5 h-4 w-4 rounded border-border-1 accent-brand"
             />
             <span className="text-[12.5px] leading-relaxed text-ink-600">
               Confermo che i documenti sono corretti. Il Sales ricevera una notifica.
@@ -368,8 +368,8 @@ export function GestioneContrattiClient({ requests: initial }: { requests: Reque
       {/* Header */}
       <div className="border-b border-border-1 px-7 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-pink/10">
-            <FileSignature className="h-5 w-5 text-pink" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-brand/10">
+            <FileSignature className="h-5 w-5 text-brand" />
           </div>
           <div>
             <h1 className="text-[20px] font-bold tracking-[-0.4px] text-ink-900">
@@ -395,17 +395,17 @@ export function GestioneContrattiClient({ requests: initial }: { requests: Reque
                 onClick={() => setFilter(f.key)}
                 className="flex items-center gap-1.5 rounded-[999px] px-3.5 py-1.5 text-[12px] font-medium transition-colors"
                 style={{
-                  backgroundColor: filter === f.key ? "#FDF2F8" : "transparent",
-                  color: filter === f.key ? "#EC4899" : "#64748B",
-                  border: `1px solid ${filter === f.key ? "#FBCFE8" : "#E2E8F0"}`,
+                  backgroundColor: filter === f.key ? "#eeeef4" : "transparent",
+                  color: filter === f.key ? "#1a1a2e" : "#6a6a6a",
+                  border: `1px solid ${filter === f.key ? "#e2e2e8" : "#dddddd"}`,
                 }}
               >
                 {f.label}
                 <span
                   className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[10px]"
                   style={{
-                    backgroundColor: filter === f.key ? "#EC4899" : "#F1F5F9",
-                    color: filter === f.key ? "white" : "#64748B",
+                    backgroundColor: filter === f.key ? "#1a1a2e" : "#f2f2f2",
+                    color: filter === f.key ? "white" : "#6a6a6a",
                   }}
                 >
                   {count}
@@ -544,13 +544,13 @@ export function GestioneContrattiClient({ requests: initial }: { requests: Reque
                             setAdminNotesMap((prev) => ({ ...prev, [req.id]: e.target.value }))
                           }
                           placeholder="Note interne..."
-                          className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+                          className="w-full resize-none rounded-[10px] border border-border-1 bg-surface p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
                           rows={2}
                         />
                         <button
                           onClick={() => handleSaveNotes(req.id)}
                           disabled={isPending}
-                          className="mt-1.5 text-[12px] font-medium text-pink hover:text-pink/80 disabled:opacity-50"
+                          className="mt-1.5 text-[12px] font-medium text-brand hover:text-brand/80 disabled:opacity-50"
                         >
                           Salva note
                         </button>

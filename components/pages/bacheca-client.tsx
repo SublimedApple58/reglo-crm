@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Pin, Calendar, Send, Trash2 } from "lucide-react"
 import { NEWS_CATEGORIES } from "@/lib/constants"
 import { getComments, createComment, deleteComment, markNewsAsRead } from "@/lib/actions/data"
+import { Linkify } from "@/components/ui/linkify"
 import type { News } from "@/lib/db/schema"
 
 type CategoryDef = { id: string; color: string }
@@ -51,8 +52,8 @@ export function BachecaClient({ news, userId, categories: catsProp }: { news: Ne
               onClick={() => setFilter(null)}
               className="rounded-[999px] px-2.5 py-1 text-[11px] font-semibold"
               style={{
-                backgroundColor: !filter ? "#EC4899" : "#F8FAFC",
-                color: !filter ? "white" : "#64748B",
+                backgroundColor: !filter ? "#1a1a2e" : "#f7f7f7",
+                color: !filter ? "white" : "#6a6a6a",
               }}
             >
               Tutti
@@ -63,8 +64,8 @@ export function BachecaClient({ news, userId, categories: catsProp }: { news: Ne
                 onClick={() => setFilter(cat.id)}
                 className="rounded-[999px] px-2.5 py-1 text-[11px] font-semibold"
                 style={{
-                  backgroundColor: filter === cat.id ? cat.color : "#F8FAFC",
-                  color: filter === cat.id ? "white" : "#64748B",
+                  backgroundColor: filter === cat.id ? cat.color : "#f7f7f7",
+                  color: filter === cat.id ? "white" : "#6a6a6a",
                 }}
               >
                 {cat.id}
@@ -77,16 +78,16 @@ export function BachecaClient({ news, userId, categories: catsProp }: { news: Ne
           {filtered.map((item) => {
             const isSelected = item.id === selectedId
             const catColor =
-              categories.find((c) => c.id === item.category)?.color ?? "#64748B"
+              categories.find((c) => c.id === item.category)?.color ?? "#6a6a6a"
             return (
               <button
                 key={item.id}
                 onClick={() => setSelectedId(item.id)}
                 className="flex w-full flex-col border-b border-border-2 px-4 py-3 text-left transition-colors"
                 style={{
-                  backgroundColor: isSelected ? "#FDF2F8" : "transparent",
+                  backgroundColor: isSelected ? "#eeeef4" : "transparent",
                   borderLeftWidth: 3,
-                  borderLeftColor: isSelected ? "#EC4899" : "transparent",
+                  borderLeftColor: isSelected ? "#1a1a2e" : "transparent",
                 }}
               >
                 <div className="mb-1 flex items-center gap-2">
@@ -99,7 +100,7 @@ export function BachecaClient({ news, userId, categories: catsProp }: { news: Ne
                   >
                     {item.category}
                   </span>
-                  {item.pinned && <Pin className="h-3 w-3 text-pink" />}
+                  {item.pinned && <Pin className="h-3 w-3 text-brand" />}
                 </div>
                 <p className="mb-0.5 text-[13px] font-semibold text-ink-900">
                   {item.icon && <span className="mr-1.5">{item.icon}</span>}
@@ -134,9 +135,9 @@ export function BachecaClient({ news, userId, categories: catsProp }: { news: Ne
                 style={{
                   backgroundColor:
                     (categories.find((c) => c.id === selected.category)?.color ??
-                      "#64748B") + "15",
+                      "#6a6a6a") + "15",
                   color:
-                    categories.find((c) => c.id === selected.category)?.color ?? "#64748B",
+                    categories.find((c) => c.id === selected.category)?.color ?? "#6a6a6a",
                 }}
               >
                 {selected.category}
@@ -165,7 +166,7 @@ export function BachecaClient({ news, userId, categories: catsProp }: { news: Ne
             {selected.body && (
               <div
                 onClick={handleContentClick}
-                className="reglo-links prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-pink [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-pink [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_hr]:my-4 [&_hr]:border-border-1 [&_table]:border-collapse [&_table]:my-4 [&_table]:w-full [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold"
+                className="reglo-links prose prose-sm max-w-none text-[14px] leading-relaxed text-ink-700 [&_h1]:mb-3 [&_h1]:mt-8 [&_h1]:text-[24px] [&_h1]:font-bold [&_h1]:text-ink-900 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[20px] [&_h2]:font-bold [&_h2]:text-ink-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-[17px] [&_h3]:font-semibold [&_h3]:text-ink-900 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-brand [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-ink-500 [&_blockquote]:my-3 [&_a]:text-brand [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[13px] [&_strong]:font-semibold [&_strong]:text-ink-900 [&_hr]:my-4 [&_hr]:border-border-1 [&_table]:border-collapse [&_table]:my-4 [&_table]:w-full [&_td]:border [&_td]:border-border-1 [&_td]:px-3 [&_td]:py-2 [&_th]:border [&_th]:border-border-1 [&_th]:bg-surface-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold"
                 dangerouslySetInnerHTML={{ __html: selected.body }}
               />
             )}
@@ -247,7 +248,7 @@ function CommentsSection({ targetType, targetId, userId }: { targetType: "news" 
                 </button>
               )}
             </div>
-            <p className="text-[13px] leading-relaxed text-ink-700">{comment.body}</p>
+            <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-ink-700"><Linkify text={comment.body} /></p>
           </div>
         </div>
       ))}
@@ -258,12 +259,12 @@ function CommentsSection({ targetType, targetId, userId }: { targetType: "news" 
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Scrivi un commento…"
-          className="h-9 flex-1 rounded-[999px] border border-border-1 bg-surface px-4 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink"
+          className="h-9 flex-1 rounded-[999px] border border-border-1 bg-surface px-4 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand"
         />
         <button
           onClick={handleSubmit}
           disabled={!body.trim() || isPending}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-pink text-white hover:bg-pink/90 disabled:opacity-50"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white hover:bg-brand/90 disabled:opacity-50"
         >
           <Send className="h-3.5 w-3.5" />
         </button>

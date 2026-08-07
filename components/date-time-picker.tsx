@@ -137,7 +137,7 @@ export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePic
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex h-[38px] w-full cursor-pointer items-center gap-2 rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none transition-colors hover:border-ink-300 focus:border-pink focus:ring-2 focus:ring-pink/20"
+        className="flex h-[38px] w-full cursor-pointer items-center gap-2 rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none transition-colors hover:border-ink-300 focus:border-brand focus:ring-2 focus:ring-brand/20"
       >
         <Calendar className="h-3.5 w-3.5 text-ink-400" />
         <span>{displayDateStr}</span>
@@ -190,8 +190,8 @@ export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePic
                   }}
                   className={`flex h-8 w-full cursor-pointer items-center justify-center rounded-full text-[12.5px] font-medium transition-colors
                     ${!cell.isCurrentMonth ? "text-ink-300" : "text-ink-700 hover:bg-surface-2"}
-                    ${selected ? "!bg-pink !text-white hover:!bg-pink/90" : ""}
-                    ${todayCell && !selected ? "font-bold text-pink" : ""}
+                    ${selected ? "!bg-brand !text-white hover:!bg-brand/90" : ""}
+                    ${todayCell && !selected ? "font-bold text-brand" : ""}
                   `}
                 >
                   {cell.day}
@@ -213,7 +213,7 @@ export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePic
                 <select
                   value={hours}
                   onChange={(e) => setStagingTime(Number(e.target.value), minutes)}
-                  className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-pink"
+                  className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-brand"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
                     <option key={i} value={i}>{pad(i)}</option>
@@ -223,7 +223,7 @@ export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePic
                 <select
                   value={minutes}
                   onChange={(e) => setStagingTime(hours, Number(e.target.value))}
-                  className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-pink"
+                  className="h-[32px] cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2 text-center text-[13px] font-medium text-ink-900 outline-none focus:border-brand"
                 >
                   {[0, 15, 30, 45].map((m) => (
                     <option key={m} value={m}>{pad(m)}</option>
@@ -237,7 +237,7 @@ export function DateTimePicker({ value, onChange, label, dateOnly }: DateTimePic
           <button
             type="button"
             onClick={handleConfirm}
-            className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[999px] bg-pink text-[12.5px] font-semibold text-white transition-colors hover:bg-pink/90"
+            className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[999px] bg-brand text-[12.5px] font-semibold text-white transition-colors hover:bg-brand/90"
           >
             <Check className="h-3.5 w-3.5" />
             Conferma

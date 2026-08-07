@@ -193,7 +193,7 @@ export function SalesDetailClient({
             <button
               onClick={() => setShowAddRegion(!showAddRegion)}
               disabled={availableRegions.length === 0}
-              className="flex h-7 items-center gap-1 rounded-[999px] bg-pink px-3 text-[11px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+              className="flex h-7 items-center gap-1 rounded-[999px] bg-brand px-3 text-[11px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
               <Plus className="h-3 w-3" />
               Aggiungi regione
@@ -222,13 +222,13 @@ export function SalesDetailClient({
             {regions.map((region) => (
               <span
                 key={region}
-                className="flex items-center gap-1.5 rounded-[999px] border border-pink/20 bg-pink/5 px-3 py-1.5 text-[12.5px] font-medium text-pink"
+                className="flex items-center gap-1.5 rounded-[999px] border border-brand/20 bg-brand/5 px-3 py-1.5 text-[12.5px] font-medium text-brand"
               >
                 {region}
                 <button
                   onClick={() => handleUnassignRegion(region)}
                   disabled={isPending}
-                  className="flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-pink/20"
+                  className="flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-brand/20"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>
@@ -256,7 +256,7 @@ export function SalesDetailClient({
                 <Filter className="h-3.5 w-3.5" />
                 Filtro
                 {filters.length > 0 && (
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-pink text-[9px] font-bold text-white">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white">
                     {filters.length}
                   </span>
                 )}
@@ -280,7 +280,7 @@ export function SalesDetailClient({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cerca…"
-                className="h-8 w-[200px] rounded-[999px] border border-border-1 bg-surface pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-pink"
+                className="h-8 w-[200px] rounded-[999px] border border-border-1 bg-surface pl-8 pr-3 text-[12.5px] outline-none placeholder:text-ink-400 focus:border-brand"
               />
             </div>
           </div>
@@ -291,7 +291,7 @@ export function SalesDetailClient({
               {filters.map((f, i) => (
                 <span
                   key={i}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-[999px] border border-border-1 bg-surface-2 px-2.5 py-1 text-[11.5px] font-medium text-ink-700 transition-colors hover:border-pink/30 hover:bg-pink/5"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-[999px] border border-border-1 bg-surface-2 px-2.5 py-1 text-[11.5px] font-medium text-ink-700 transition-colors hover:border-brand/30 hover:bg-brand/5"
                 >
                   <span onClick={() => editFilter(i)} className="flex items-center gap-1.5">
                     <span className="text-ink-400">{FILTER_FIELDS.find((ff) => ff.id === f.field)?.label}</span>
@@ -308,7 +308,7 @@ export function SalesDetailClient({
               ))}
               <button
                 onClick={() => setFilters([])}
-                className="text-[11px] font-medium text-pink hover:underline"
+                className="text-[11px] font-medium text-brand hover:underline"
               >
                 Resetta tutto
               </button>
@@ -352,7 +352,7 @@ export function SalesDetailClient({
                       type="checkbox"
                       checked={selected.size === filtered.length && filtered.length > 0}
                       onChange={toggleAll}
-                      className="accent-pink"
+                      className="accent-brand"
                     />
                   </th>
                   <th className="px-5 py-3 text-left text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Autoscuola</th>
@@ -370,11 +370,11 @@ export function SalesDetailClient({
                         type="checkbox"
                         checked={selected.has(a.id)}
                         onChange={() => toggleSelect(a.id)}
-                        className="accent-pink"
+                        className="accent-brand"
                       />
                     </td>
                     <td className="px-5 py-2.5">
-                      <Link href={`/autoscuola/${a.id}`} className="text-[13px] font-semibold text-ink-900 hover:text-pink">
+                      <Link href={`/autoscuola/${a.id}`} className="text-[13px] font-semibold text-ink-900 hover:text-brand">
                         {a.name}
                       </Link>
                     </td>
@@ -525,7 +525,7 @@ function AddFilterPopover({
                 onChange={(e) => setValueSearch(e.target.value)}
                 placeholder="Cerca…"
                 autoFocus
-                className="h-7 w-full rounded-[6px] border border-border-1 px-2.5 text-[12px] outline-none placeholder:text-ink-400 focus:border-pink"
+                className="h-7 w-full rounded-[6px] border border-border-1 px-2.5 text-[12px] outline-none placeholder:text-ink-400 focus:border-brand"
               />
             </div>
             <div className="max-h-[220px] overflow-y-auto">
@@ -538,7 +538,7 @@ function AddFilterPopover({
                     type="checkbox"
                     checked={checked.has(v.value)}
                     onChange={() => toggleValue(v.value, v.label)}
-                    className="accent-pink"
+                    className="accent-brand"
                   />
                   {v.label}
                 </label>
@@ -552,7 +552,7 @@ function AddFilterPopover({
               <button
                 onClick={confirm}
                 disabled={checked.size === 0}
-                className="w-full rounded-[8px] bg-pink py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-40"
+                className="w-full rounded-[8px] bg-brand py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-40"
               >
                 Applica{checked.size > 0 ? ` (${checked.size})` : ""}
               </button>

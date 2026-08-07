@@ -114,7 +114,7 @@ export function AppSidebar() {
           <img src="/reglo-logo.png" alt="Reglo" className="h-8 w-8 rounded-[8px]" />
           <div>
             <div className="text-[16px] font-bold leading-none tracking-tight text-ink-900">
-              REGLO<span className="text-pink">.</span>
+              REGLO<span className="text-brand">.</span>
             </div>
             <div className="text-[10.5px] font-medium tracking-[0.5px] text-ink-400 uppercase">
               CRM Sales
@@ -157,7 +157,7 @@ export function AppSidebar() {
           {avatar ? (
             <img src={avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pink text-[11px] font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
               {userName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
             </div>
           )}
@@ -225,8 +225,8 @@ function NavRow({
       className="flex items-center gap-2 rounded-[999px] py-[7px] pr-[10px] text-[13px] font-medium transition-colors"
       style={{
         paddingLeft,
-        color: isActive ? "#EC4899" : "#1E293B",
-        backgroundColor: isActive ? "#FDF2F8" : "transparent",
+        color: isActive ? "#1a1a2e" : "#33334d",
+        backgroundColor: isActive ? "#eeeef4" : "transparent",
         fontWeight: isActive ? 600 : 500,
       }}
     >

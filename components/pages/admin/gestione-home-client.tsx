@@ -50,7 +50,7 @@ export function GestioneHomeClient({ cards: initial, resources = [] }: { cards: 
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex h-9 items-center gap-1.5 rounded-[999px] bg-pink px-4 text-[13px] font-semibold text-white hover:bg-pink/90"
+          className="flex h-9 items-center gap-1.5 rounded-[999px] bg-brand px-4 text-[13px] font-semibold text-white hover:bg-brand/90"
         >
           <Plus className="h-3.5 w-3.5" />
           Nuova card
@@ -86,7 +86,7 @@ export function GestioneHomeClient({ cards: initial, resources = [] }: { cards: 
             </div>
             <button
               onClick={() => setEditingId(card.id)}
-              className="text-[12px] font-medium text-pink hover:underline"
+              className="text-[12px] font-medium text-brand hover:underline"
             >
               Modifica
             </button>
@@ -225,7 +225,7 @@ function CardFormDialog({
             <input
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
               placeholder="Script Chiamate"
             />
           </div>
@@ -234,7 +234,7 @@ function CardFormDialog({
             <input
               value={form.icon}
               onChange={(e) => setForm({ ...form, icon: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
               placeholder="📞"
             />
           </div>
@@ -255,7 +255,7 @@ function CardFormDialog({
                   className="flex-1 rounded-[8px] py-1.5 text-[12px] font-semibold transition-colors"
                   style={{
                     backgroundColor: linkType === opt.key ? "white" : "transparent",
-                    color: linkType === opt.key ? "#1E293B" : "#94A3B8",
+                    color: linkType === opt.key ? "#33334d" : "#929292",
                     boxShadow: linkType === opt.key ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
                   }}
                 >
@@ -268,7 +268,7 @@ function CardFormDialog({
               <select
                 value={linkPage}
                 onChange={(e) => setLinkPage(e.target.value)}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
               >
                 <option value="">Nessun link</option>
                 {LINK_PAGES.map((p) => (
@@ -285,7 +285,7 @@ function CardFormDialog({
                     value={resourceSearch}
                     onChange={(e) => setResourceSearch(e.target.value)}
                     placeholder="Cerca risorsa…"
-                    className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface pl-8 pr-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-pink"
+                    className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface pl-8 pr-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-brand"
                   />
                 </div>
                 <div className="max-h-[180px] space-y-1 overflow-y-auto rounded-[10px] border border-border-1 p-1.5">
@@ -296,8 +296,8 @@ function CardFormDialog({
                       onClick={() => setLinkResourceId(String(r.id))}
                       className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left transition-colors"
                       style={{
-                        backgroundColor: linkResourceId === String(r.id) ? "#FDF2F8" : "transparent",
-                        borderLeft: linkResourceId === String(r.id) ? "3px solid #EC4899" : "3px solid transparent",
+                        backgroundColor: linkResourceId === String(r.id) ? "#eeeef4" : "transparent",
+                        borderLeft: linkResourceId === String(r.id) ? "3px solid #1a1a2e" : "3px solid transparent",
                       }}
                     >
                       <BookOpen className="h-3.5 w-3.5 shrink-0 text-ink-400" />
@@ -318,7 +318,7 @@ function CardFormDialog({
               <input
                 value={linkCustom}
                 onChange={(e) => setLinkCustom(e.target.value)}
-                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+                className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
                 placeholder="/percorso-personalizzato"
               />
             )}
@@ -329,7 +329,7 @@ function CardFormDialog({
             <input
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand"
               placeholder="Opzionale"
             />
           </div>
@@ -342,7 +342,7 @@ function CardFormDialog({
           <button
             onClick={handleSubmit}
             disabled={!form.title.trim() || isPending}
-            className="h-9 rounded-[999px] bg-pink px-5 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            className="h-9 rounded-[999px] bg-brand px-5 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
           >
             {isPending ? "Salvataggio..." : "Salva"}
           </button>

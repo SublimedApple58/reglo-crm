@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { autoscuole, pipelineStages, activities, users, commissionLines, documents, salesTerritories } from "@/lib/db/schema"
+import { autoscuole, pipelineStages, activities, users, commissionLines, documents, salesTerritories, contractRequests } from "@/lib/db/schema"
 import { eq, and, ilike, or, desc, asc, sql, inArray } from "drizzle-orm"
 import { REGIONI_PROVINCE } from "@/lib/constants"
 import { auth } from "@/lib/auth"
@@ -64,18 +64,43 @@ export async function getAutoscuola(id: string) {
   return result
 }
 
-export async function updateAutoscuolaStage(id: string, stageId: string) {
+export async function updateAutoscuolaStage(id: string, stageId: string, opts?: { lostReason?: string }) {
   const session = await auth()
   if (!session?.user) throw new Error("Non autorizzato")
 
-  await db.update(autoscuole).set({ stageId }).where(eq(autoscuole.id, id))
+  const [current] = await db
+    .select({ stageId: autoscuole.stageId, trialStartAt: autoscuole.trialStartAt })
+    .from(autoscuole)
+    .where(eq(autoscuole.id, id))
+  if (!current) throw new Error("Autoscuola non trovata")
+
+  const update: Partial<typeof autoscuole.$inferInsert> = { stageId }
+
+  const reason = opts?.lostReason?.trim()
+  if (stageId === "non_chiuso") {
+    if (!reason) throw new Error('La motivazione è obbligatoria per "Non chiuso"')
+    update.lostReason = reason
+  } else if (current.stageId === "non_chiuso") {
+    // Uscendo da Non chiuso la colonna si azzera; la storia resta nell'attività
+    update.lostReason = null
+  }
+
+  // Inizio mese di prova: primo passaggio a Cliente, mai sovrascritto
+  if (stageId === "cliente" && !current.trialStartAt) {
+    update.trialStartAt = new Date()
+  }
+
+  await db.update(autoscuole).set(update).where(eq(autoscuole.id, id))
 
   await db.insert(activities).values({
     autoscuolaId: id,
     userId: session.user.id,
     type: "stage_change",
     title: `Stage aggiornato`,
-    body: `Stage cambiato a "${stageId}"`,
+    body:
+      stageId === "non_chiuso" && reason
+        ? `Stage cambiato a "${stageId}" — Motivo: ${reason}`
+        : `Stage cambiato a "${stageId}"`,
   })
 
   revalidatePath("/pipeline")
@@ -96,6 +121,7 @@ export async function updateAutoscuola(
     interesseRinnovo: boolean | null
     setter: string | null
     closer: string | null
+    trialStartAt: Date | null
   }>
 ) {
   const session = await auth()
@@ -195,6 +221,28 @@ export async function createActivity(data: {
   revalidatePath(`/autoscuola/${data.autoscuolaId}`)
 }
 
+export async function updateActivity(id: number, text: string) {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+  if (!text.trim()) throw new Error("Il testo non può essere vuoto")
+
+  const [activity] = await db.select().from(activities).where(eq(activities.id, id))
+  if (!activity) throw new Error("Attività non trovata")
+  if (activity.type === "stage_change") throw new Error("I cambi di stage non sono modificabili")
+
+  const u = session.user as Record<string, unknown>
+  const isAdmin = u.role === "admin" || u.role === "both"
+  if (!isAdmin && activity.userId !== session.user.id) throw new Error("Non autorizzato")
+
+  // Il testo vive in body per call/email/meeting/note; nei task (body null) vive in title
+  await db
+    .update(activities)
+    .set(activity.body !== null ? { body: text } : { title: text })
+    .where(eq(activities.id, id))
+
+  revalidatePath(`/autoscuola/${activity.autoscuolaId}`)
+}
+
 export async function getPipelineCounts() {
   const result = await db
     .select({
@@ -223,14 +271,26 @@ export async function deleteAutoscuola(id: string) {
   const session = await auth()
   if (!session?.user) throw new Error("Non autorizzato")
 
+  const [target] = await db
+    .select({ groupId: autoscuole.groupId, isGroupPrimary: autoscuole.isGroupPrimary })
+    .from(autoscuole)
+    .where(eq(autoscuole.id, id))
+
   // Cascade delete: commission lines referencing this autoscuola
   await db.delete(commissionLines).where(eq(commissionLines.autoscuolaId, id))
   // Delete documents
   await db.delete(documents).where(eq(documents.autoscuolaId, id))
   // Delete activities
   await db.delete(activities).where(eq(activities.autoscuolaId, id))
+  // Delete contract requests (FK notNull: senza questo il delete fallisce)
+  await db.delete(contractRequests).where(eq(contractRequests.autoscuolaId, id))
   // Delete autoscuola
   await db.delete(autoscuole).where(eq(autoscuole.id, id))
+
+  // Se apparteneva a un gruppo, sistema primary/dissoluzione
+  if (target?.groupId) {
+    await normalizeGroup(target.groupId)
+  }
 
   revalidatePath("/pipeline")
   revalidatePath("/admin/assegnazioni")
@@ -419,6 +479,142 @@ export async function setFollowUp(autoscuolaId: string, followUpAt: string | nul
 
   revalidatePath(`/autoscuola/${autoscuolaId}`)
   revalidatePath("/pipeline")
+}
+
+// ── Gruppi multi-sede (Unisci sedi) ──────────────────────────────────
+// Modello: gruppo "piatto" — le sedi condividono un groupId, una sola è primary.
+// Nessuna FK viene riscritta: attività, documenti, contratti e commissioni restano per-sede.
+
+async function requireAdmin() {
+  const session = await auth()
+  if (!session?.user) throw new Error("Non autorizzato")
+  const u = session.user as Record<string, unknown>
+  if (u.role !== "admin" && u.role !== "both") throw new Error("Operazione riservata agli admin")
+  return session
+}
+
+// Garantisce l'invariante del gruppo: 0 membri ok, 1 membro → dissolto, N membri → esattamente un primary
+async function normalizeGroup(groupId: string) {
+  const members = await db
+    .select({ id: autoscuole.id, name: autoscuole.name, isGroupPrimary: autoscuole.isGroupPrimary })
+    .from(autoscuole)
+    .where(eq(autoscuole.groupId, groupId))
+    .orderBy(asc(autoscuole.name))
+
+  if (members.length === 0) return
+  if (members.length === 1) {
+    await db
+      .update(autoscuole)
+      .set({ groupId: null, isGroupPrimary: false })
+      .where(eq(autoscuole.id, members[0].id))
+    return
+  }
+  if (!members.some((m) => m.isGroupPrimary)) {
+    await db.update(autoscuole).set({ isGroupPrimary: true }).where(eq(autoscuole.id, members[0].id))
+  }
+}
+
+export async function mergeAutoscuole(ids: string[], primaryId: string) {
+  const session = await requireAdmin()
+
+  const unique = [...new Set(ids)].filter(Boolean)
+  if (unique.length < 2) throw new Error("Seleziona almeno due sedi da unire")
+  if (!unique.includes(primaryId)) throw new Error("La sede principale deve essere tra quelle selezionate")
+
+  const rows = await db
+    .select({ id: autoscuole.id, name: autoscuole.name, groupId: autoscuole.groupId })
+    .from(autoscuole)
+    .where(inArray(autoscuole.id, unique))
+  if (rows.length !== unique.length) throw new Error("Una o più sedi non esistono")
+
+  // Se un membro appartiene già a un gruppo, assorbi l'intero gruppo esistente
+  const existingGroupIds = [...new Set(rows.map((r) => r.groupId).filter((g): g is string => Boolean(g)))]
+  let allIds = [...unique]
+  if (existingGroupIds.length > 0) {
+    const absorbed = await db
+      .select({ id: autoscuole.id })
+      .from(autoscuole)
+      .where(inArray(autoscuole.groupId, existingGroupIds))
+    allIds = [...new Set([...allIds, ...absorbed.map((a) => a.id)])]
+  }
+
+  const groupId = `grp_${Date.now()}`
+  await db.update(autoscuole).set({ groupId, isGroupPrimary: false }).where(inArray(autoscuole.id, allIds))
+  await db.update(autoscuole).set({ isGroupPrimary: true }).where(eq(autoscuole.id, primaryId))
+
+  const names = rows.map((r) => r.name.replace("Autoscuola ", "")).join(", ")
+  for (const id of allIds) {
+    await db.insert(activities).values({
+      autoscuolaId: id,
+      userId: session.user.id,
+      type: "note",
+      title: "Sedi unite",
+      body: `Unita al gruppo multi-sede (${names})`,
+    })
+  }
+
+  revalidatePath("/pipeline")
+  for (const id of allIds) revalidatePath(`/autoscuola/${id}`)
+  return groupId
+}
+
+export async function unmergeAutoscuola(id: string) {
+  const session = await requireAdmin()
+
+  const [row] = await db
+    .select({ groupId: autoscuole.groupId, name: autoscuole.name })
+    .from(autoscuole)
+    .where(eq(autoscuole.id, id))
+  if (!row?.groupId) return
+
+  await db.update(autoscuole).set({ groupId: null, isGroupPrimary: false }).where(eq(autoscuole.id, id))
+  await normalizeGroup(row.groupId)
+
+  await db.insert(activities).values({
+    autoscuolaId: id,
+    userId: session.user.id,
+    type: "note",
+    title: "Sede scollegata",
+    body: "Rimossa dal gruppo multi-sede",
+  })
+
+  revalidatePath("/pipeline")
+  revalidatePath(`/autoscuola/${id}`)
+}
+
+export async function getGroupMembers(groupId: string) {
+  const session = await auth()
+  if (!session?.user) return []
+
+  return db
+    .select({
+      id: autoscuole.id,
+      name: autoscuole.name,
+      town: autoscuole.town,
+      province: autoscuole.province,
+      stageId: autoscuole.stageId,
+      isGroupPrimary: autoscuole.isGroupPrimary,
+    })
+    .from(autoscuole)
+    .where(eq(autoscuole.groupId, groupId))
+    .orderBy(desc(autoscuole.isGroupPrimary), asc(autoscuole.name))
+}
+
+// Mappa id → nome/telefono per arricchire le liste follow-up (Google Tasks non porta il telefono)
+export async function getAutoscuolePhoneMap(ids: string[]) {
+  const session = await auth()
+  if (!session?.user) return {}
+  const unique = [...new Set(ids)].filter(Boolean)
+  if (unique.length === 0) return {}
+
+  const rows = await db
+    .select({ id: autoscuole.id, name: autoscuole.name, phone: autoscuole.phone })
+    .from(autoscuole)
+    .where(inArray(autoscuole.id, unique))
+
+  const map: Record<string, { name: string; phone: string | null }> = {}
+  for (const r of rows) map[r.id] = { name: r.name, phone: r.phone }
+  return map
 }
 
 export async function searchAutoscuole(query: string) {

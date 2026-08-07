@@ -69,14 +69,14 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink text-[18px] font-bold text-white">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand text-[18px] font-bold text-white">
               {initials}
             </div>
           )}
           <button
             onClick={() => avatarInputRef.current?.click()}
             disabled={uploadingAvatar}
-            className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-pink text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+            className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-brand text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
           >
             <Camera className="h-3.5 w-3.5" />
           </button>
@@ -134,7 +134,7 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
           <div className="flex items-center gap-3">
             <Shield className="h-4 w-4 text-ink-400" />
             <span className="w-24 text-[13px] text-ink-500">Ruolo</span>
-            <span className="rounded-[999px] bg-pink/10 px-2 py-0.5 text-[11px] font-semibold text-pink capitalize">
+            <span className="rounded-[999px] bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand capitalize">
               {user.role}
             </span>
           </div>
@@ -153,7 +153,7 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="••••••••"
             />
           </div>
@@ -165,7 +165,7 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="••••••••"
             />
           </div>
@@ -177,7 +177,7 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+              className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
               placeholder="••••••••"
             />
           </div>
@@ -186,8 +186,8 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
             <div
               className="rounded-[10px] px-3 py-2 text-[12.5px] font-medium"
               style={{
-                backgroundColor: message.type === "success" ? "#ECFDF5" : "#FEF2F2",
-                color: message.type === "success" ? "#10B981" : "#EF4444",
+                backgroundColor: message.type === "success" ? "#F0FDF4" : "#faf0ed",
+                color: message.type === "success" ? "#22C55E" : "#c13515",
               }}
             >
               {message.text}
@@ -197,7 +197,7 @@ export function ProfiloClient({ user }: { user: UserInfo }) {
           <button
             onClick={handleChangePassword}
             disabled={isPending}
-            className="mt-2 rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+            className="mt-2 rounded-[999px] bg-brand px-5 py-2 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
           >
             {isPending ? "Salvataggio..." : "Salva"}
           </button>

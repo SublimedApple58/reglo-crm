@@ -8,7 +8,7 @@ export default async function BachecaPage() {
   if (!session?.user) redirect("/sign-in")
 
   const [newsItems, dbCategories] = await Promise.all([getNews(), getNewsCategories()])
-  const categories = dbCategories.map((c) => ({ id: c.label, color: c.color ?? "#64748B" }))
+  const categories = dbCategories.map((c) => ({ id: c.label, color: c.color ?? "#6a6a6a" }))
 
   return <BachecaClient news={newsItems} userId={session.user.id} categories={categories} />
 }

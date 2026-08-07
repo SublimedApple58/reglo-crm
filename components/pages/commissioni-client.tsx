@@ -66,8 +66,8 @@ export function CommissioniClient({
               <span
                 className="mb-1 flex items-center gap-1 rounded-[999px] px-2 py-0.5 text-[11px] font-semibold"
                 style={{
-                  backgroundColor: trendPositive ? "#ECFDF5" : "#FEF2F2",
-                  color: trendPositive ? "#10B981" : "#EF4444",
+                  backgroundColor: trendPositive ? "#F0FDF4" : "#faf0ed",
+                  color: trendPositive ? "#22C55E" : "#c13515",
                 }}
               >
                 {trendPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -84,7 +84,7 @@ export function CommissioniClient({
         <div className="rounded-[18px] border border-border-1 bg-surface p-5">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[12px] font-medium text-ink-500">Progresso quota</p>
-            <span className="font-mono text-[14px] font-bold text-pink">
+            <span className="font-mono text-[14px] font-bold text-brand">
               {Math.round(quotaProgress * 100)}%
             </span>
           </div>
@@ -93,7 +93,7 @@ export function CommissioniClient({
               className="h-full rounded-full"
               style={{
                 width: `${Math.min(100, quotaProgress * 100)}%`,
-                background: "linear-gradient(90deg, #EC4899, #F472B6)",
+                background: "linear-gradient(90deg, #1a1a2e, #F472B6)",
               }}
             />
           </div>
@@ -110,15 +110,15 @@ export function CommissioniClient({
         <div className="h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} barSize={32}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f2f2f2" />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 11, fill: "#94A3B8" }}
+                tick={{ fontSize: 11, fill: "#929292" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94A3B8" }}
+                tick={{ fontSize: 11, fill: "#929292" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `€${v}`}
@@ -127,17 +127,17 @@ export function CommissioniClient({
                 formatter={(value) => [`€${Number(value).toLocaleString("it-IT")}`, "Commissione"]}
                 contentStyle={{
                   borderRadius: 12,
-                  border: "1px solid #E2E8F0",
+                  border: "1px solid #dddddd",
                   fontSize: 12,
                 }}
               />
               <ReferenceLine
                 y={quota}
-                stroke="#EC4899"
+                stroke="#1a1a2e"
                 strokeDasharray="4 4"
-                label={{ value: "Quota", fill: "#EC4899", fontSize: 10 }}
+                label={{ value: "Quota", fill: "#1a1a2e", fontSize: 10 }}
               />
-              <Bar dataKey="gross" fill="#EC4899" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="gross" fill="#1a1a2e" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -154,14 +154,14 @@ export function CommissioniClient({
               key={tier.tier}
               className="rounded-[14px] p-4"
               style={{
-                backgroundColor: isHighlight ? "#FDF2F8" : "#F8FAFC",
-                border: `1px solid ${isHighlight ? "#EC489930" : "#E2E8F0"}`,
+                backgroundColor: isHighlight ? "#eeeef4" : "#f7f7f7",
+                border: `1px solid ${isHighlight ? "#1a1a2e30" : "#dddddd"}`,
               }}
             >
               <div className="mb-1 flex items-center gap-2">
                 <Award
                   className="h-4 w-4"
-                  style={{ color: isHighlight ? "#EC4899" : "#64748B" }}
+                  style={{ color: isHighlight ? "#1a1a2e" : "#6a6a6a" }}
                 />
                 <span className="text-[12px] font-semibold text-ink-900">{tier.tier}</span>
               </div>
@@ -222,9 +222,9 @@ export function CommissioniClient({
                     className="rounded-[999px] px-2 py-0.5 text-[10px] font-semibold"
                     style={{
                       backgroundColor:
-                        l.line.commissionRate >= 0.25 ? "#FDF2F8" : "#F8FAFC",
+                        l.line.commissionRate >= 0.25 ? "#eeeef4" : "#f7f7f7",
                       color:
-                        l.line.commissionRate >= 0.25 ? "#EC4899" : "#64748B",
+                        l.line.commissionRate >= 0.25 ? "#1a1a2e" : "#6a6a6a",
                     }}
                   >
                     {l.line.commissionRate >= 0.25 ? "Premium" : "Base"} {Math.round(l.line.commissionRate * 100)}%

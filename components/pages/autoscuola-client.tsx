@@ -26,15 +26,19 @@ import {
   AlertTriangle,
   Copy,
   CheckSquare,
+  Pencil,
+  X,
 } from "lucide-react"
-import { STAGES } from "@/lib/constants"
+import { STAGES, TRIAL_DAYS } from "@/lib/constants"
 import { formatProvince } from "@/lib/utils"
-import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, deleteAutoscuola, setFollowUp } from "@/lib/actions/autoscuole"
+import { updateAutoscuolaStage, updateAutoscuola, updateAutoscuolaInfo, createActivity, updateActivity, deleteAutoscuola, setFollowUp, mergeAutoscuole, unmergeAutoscuola, searchAutoscuole } from "@/lib/actions/autoscuole"
 import { deleteDocument } from "@/lib/actions/documents"
 import { createContractRequest, updateContractRequest, resubmitContractRequest, getContractFileUrl } from "@/lib/actions/contracts"
 import { createGoogleTask } from "@/lib/actions/calendar"
 import { MeetingDialog } from "@/components/meeting-dialog"
+import { LostReasonDialog } from "@/components/lost-reason-dialog"
 import { DateTimePicker } from "@/components/date-time-picker"
+import { Linkify } from "@/components/ui/linkify"
 import type { Autoscuola, PipelineStage, User, Activity, Document, ContractRequest } from "@/lib/db/schema"
 
 type ActivityFlat = Activity & {
@@ -96,6 +100,10 @@ export function AutoscuolaClient({
   isAdmin = false,
   googleConnected = false,
   salesUsers = [],
+  currentUserId = "",
+  currentUserName = "",
+  calendarSalesUsers = [],
+  groupMembers = [],
 }: {
   autoscuola: Autoscuola
   stage: PipelineStage
@@ -107,6 +115,10 @@ export function AutoscuolaClient({
   isAdmin?: boolean
   googleConnected?: boolean
   salesUsers?: SalesUser[]
+  currentUserId?: string
+  currentUserName?: string
+  calendarSalesUsers?: { id: string; name: string; color?: string | null }[]
+  groupMembers?: { id: string; name: string; town: string; province: string; stageId: string; isGroupPrimary: boolean }[]
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("attivita")
@@ -122,13 +134,40 @@ export function AutoscuolaClient({
   })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showMeetingDialog, setShowMeetingDialog] = useState(false)
+  const [showLostReasonDialog, setShowLostReasonDialog] = useState(false)
+  const [showMergeDialog, setShowMergeDialog] = useState(false)
+  const [editingActivityId, setEditingActivityId] = useState<number | null>(null)
+  const [editingText, setEditingText] = useState("")
+
+  function handleSaveActivityEdit(id: number) {
+    if (!editingText.trim()) return
+    startTransition(async () => {
+      await updateActivity(id, editingText.trim())
+      setEditingActivityId(null)
+      setEditingText("")
+      router.refresh()
+    })
+  }
 
   const currentStageOrder = STAGES.findIndex((s) => s.id === currentStageId)
 
   function handleStageClick(stageId: string) {
+    if (stageId === "non_chiuso") {
+      setShowLostReasonDialog(true)
+      return
+    }
     setCurrentStageId(stageId)
     startTransition(() => {
       updateAutoscuolaStage(autoscuola.id, stageId)
+    })
+  }
+
+  function handleConfirmLostReason(reason: string) {
+    startTransition(async () => {
+      await updateAutoscuolaStage(autoscuola.id, "non_chiuso", { lostReason: reason })
+      setCurrentStageId("non_chiuso")
+      setShowLostReasonDialog(false)
+      router.refresh()
     })
   }
 
@@ -140,7 +179,7 @@ export function AutoscuolaClient({
         const dueISO = new Date(taskDueDate).toISOString()
         await createGoogleTask({
           title: activityText.trim(),
-          notes: `Autoscuola: ${autoscuola.name}`,
+          notes: `Autoscuola: ${autoscuola.name}\nLink CRM: /autoscuola/${autoscuola.id}`,
           dueDate: dueISO,
         })
         await createActivity({
@@ -249,7 +288,7 @@ export function AutoscuolaClient({
               )}
               <button
                 onClick={() => setShowMeetingDialog(true)}
-                className="flex h-8 items-center gap-1.5 rounded-[999px] bg-pink px-3 text-[12px] font-semibold text-white hover:bg-pink/90"
+                className="flex h-8 items-center gap-1.5 rounded-[999px] bg-brand px-3 text-[12px] font-semibold text-white hover:bg-brand/90"
               >
                 <Calendar className="h-3.5 w-3.5" />
                 Fissa meeting
@@ -273,9 +312,9 @@ export function AutoscuolaClient({
                       ? s.color
                       : isPast
                       ? s.color + "20"
-                      : "#F8FAFC",
-                    color: isCurrent ? "white" : isPast ? s.color : "#94A3B8",
-                    border: `1px solid ${isCurrent ? s.color : isPast ? s.color + "30" : "#E2E8F0"}`,
+                      : "#f7f7f7",
+                    color: isCurrent ? "white" : isPast ? s.color : "#929292",
+                    border: `1px solid ${isCurrent ? s.color : isPast ? s.color + "30" : "#dddddd"}`,
                   }}
                 >
                   {isPast && <Check className="h-3 w-3" />}
@@ -301,13 +340,13 @@ export function AutoscuolaClient({
               onClick={() => setActiveTab(tab.id)}
               className="relative px-4 py-3 text-[13px] font-medium transition-colors"
               style={{
-                color: activeTab === tab.id ? "#EC4899" : "#64748B",
+                color: activeTab === tab.id ? "#1a1a2e" : "#6a6a6a",
                 fontWeight: activeTab === tab.id ? 600 : 500,
               }}
             >
               {tab.label}
               {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-pink" />
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
               )}
             </button>
           ))}
@@ -323,7 +362,7 @@ export function AutoscuolaClient({
                   value={activityText}
                   onChange={(e) => setActivityText(e.target.value)}
                   placeholder={activityType === "task" ? "Descrivi la task..." : "Registra un'attivita\u2026"}
-                  className="mb-3 w-full resize-none rounded-[10px] border border-border-2 bg-surface-2 p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink"
+                  className="mb-3 w-full resize-none rounded-[10px] border border-border-2 bg-surface-2 p-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand"
                   rows={3}
                 />
 
@@ -355,9 +394,9 @@ export function AutoscuolaClient({
                         className="flex items-center gap-1 rounded-[8px] px-2.5 py-1.5 text-[11.5px] font-medium transition-colors"
                         style={{
                           backgroundColor:
-                            activityType === btn.type ? "#FDF2F8" : "transparent",
+                            activityType === btn.type ? "#eeeef4" : "transparent",
                           color:
-                            activityType === btn.type ? "#EC4899" : "#64748B",
+                            activityType === btn.type ? "#1a1a2e" : "#6a6a6a",
                         }}
                       >
                         <btn.icon className="h-3.5 w-3.5" />
@@ -368,7 +407,7 @@ export function AutoscuolaClient({
                   <button
                     onClick={handleAddActivity}
                     disabled={!activityText.trim() || isPending}
-                    className="flex items-center gap-1.5 rounded-[999px] bg-pink px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-[999px] bg-brand px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
                   >
                     <Send className="h-3 w-3" />
                     {activityType === "task" ? "Crea task" : "Registra"}
@@ -382,9 +421,20 @@ export function AutoscuolaClient({
                 {activities.map((a) => {
                   const isFuture = a.scheduledAt && new Date(a.scheduledAt) > new Date()
                   const isCancelled = a.status === "cancelled"
+                  const isEditing = editingActivityId === a.id
+                  const canEdit = a.type !== "stage_change" && !isCancelled && (isAdmin || a.userId === currentUserId)
 
                   return (
-                  <div key={a.id} className={`relative mb-5 pl-5 ${isFuture && !isCancelled ? "opacity-100" : ""}`}>
+                  <div key={a.id} className={`group relative mb-5 pl-5 ${isFuture && !isCancelled ? "opacity-100" : ""}`}>
+                    {canEdit && !isEditing && (
+                      <button
+                        onClick={() => { setEditingActivityId(a.id); setEditingText(a.body ?? a.title) }}
+                        className="absolute right-0 top-0 rounded-md p-1 text-ink-400 opacity-0 transition-opacity hover:bg-surface-2 hover:text-ink-600 group-hover:opacity-100"
+                        title="Modifica"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <div
                       className={`absolute left-[-16px] top-1 flex h-[22px] w-[22px] items-center justify-center rounded-full border ${isFuture && !isCancelled ? "border-dashed" : ""}`}
                       style={{
@@ -415,6 +465,7 @@ export function AutoscuolaClient({
                           })
                         : ""}
                     </p>
+                    {!(isEditing && a.body === null) && (
                     <p className={`text-[13px] font-semibold ${isCancelled ? "text-ink-400 line-through" : isFuture ? "text-blue-600" : "text-ink-900"}`}>
                       {a.title}
                       {isCancelled && (
@@ -428,6 +479,7 @@ export function AutoscuolaClient({
                         </span>
                       )}
                     </p>
+                    )}
                     {a.scheduledAt && (
                       <p className={`mt-0.5 flex items-center gap-1 text-[11.5px] ${isFuture && !isCancelled ? "text-blue-500" : "text-ink-400"}`}>
                         <Clock className="h-3 w-3" />
@@ -440,10 +492,37 @@ export function AutoscuolaClient({
                         })}
                       </p>
                     )}
-                    {a.body && (
-                      <p className={`mt-0.5 text-[12.5px] leading-relaxed ${isFuture ? "text-ink-400" : "text-ink-600"}`}>
-                        {a.body}
-                      </p>
+                    {isEditing ? (
+                      <div className="mt-1.5">
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          rows={3}
+                          autoFocus
+                          className="w-full resize-y rounded-[10px] border border-border-1 bg-white px-3 py-2 text-[12.5px] leading-relaxed text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                        />
+                        <div className="mt-1.5 flex gap-2">
+                          <button
+                            onClick={() => handleSaveActivityEdit(a.id)}
+                            disabled={isPending || !editingText.trim()}
+                            className="rounded-[999px] bg-brand px-3.5 py-1 text-[11.5px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
+                          >
+                            Salva
+                          </button>
+                          <button
+                            onClick={() => { setEditingActivityId(null); setEditingText("") }}
+                            className="rounded-[999px] px-3.5 py-1 text-[11.5px] font-semibold text-ink-500 hover:bg-surface-2"
+                          >
+                            Annulla
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      a.body && (
+                        <p className={`mt-0.5 text-[12.5px] leading-relaxed whitespace-pre-wrap ${isFuture ? "text-ink-400" : "text-ink-600"}`}>
+                          <Linkify text={a.body} />
+                        </p>
+                      )
                     )}
                     {a.meetLink && (
                       <a
@@ -453,7 +532,7 @@ export function AutoscuolaClient({
                         className={`mt-1.5 inline-flex items-center gap-1.5 rounded-[999px] px-3 py-1 text-[11.5px] font-semibold ${
                           isFuture
                             ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                            : "bg-pink/10 text-pink hover:bg-pink/20"
+                            : "bg-brand/10 text-brand hover:bg-brand/20"
                         }`}
                       >
                         <Video className="h-3 w-3" />
@@ -507,13 +586,13 @@ export function AutoscuolaClient({
           </h3>
           <div className="space-y-2.5">
             {autoscuola.phone && (
-              <a href={`tel:${autoscuola.phone}`} className="flex items-center gap-2.5 text-[13px] hover:text-pink">
+              <a href={`tel:${autoscuola.phone}`} className="flex items-center gap-2.5 text-[13px] hover:text-brand">
                 <Phone className="h-3.5 w-3.5 text-ink-400" />
                 <span className="text-ink-700">{autoscuola.phone}</span>
               </a>
             )}
             {autoscuola.email && (
-              <a href={`mailto:${autoscuola.email}`} className="flex items-center gap-2.5 text-[13px] hover:text-pink">
+              <a href={`mailto:${autoscuola.email}`} className="flex items-center gap-2.5 text-[13px] hover:text-brand">
                 <Mail className="h-3.5 w-3.5 text-ink-400" />
                 <span className="text-ink-700">{autoscuola.email}</span>
               </a>
@@ -529,6 +608,78 @@ export function AutoscuolaClient({
             )}
           </div>
         </div>
+
+        {/* Sedi collegate (gruppo multi-sede) */}
+        {(groupMembers.length > 0 || isAdmin) && (
+          <div className="border-b border-border-1 p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[12px] font-semibold tracking-wider text-ink-400 uppercase">
+                Sedi collegate
+              </h3>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowMergeDialog(true)}
+                  className="flex items-center gap-1 rounded-[999px] border border-border-1 px-2.5 py-1 text-[11px] font-semibold text-ink-600 transition-colors hover:bg-surface-2"
+                >
+                  <Building className="h-3 w-3" />
+                  Unisci sedi
+                </button>
+              )}
+            </div>
+            {groupMembers.length > 0 ? (
+              <div className="space-y-1.5">
+                {groupMembers
+                  .filter((m) => m.id !== autoscuola.id)
+                  .map((m) => (
+                    <div key={m.id} className="flex items-center justify-between gap-2">
+                      <a
+                        href={`/autoscuola/${m.id}`}
+                        className="flex min-w-0 items-center gap-2 text-[12.5px] font-medium text-brand hover:underline"
+                      >
+                        <Building className="h-3 w-3 shrink-0 text-ink-400" />
+                        <span className="truncate">{m.name.replace("Autoscuola ", "")}</span>
+                        {m.isGroupPrimary && (
+                          <span className="shrink-0 rounded-[4px] bg-brand-50 px-1.5 py-0.5 text-[9.5px] font-bold text-brand">
+                            Principale
+                          </span>
+                        )}
+                      </a>
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            startTransition(async () => {
+                              await unmergeAutoscuola(m.id)
+                              router.refresh()
+                            })
+                          }}
+                          disabled={isPending}
+                          className="shrink-0 text-[10.5px] font-medium text-ink-400 hover:text-red disabled:opacity-50"
+                        >
+                          Scollega
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      startTransition(async () => {
+                        await unmergeAutoscuola(autoscuola.id)
+                        router.refresh()
+                      })
+                    }}
+                    disabled={isPending}
+                    className="mt-1 text-[11px] font-medium text-ink-400 hover:text-red disabled:opacity-50"
+                  >
+                    Scollega questa sede dal gruppo
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-[12.5px] text-ink-400">Nessuna sede collegata</p>
+            )}
+          </div>
+        )}
 
         {/* Sales owner — visible only to admins */}
         {isAdmin && (
@@ -598,11 +749,36 @@ export function AutoscuolaClient({
       {showMeetingDialog && (
         <MeetingDialog
           onClose={() => setShowMeetingDialog(false)}
-          onCreated={() => setShowMeetingDialog(false)}
-          defaultTitle={`Meeting con ${autoscuola.name}`}
-          defaultGuests={autoscuola.email ? [autoscuola.email] : []}
-          autoscuolaId={autoscuola.id}
+          onCreated={() => {
+            setShowMeetingDialog(false)
+            router.refresh()
+          }}
+          lockedAutoscuola={{ id: autoscuola.id, name: autoscuola.name, email: autoscuola.email }}
+          salesUsers={calendarSalesUsers}
+          currentUserName={currentUserName}
           googleConnected={googleConnected}
+        />
+      )}
+
+      {/* Merge sedi dialog */}
+      {showMergeDialog && (
+        <MergeSediDialog
+          current={{ id: autoscuola.id, name: autoscuola.name }}
+          onClose={() => setShowMergeDialog(false)}
+          onMerged={() => {
+            setShowMergeDialog(false)
+            router.refresh()
+          }}
+        />
+      )}
+
+      {/* Lost reason dialog — obbligatorio per "Non chiuso" */}
+      {showLostReasonDialog && (
+        <LostReasonDialog
+          autoscuolaName={autoscuola.name}
+          isPending={isPending}
+          onConfirm={handleConfirmLostReason}
+          onClose={() => setShowLostReasonDialog(false)}
         />
       )}
 
@@ -645,15 +821,29 @@ function AnagraficaTab({ autoscuola, onDelete }: { autoscuola: Autoscuola; onDel
     email: autoscuola.email ?? "",
     address: autoscuola.address ?? "",
   })
+  const [trialStart, setTrialStart] = useState(() =>
+    autoscuola.trialStartAt ? new Date(autoscuola.trialStartAt).toISOString().slice(0, 10) : ""
+  )
+  const showLostReason = autoscuola.stageId === "non_chiuso" && autoscuola.lostReason
+  const showTrialField = autoscuola.stageId === "cliente" || autoscuola.trialStartAt !== null
 
   function handleSave() {
     startTransition(() => {
-      updateAutoscuola(autoscuola.id, form)
+      updateAutoscuola(autoscuola.id, {
+        ...form,
+        ...(showTrialField ? { trialStartAt: trialStart ? new Date(`${trialStart}T00:00:00`) : null } : {}),
+      })
     })
   }
 
   return (
     <div className="max-w-[560px] space-y-4">
+      {showLostReason && (
+        <div className="rounded-[14px] border border-red/30 bg-red-50 p-4">
+          <p className="mb-1 text-[11px] font-bold tracking-wider text-red uppercase">Motivo non chiuso</p>
+          <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-ink-700">{autoscuola.lostReason}</p>
+        </div>
+      )}
       {[
         { label: "Nome", key: "name" as const },
         { label: "Titolare", key: "owner" as const },
@@ -668,15 +858,31 @@ function AnagraficaTab({ autoscuola, onDelete }: { autoscuola: Autoscuola; onDel
           <input
             value={form[field.key]}
             onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-pink focus:ring-2 focus:ring-pink/20"
+            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
         </div>
       ))}
+      {showTrialField && (
+        <div>
+          <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">
+            Inizio periodo di prova
+          </label>
+          <input
+            type="date"
+            value={trialStart}
+            onChange={(e) => setTrialStart(e.target.value)}
+            className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+          />
+          <p className="mt-1 text-[11.5px] text-ink-400">
+            Impostata automaticamente al primo passaggio in &ldquo;Cliente&rdquo;; il badge in pipeline conta {TRIAL_DAYS} giorni da questa data.
+          </p>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}
           disabled={isPending}
-          className="mt-2 rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+          className="mt-2 rounded-[999px] bg-brand px-5 py-2 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
         >
           Salva modifiche
         </button>
@@ -789,13 +995,13 @@ function DocumentiTab({
         onDrop={handleDrop}
         className={`mb-6 flex flex-col items-center justify-center rounded-[14px] border-2 border-dashed p-8 transition-colors ${
           isDragging
-            ? "border-pink bg-pink/5"
+            ? "border-brand bg-brand/5"
             : "border-border-2 bg-surface-2/50"
         }`}
       >
         <Upload
           className={`mb-3 h-8 w-8 ${
-            isDragging ? "text-pink" : "text-ink-400"
+            isDragging ? "text-brand" : "text-ink-400"
           }`}
         />
         <p className="mb-1 text-[13px] font-medium text-ink-700">
@@ -819,7 +1025,7 @@ function DocumentiTab({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-1.5 rounded-[999px] bg-pink px-4 py-2 text-[12px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-[999px] bg-brand px-4 py-2 text-[12px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
         >
           <Upload className="h-3.5 w-3.5" />
           {uploading ? "Caricamento..." : "Carica file"}
@@ -916,7 +1122,7 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Aggiungi note su questa autoscuola…"
-            className="mb-3 w-full resize-none rounded-[12px] border border-border-1 bg-surface p-4 text-[13px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 focus:border-pink focus:ring-2 focus:ring-pink/20"
+            className="mb-3 w-full resize-none rounded-[12px] border border-border-1 bg-surface p-4 text-[13px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
             rows={8}
           />
           <div className="flex gap-2">
@@ -926,7 +1132,7 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
                 setEditing(false)
               }}
               disabled={isPending}
-              className="rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+              className="rounded-[999px] bg-brand px-5 py-2 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
               Salva note
             </button>
@@ -954,129 +1160,6 @@ function NoteTab({ autoscuola }: { autoscuola: Autoscuola }) {
         </div>
       )}
     </div>
-  )
-}
-
-const URL_REGEX = /https?:\/\/[^\s<>)"']+/g
-
-function getEmbedUrl(url: string): string | null {
-  try {
-    const u = new URL(url)
-    // YouTube
-    if (u.hostname === "youtu.be") return `https://www.youtube.com/embed/${u.pathname.slice(1).split("/")[0]}`
-    if (u.hostname.includes("youtube.com") && u.searchParams.has("v")) return `https://www.youtube.com/embed/${u.searchParams.get("v")}`
-    // Vimeo
-    const vimeoMatch = u.hostname.includes("vimeo.com") && u.pathname.match(/\/(\d+)/)
-    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
-    // Loom
-    if (u.hostname.includes("loom.com") && u.pathname.startsWith("/share/")) return `https://www.loom.com/embed/${u.pathname.replace("/share/", "")}`
-  } catch {}
-  return null
-}
-
-function Linkify({ text }: { text: string }) {
-  const parts: (string | { url: string; key: number })[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  let key = 0
-
-  while ((match = URL_REGEX.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index))
-    }
-    parts.push({ url: match[0], key: key++ })
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
-  }
-
-  return (
-    <>
-      {parts.map((part) => {
-        if (typeof part === "string") return part
-        const embedUrl = getEmbedUrl(part.url)
-        if (embedUrl) {
-          return (
-            <span key={part.key} className="my-2 block">
-              <iframe
-                src={embedUrl}
-                className="w-full rounded-[10px]"
-                style={{ aspectRatio: "16/9" }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </span>
-          )
-        }
-        return <LinkPreviewCard key={part.key} url={part.url} />
-      })}
-    </>
-  )
-}
-
-function LinkPreviewCard({ url }: { url: string }) {
-  const [preview, setPreview] = useState<{ title: string | null; description: string | null; image: string | null; siteName: string | null } | null>(null)
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    import("@/lib/actions/link-preview").then(({ fetchLinkPreview }) =>
-      fetchLinkPreview(url).then((data) => {
-        if (!cancelled) {
-          setPreview(data)
-          setLoaded(true)
-        }
-      })
-    )
-    return () => { cancelled = true }
-  }, [url])
-
-  // Still loading — show plain link
-  if (!loaded) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="text-pink underline decoration-pink/40 hover:decoration-pink">
-        {url}
-      </a>
-    )
-  }
-
-  // No OG data — plain link
-  if (!preview) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="text-pink underline decoration-pink/40 hover:decoration-pink">
-        {url}
-      </a>
-    )
-  }
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="my-2 flex overflow-hidden rounded-[10px] border border-border-1 bg-surface-2/50 transition-colors hover:bg-surface-2"
-    >
-      {preview.image && (
-        <img
-          src={preview.image}
-          alt=""
-          className="h-[90px] w-[120px] shrink-0 object-cover"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-        />
-      )}
-      <div className="flex min-w-0 flex-col justify-center px-3 py-2">
-        {preview.siteName && (
-          <p className="mb-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-ink-400">{preview.siteName}</p>
-        )}
-        {preview.title && (
-          <p className="truncate text-[12.5px] font-semibold text-ink-900">{preview.title}</p>
-        )}
-        {preview.description && (
-          <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-ink-500">{preview.description}</p>
-        )}
-      </div>
-    </a>
   )
 }
 
@@ -1146,7 +1229,7 @@ function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
                   value={values[field.key]}
                   onChange={(e) => handleChange(field.key, e.target.value)}
                   placeholder="Non specificato."
-                  className="w-full bg-transparent px-4 py-2.5 text-[13px] text-ink-700 outline-none placeholder:text-ink-400 focus:bg-pink-50/30"
+                  className="w-full bg-transparent px-4 py-2.5 text-[13px] text-ink-700 outline-none placeholder:text-ink-400 focus:bg-brand-50/30"
                 />
               </td>
             </tr>
@@ -1158,7 +1241,7 @@ function InformazioniTab({ autoscuola }: { autoscuola: Autoscuola }) {
         <button
           onClick={handleSave}
           disabled={isPending}
-          className="rounded-[999px] bg-pink px-5 py-2 text-[13px] font-semibold text-white hover:bg-pink/90 disabled:opacity-50"
+          className="rounded-[999px] bg-brand px-5 py-2 text-[13px] font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
         >
           {isPending ? "Salvataggio..." : "Salva informazioni"}
         </button>
@@ -1227,8 +1310,8 @@ type ContractFormData = Record<(typeof ALL_CONTRACT_KEYS)[number], string>
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: typeof Clock }> = {
   pending: { label: "In attesa", color: "#F59E0B", bg: "#FEF3C7", icon: Clock },
   in_progress: { label: "In lavorazione", color: "#3B82F6", bg: "#DBEAFE", icon: Clock },
-  done: { label: "Completato", color: "#10B981", bg: "#D1FAE5", icon: Check },
-  rejected: { label: "Rimandato", color: "#EF4444", bg: "#FEE2E2", icon: AlertTriangle },
+  done: { label: "Completato", color: "#22C55E", bg: "#D1FAE5", icon: Check },
+  rejected: { label: "Rimandato", color: "#c13515", bg: "#FEE2E2", icon: AlertTriangle },
 }
 
 function ContrattoTab({
@@ -1297,8 +1380,8 @@ function ContrattoTab({
 
         <div className="mb-6">
           <div className="mb-1 flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-pink/10">
-              <FileText className="h-4 w-4 text-pink" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-brand/10">
+              <FileText className="h-4 w-4 text-brand" />
             </div>
             <h3 className="text-[17px] font-bold text-ink-900">
               {isResubmit ? "Correggi e reinvia" : editing ? "Correggi dati fiscali" : "Richiesta contratto"}
@@ -1321,7 +1404,7 @@ function ContrattoTab({
                 const text = `RICHIESTA DATI FATTURA\n\n${REGLO_FIELDS.map((f) => `${f.label}: ${REGLO_COMPANY_DATA[f.key]}`).join("\n")}`
                 navigator.clipboard.writeText(text)
               }}
-              className="flex items-center gap-1.5 rounded-[999px] border border-pink/30 px-3 py-1.5 text-[12px] font-semibold text-pink transition-colors hover:bg-pink/5"
+              className="flex items-center gap-1.5 rounded-[999px] border border-brand/30 px-3 py-1.5 text-[12px] font-semibold text-brand transition-colors hover:bg-brand/5"
             >
               <Copy className="h-3 w-3" />
               Copia testo
@@ -1362,7 +1445,7 @@ function ContrattoTab({
                   value={form.importoPreventivo}
                   onChange={(e) => setForm({ ...form, importoPreventivo: e.target.value })}
                   placeholder="0.00"
-                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface-2/50 px-3 text-[13px] text-ink-900 outline-none transition-colors focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+                  className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface-2/50 px-3 text-[13px] text-ink-900 outline-none transition-colors focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
                 />
               </div>
               <div className="col-span-2">
@@ -1373,7 +1456,7 @@ function ContrattoTab({
                   value={form.descrizioneServizio}
                   onChange={(e) => setForm({ ...form, descrizioneServizio: e.target.value })}
                   placeholder="Descrivi brevemente il servizio offerto..."
-                  className="w-full resize-none rounded-[10px] border border-border-1 bg-surface-2/50 p-3 text-[13px] text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+                  className="w-full resize-none rounded-[10px] border border-border-1 bg-surface-2/50 p-3 text-[13px] text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
                   rows={2}
                 />
               </div>
@@ -1399,7 +1482,7 @@ function ContrattoTab({
                       <input
                         value={form[field.key as keyof ContractFormData]}
                         onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                        className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface-2/50 px-3 text-[13px] text-ink-900 outline-none transition-colors focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+                        className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface-2/50 px-3 text-[13px] text-ink-900 outline-none transition-colors focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
                       />
                     </div>
                   ))}
@@ -1420,7 +1503,7 @@ function ContrattoTab({
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Note per l'admin (facoltativo)..."
-              className="w-full resize-none rounded-[10px] border border-border-1 bg-surface-2/50 p-3 text-[13px] text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-pink focus:bg-white focus:ring-2 focus:ring-pink/20"
+              className="w-full resize-none rounded-[10px] border border-border-1 bg-surface-2/50 p-3 text-[13px] text-ink-900 outline-none transition-colors placeholder:text-ink-400 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
               rows={3}
             />
           </div>
@@ -1430,7 +1513,7 @@ function ContrattoTab({
           <button
             onClick={handleSubmit}
             disabled={isPending}
-            className="flex items-center gap-2 rounded-[999px] bg-pink px-6 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-[999px] bg-brand px-6 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
           >
             <Send className="h-3.5 w-3.5" />
             {isPending
@@ -1616,7 +1699,7 @@ function ContrattoTab({
               descrizioneServizio: req.descrizioneServizio ?? "",
             })
           }}
-          className="mt-5 flex items-center gap-2 rounded-[999px] bg-pink px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-pink/90"
+          className="mt-5 flex items-center gap-2 rounded-[999px] bg-brand px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
         >
           <Send className="h-3.5 w-3.5" />
           Correggi e reinvia
@@ -1631,8 +1714,8 @@ function ContrattoTab({
       {/* Status header */}
       <div className="mb-6 flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-pink/10">
-            <FileText className="h-5 w-5 text-pink" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-brand/10">
+            <FileText className="h-5 w-5 text-brand" />
           </div>
           <div>
             <h3 className="text-[17px] font-bold text-ink-900">Richiesta contratto</h3>
@@ -1673,9 +1756,9 @@ function ContrattoTab({
             <div key={step} className="flex-1">
               <div
                 className="mb-1.5 h-[3px] rounded-full transition-colors"
-                style={{ backgroundColor: isActive ? info.color : "#E2E8F0" }}
+                style={{ backgroundColor: isActive ? info.color : "#dddddd" }}
               />
-              <p className="text-[10.5px] font-medium" style={{ color: isActive ? info.color : "#94A3B8" }}>
+              <p className="text-[10.5px] font-medium" style={{ color: isActive ? info.color : "#929292" }}>
                 {info.label}
               </p>
             </div>
@@ -1749,14 +1832,14 @@ function ContrattoTab({
                 Note
               </h4>
             </div>
-            <p className="text-[13px] leading-relaxed text-ink-700">{req.notes}</p>
+            <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-ink-700"><Linkify text={req.notes} /></p>
           </div>
         )}
       </div>
 
       <button
         onClick={() => setEditing(true)}
-        className="mt-5 flex items-center gap-2 rounded-[999px] border border-border-1 px-5 py-2 text-[13px] font-medium text-ink-600 transition-colors hover:border-pink hover:bg-pink/5 hover:text-pink"
+        className="mt-5 flex items-center gap-2 rounded-[999px] border border-border-1 px-5 py-2 text-[13px] font-medium text-ink-600 transition-colors hover:border-brand hover:bg-brand/5 hover:text-brand"
       >
         <FileText className="h-3.5 w-3.5" />
         Correggi dati
@@ -1845,7 +1928,7 @@ function InteressiToggles({
           <span className="text-[13px] font-medium text-ink-700">{item.label}</span>
           <div
             className="flex h-[22px] w-[40px] items-center rounded-full p-[2px] transition-colors"
-            style={{ backgroundColor: item.value ? "#EC4899" : "#E2E8F0" }}
+            style={{ backgroundColor: item.value ? "#1a1a2e" : "#dddddd" }}
           >
             <div
               className="h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform"
@@ -1908,7 +1991,7 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
     return (
       <button
         onClick={() => setShowPicker(true)}
-        className="flex h-[38px] w-full cursor-pointer items-center gap-2 rounded-[10px] border border-dashed border-border-2 bg-surface-2/50 px-3 text-[13px] text-ink-400 transition-colors hover:border-pink hover:text-pink"
+        className="flex h-[38px] w-full cursor-pointer items-center gap-2 rounded-[10px] border border-dashed border-border-2 bg-surface-2/50 px-3 text-[13px] text-ink-400 transition-colors hover:border-brand hover:text-brand"
       >
         <Calendar className="h-3.5 w-3.5" />
         Programma un follow-up
@@ -1925,7 +2008,7 @@ function FollowUpPicker({ autoscuolaId, initialDate }: { autoscuolaId: string; i
         />
       </div>
       {followUpDate && (
-        <p className="text-[12px]" style={{ color: isExpired ? "#EF4444" : "#10B981" }}>
+        <p className="text-[12px]" style={{ color: isExpired ? "#c13515" : "#22C55E" }}>
           {isExpired
             ? `Scaduto da ${Math.abs(diffDays)} giorn${Math.abs(diffDays) === 1 ? "o" : "i"}`
             : `Tra ${diffDays} giorn${diffDays === 1 ? "o" : "i"}`}
@@ -1969,7 +2052,7 @@ function SetterCloserSelects({
   }
 
   const selectClass =
-    "h-[34px] w-full cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2.5 text-[12.5px] text-ink-700 outline-none transition-colors focus:border-pink disabled:opacity-50"
+    "h-[34px] w-full cursor-pointer rounded-[8px] border border-border-1 bg-surface px-2.5 text-[12.5px] text-ink-700 outline-none transition-colors focus:border-brand disabled:opacity-50"
 
   return (
     <div className="space-y-3">
@@ -2002,6 +2085,163 @@ function SetterCloserSelects({
             <option key={u.id} value={u.id}>{u.name}</option>
           ))}
         </select>
+      </div>
+    </div>
+  )
+}
+
+// ── Merge sedi dialog (gruppi multi-sede, admin only) ────────────────
+function MergeSediDialog({
+  current,
+  onClose,
+  onMerged,
+}: {
+  current: { id: string; name: string }
+  onClose: () => void
+  onMerged: () => void
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<{ id: string; name: string; town: string; province: string }[]>([])
+  const [selected, setSelected] = useState<{ id: string; name: string }[]>([])
+  const [primaryId, setPrimaryId] = useState(current.id)
+  const [error, setError] = useState("")
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const members = [current, ...selected]
+
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    if (query.length < 2) {
+      setResults([])
+      return
+    }
+    searchTimeout.current = setTimeout(async () => {
+      const r = await searchAutoscuole(query)
+      setResults(r.filter((x) => x.id !== current.id && !selected.some((s) => s.id === x.id)))
+    }, 300)
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    }
+  }, [query, current.id, selected])
+
+  function handleMerge() {
+    if (selected.length === 0) return
+    setError("")
+    startTransition(async () => {
+      try {
+        await mergeAutoscuole(members.map((m) => m.id), primaryId)
+        onMerged()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Errore durante l'unione. Riprova.")
+      }
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="max-h-[85vh] w-[520px] overflow-y-auto rounded-[20px] border border-border-1 bg-surface p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-[18px] font-bold text-ink-900">Unisci sedi</h2>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-400 hover:bg-surface-2">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="mb-4 text-[13px] leading-relaxed text-ink-600">
+          Collega più schede dello stesso titolare in un gruppo multi-sede. Ogni sede mantiene stage,
+          follow-up, attività e commissioni propri; le schede restano separate in pipeline con un badge di gruppo.
+        </p>
+
+        {/* Search */}
+        <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Aggiungi sedi da unire *</label>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cerca autoscuola per nome o città…"
+          className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-brand focus:ring-2 focus:ring-brand/20"
+        />
+        {results.length > 0 && (
+          <div className="mt-1 max-h-[160px] overflow-y-auto rounded-[12px] border border-border-1 bg-surface shadow-lg">
+            {results.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => {
+                  setSelected((prev) => [...prev, { id: r.id, name: r.name }])
+                  setQuery("")
+                  setResults([])
+                }}
+                className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+              >
+                <Building className="h-3.5 w-3.5 shrink-0 text-ink-400" />
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-ink-900">{r.name}</p>
+                  <p className="text-[11px] text-ink-400">{r.town}, {r.province}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Members + primary radio */}
+        <div className="mt-4">
+          <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">Sedi del gruppo — scegli la principale</label>
+          <div className="space-y-1.5">
+            {members.map((m) => (
+              <div key={m.id} className="flex items-center justify-between gap-2 rounded-[10px] border border-border-1 px-3 py-2">
+                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                  <input
+                    type="radio"
+                    name="primary-sede"
+                    checked={primaryId === m.id}
+                    onChange={() => setPrimaryId(m.id)}
+                    className="accent-brand"
+                  />
+                  <span className="truncate text-[13px] font-medium text-ink-900">
+                    {m.name.replace("Autoscuola ", "")}
+                  </span>
+                  {m.id === current.id && (
+                    <span className="shrink-0 rounded-[4px] bg-surface-2 px-1.5 py-0.5 text-[9.5px] font-semibold text-ink-500">
+                      Questa scheda
+                    </span>
+                  )}
+                </label>
+                {m.id !== current.id && (
+                  <button
+                    onClick={() => {
+                      setSelected((prev) => prev.filter((s) => s.id !== m.id))
+                      if (primaryId === m.id) setPrimaryId(current.id)
+                    }}
+                    className="shrink-0 text-ink-400 hover:text-red"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {error && <p className="mt-3 text-[12.5px] font-medium text-red">{error}</p>}
+
+        <div className="mt-5 flex justify-end gap-2.5">
+          <button
+            onClick={onClose}
+            className="h-9 rounded-[999px] px-4 text-[12.5px] font-semibold text-ink-500 transition-colors hover:bg-surface-2"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={handleMerge}
+            disabled={selected.length === 0 || isPending}
+            className="h-9 rounded-[999px] bg-brand px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? "Unione..." : `Unisci ${members.length} sedi`}
+          </button>
+        </div>
       </div>
     </div>
   )
