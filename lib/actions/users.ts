@@ -1,7 +1,20 @@
 "use server"
 
 import { db } from "@/lib/db"
-import { users, autoscuole } from "@/lib/db/schema"
+import {
+  users,
+  autoscuole,
+  activities,
+  documents,
+  commissions,
+  contractRequests,
+  news,
+  resources,
+  comments,
+  newsReads,
+  salesTerritories,
+  oauthTokens,
+} from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
@@ -79,17 +92,40 @@ export async function deleteUser(id: string, reassignTo?: string | null) {
   const session = await auth()
   if (!session?.user) throw new Error("Non autorizzato")
 
-  // Reassign autoscuole
-  if (reassignTo) {
-    await db.update(autoscuole).set({ assignedTo: reassignTo }).where(eq(autoscuole.assignedTo, id))
-  } else {
-    await db.update(autoscuole).set({ assignedTo: null }).where(eq(autoscuole.assignedTo, id))
-  }
+  // L'utente è referenziato da molte tabelle (diverse con FK NOT NULL): vanno
+  // tutte gestite prima della delete, altrimenti la delete viola un vincolo FK.
+  const reassign = reassignTo ?? null
+  // Le righe "di lavoro" con FK NOT NULL non possono restare orfane: le si
+  // riassegna al sales indicato o, in mancanza, all'admin che sta eliminando,
+  // così non si perde lo storico legato alle autoscuole.
+  const owner = reassignTo ?? session.user.id
+
+  // Autoscuole: riassegnate al nuovo sales o svincolate (colonne nullable)
+  await db.update(autoscuole).set({ assignedTo: reassign }).where(eq(autoscuole.assignedTo, id))
+  await db.update(autoscuole).set({ setter: reassign }).where(eq(autoscuole.setter, id))
+  await db.update(autoscuole).set({ closer: reassign }).where(eq(autoscuole.closer, id))
+
+  // Autore contenuti (nullable) → svincolato
+  await db.update(news).set({ authorId: null }).where(eq(news.authorId, id))
+  await db.update(resources).set({ authorId: null }).where(eq(resources.authorId, id))
+
+  // Record di lavoro con FK NOT NULL → riassegnati per preservare lo storico
+  await db.update(activities).set({ userId: owner }).where(eq(activities.userId, id))
+  await db.update(documents).set({ userId: owner }).where(eq(documents.userId, id))
+  await db.update(contractRequests).set({ requestedBy: owner }).where(eq(contractRequests.requestedBy, id))
+  await db.update(commissions).set({ userId: owner }).where(eq(commissions.userId, id))
+
+  // Dati personali/effimeri dell'utente → eliminati
+  await db.delete(comments).where(eq(comments.userId, id))
+  await db.delete(newsReads).where(eq(newsReads.userId, id))
+  await db.delete(salesTerritories).where(eq(salesTerritories.userId, id))
+  await db.delete(oauthTokens).where(eq(oauthTokens.userId, id))
 
   await db.delete(users).where(eq(users.id, id))
 
   revalidatePath("/admin/gestione-sales")
   revalidatePath("/pipeline")
+  revalidatePath("/admin/assegnazioni")
 }
 
 export async function changePassword(currentPassword: string, newPassword: string) {
