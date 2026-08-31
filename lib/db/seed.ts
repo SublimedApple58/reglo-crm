@@ -45,10 +45,13 @@ async function seed() {
     { id: "non_interessato", label: "Non interessato", color: "#c13515", tone: "red", order: 1 },
     { id: "follow_up", label: "Follow up", color: "#2563EB", tone: "blue", order: 2 },
     { id: "email", label: "Email", color: "#0E7490", tone: "teal", order: 3 },
-    { id: "appuntamento", label: "Appuntamento", color: "#16A34A", tone: "green", order: 4 },
-    { id: "no_show", label: "No show", color: "#D97706", tone: "orange", order: 5 },
-    { id: "cliente", label: "Cliente", color: "#1a1a2e", tone: "navy", order: 6 },
-    { id: "nuove_features", label: "Nuove features", color: "#A855F7", tone: "violet", order: 7 },
+    { id: "in_attesa", label: "In attesa", color: "#7C3AED", tone: "violet", order: 4 },
+    { id: "appuntamento", label: "Appuntamento", color: "#16A34A", tone: "green", order: 5 },
+    { id: "no_show", label: "No show", color: "#D97706", tone: "orange", order: 6 },
+    { id: "cliente", label: "Cliente", color: "#1a1a2e", tone: "navy", order: 7 },
+    { id: "non_chiuso", label: "Non chiuso", color: "#7f1d1d", tone: "red", order: 8 },
+    { id: "abbandonato", label: "CI hanno abbandonato", color: "#EA580C", tone: "orange", order: 9 },
+    { id: "nuove_features", label: "Nuove features", color: "#A855F7", tone: "violet", order: 10 },
   ]
   await db.insert(schema.pipelineStages).values(stages)
   console.log("✅ Pipeline stages seeded")

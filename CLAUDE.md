@@ -89,7 +89,7 @@ There is no client-side data fetching library (no SWR/React Query). Mutations us
 
 ### Pipeline stages
 
-10 ordered stages defined in `lib/constants.ts` (`STAGES`, `StageId`): `da_chiamare`, `non_interessato`, `follow_up`, `email`, `in_attesa`, `appuntamento`, `no_show`, `cliente`, `non_chiuso`, `nuove_features`. Use these IDs — they are stored on `autoscuole` rows and drive the Kanban.
+11 ordered stages defined in `lib/constants.ts` (`STAGES`, `StageId`): `da_chiamare`, `non_interessato`, `follow_up`, `email`, `in_attesa`, `appuntamento`, `no_show`, `cliente`, `non_chiuso`, `abbandonato` (churn — "CI hanno abbandonato"), `nuove_features`. Use these IDs — they are stored on `autoscuole` rows and drive the Kanban. Stages are also rows in the `pipeline_stages` table (FK from `autoscuole.stage_id`, supplies color/label via join); adding a stage means: edit `STAGES`, add a `drizzle/` migration inserting the row (`ON CONFLICT DO NOTHING`), and sync `lib/db/seed.ts`.
 
 ### API routes
 

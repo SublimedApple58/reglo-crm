@@ -8,7 +8,8 @@ export const STAGES = [
   { id: "no_show", label: "No show", color: "#D97706", tone: "orange", order: 6 },
   { id: "cliente", label: "Cliente", color: "#1a1a2e", tone: "navy", order: 7 },
   { id: "non_chiuso", label: "Non chiuso", color: "#7f1d1d", tone: "red", order: 8 },
-  { id: "nuove_features", label: "Nuove features", color: "#A855F7", tone: "violet", order: 9 },
+  { id: "abbandonato", label: "CI hanno abbandonato", color: "#EA580C", tone: "orange", order: 9 },
+  { id: "nuove_features", label: "Nuove features", color: "#A855F7", tone: "violet", order: 10 },
 ] as const
 
 export const STAGE_DESCRIPTIONS: Record<string, string> = {
@@ -21,6 +22,7 @@ export const STAGE_DESCRIPTIONS: Record<string, string> = {
   no_show: "Non si è presentato all'appuntamento",
   cliente: "Contratto e fattura OK",
   non_chiuso: "Trattativa non andata a buon fine",
+  abbandonato: "Erano clienti ma ci hanno abbandonato (churn)",
   nuove_features: "Interessati a nuove features non ancora disponibili",
 }
 
