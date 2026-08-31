@@ -825,7 +825,7 @@ function AnagraficaTab({ autoscuola, onDelete }: { autoscuola: Autoscuola; onDel
     autoscuola.trialStartAt ? new Date(autoscuola.trialStartAt).toISOString().slice(0, 10) : ""
   )
   const showLostReason = autoscuola.stageId === "non_chiuso" && autoscuola.lostReason
-  const showTrialField = autoscuola.stageId === "cliente" || autoscuola.trialStartAt !== null
+  const showTrialField = autoscuola.stageId === "in_prova" || autoscuola.trialStartAt !== null
 
   function handleSave() {
     startTransition(() => {
@@ -874,7 +874,7 @@ function AnagraficaTab({ autoscuola, onDelete }: { autoscuola: Autoscuola; onDel
             className="h-[38px] w-full rounded-[10px] border border-border-1 bg-surface px-3 text-[13px] text-ink-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
           <p className="mt-1 text-[11.5px] text-ink-400">
-            Impostata automaticamente al primo passaggio in &ldquo;Cliente&rdquo;; il badge in pipeline conta {TRIAL_DAYS} giorni da questa data.
+            Impostata automaticamente all&rsquo;ingresso in &ldquo;In prova&rdquo;; allo scadere dei {TRIAL_DAYS} giorni l&rsquo;autoscuola passa automaticamente a &ldquo;Cliente&rdquo;.
           </p>
         </div>
       )}

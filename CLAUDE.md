@@ -89,7 +89,9 @@ There is no client-side data fetching library (no SWR/React Query). Mutations us
 
 ### Pipeline stages
 
-11 ordered stages defined in `lib/constants.ts` (`STAGES`, `StageId`): `da_chiamare`, `non_interessato`, `follow_up`, `email`, `in_attesa`, `appuntamento`, `no_show`, `cliente`, `non_chiuso`, `abbandonato` (churn — "CI hanno abbandonato"), `nuove_features`. Use these IDs — they are stored on `autoscuole` rows and drive the Kanban. Stages are also rows in the `pipeline_stages` table (FK from `autoscuole.stage_id`, supplies color/label via join); adding a stage means: edit `STAGES`, add a `drizzle/` migration inserting the row (`ON CONFLICT DO NOTHING`), and sync `lib/db/seed.ts`.
+12 ordered stages defined in `lib/constants.ts` (`STAGES`, `StageId`): `da_chiamare`, `non_interessato`, `follow_up`, `email`, `in_attesa`, `appuntamento`, `no_show`, `in_prova` (mese di prova — "In prova"), `cliente`, `non_chiuso`, `abbandonato` (churn — "CI hanno abbandonato"), `nuove_features`. Use these IDs — they are stored on `autoscuole` rows and drive the Kanban. Stages are also rows in the `pipeline_stages` table (FK from `autoscuole.stage_id`, supplies color/label via join); adding a stage means: edit `STAGES`, add a `drizzle/` migration inserting the row (`ON CONFLICT DO NOTHING`), and sync `lib/db/seed.ts`.
+
+Trial flow (REG-414): entering `in_prova` sets `autoscuole.trial_start_at` (in `updateAutoscuolaStage`); pipeline cards show a countdown to `cliente`. A daily Vercel Cron (`vercel.json` → `app/api/cron/promote-trials/route.ts`, protected by the `CRON_SECRET` env var) auto-promotes `in_prova` rows older than `TRIAL_DAYS` (30) to `cliente`. Manually moving a row out of `in_prova` opts it out of auto-promotion.
 
 ### API routes
 

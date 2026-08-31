@@ -139,8 +139,8 @@ export function PipelineClient({
                 stageId: newStageId,
                 stageName: stages.find((s) => s.id === newStageId)?.label ?? a.stageName,
                 stageColor: stages.find((s) => s.id === newStageId)?.color ?? a.stageColor,
-                // Il server setta trial_start_at al primo passaggio a Cliente: rispecchialo subito
-                trialStartAt: newStageId === "cliente" && !a.trialStartAt ? new Date() : a.trialStartAt,
+                // Il server setta trial_start_at al primo ingresso in "In prova": rispecchialo subito
+                trialStartAt: newStageId === "in_prova" && !a.trialStartAt ? new Date() : a.trialStartAt,
               }
             : a
         )
@@ -580,18 +580,18 @@ function KanbanColumn({
                         : undefined,
                     }}
                   >
-                    {/* Trial countdown badge — prima dell'evidenza colore "cliente" */}
-                    {item.stageId === "cliente" && item.trialStartAt && (() => {
+                    {/* Countdown mese di prova — quanto manca al passaggio automatico a Cliente */}
+                    {item.stageId === "in_prova" && item.trialStartAt && (() => {
                       const daysLeft = TRIAL_DAYS - Math.floor((Date.now() - new Date(item.trialStartAt).getTime()) / 86400000)
                       return daysLeft > 0 ? (
                         <span className="mb-1.5 inline-flex items-center gap-1 rounded-[999px] bg-yellow-50 px-2 py-0.5 text-[10.5px] font-bold text-yellow-600">
                           <Clock className="h-3 w-3" />
-                          Prova: {daysLeft} {daysLeft === 1 ? "giorno" : "giorni"}
+                          Cliente tra {daysLeft} {daysLeft === 1 ? "giorno" : "giorni"}
                         </span>
                       ) : (
-                        <span className="mb-1.5 inline-flex items-center gap-1 rounded-[999px] bg-surface-2 px-2 py-0.5 text-[10.5px] font-bold text-ink-500">
+                        <span className="mb-1.5 inline-flex items-center gap-1 rounded-[999px] bg-yellow-50 px-2 py-0.5 text-[10.5px] font-bold text-yellow-600">
                           <Clock className="h-3 w-3" />
-                          Prova terminata
+                          In promozione a Cliente
                         </span>
                       )
                     })()}

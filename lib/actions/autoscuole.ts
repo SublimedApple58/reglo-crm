@@ -85,8 +85,9 @@ export async function updateAutoscuolaStage(id: string, stageId: string, opts?: 
     update.lostReason = null
   }
 
-  // Inizio mese di prova: primo passaggio a Cliente, mai sovrascritto
-  if (stageId === "cliente" && !current.trialStartAt) {
+  // Inizio mese di prova: primo ingresso in "In prova", mai sovrascritto.
+  // Da qui il cron promuove a "Cliente" allo scadere dei TRIAL_DAYS.
+  if (stageId === "in_prova" && !current.trialStartAt) {
     update.trialStartAt = new Date()
   }
 
