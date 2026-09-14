@@ -117,6 +117,21 @@ export async function createCalendarEvent(data: {
     }
   }
 
+  // Invita automaticamente il sales assegnato alla lead, così il meeting compare
+  // sul suo calendario anche se a crearlo è stato un collega/admin.
+  if (data.autoscuolaId) {
+    const [row] = await db
+      .select({ salesEmail: users.email })
+      .from(autoscuole)
+      .innerJoin(users, eq(autoscuole.assignedTo, users.id))
+      .where(eq(autoscuole.id, data.autoscuolaId))
+      .limit(1)
+    const salesEmail = row?.salesEmail
+    if (salesEmail && !allGuests.some((g) => g.trim().toLowerCase() === salesEmail.toLowerCase())) {
+      allGuests.push(salesEmail)
+    }
+  }
+
   const event = await calendar.events.insert({
     calendarId: "primary",
     conferenceDataVersion: data.addMeetLink ? 1 : 0,
