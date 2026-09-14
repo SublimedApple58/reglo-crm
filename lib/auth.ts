@@ -133,13 +133,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.territory = (user as Record<string, unknown>).territory as string
         token.avatar = (user as Record<string, unknown>).avatar as string
       } else if (token.id) {
-        // Subsequent requests — refresh avatar from DB
+        // Richieste successive — riallinea ruolo/territorio/avatar dal DB, così i
+        // cambi di ruolo (es. sales → both) hanno effetto al prossimo giro senza
+        // richiedere un nuovo login.
         const [dbUser] = await db
-          .select({ avatar: users.avatar })
+          .select({ role: users.role, territory: users.territory, avatar: users.avatar })
           .from(users)
           .where(eq(users.id, token.id as string))
           .limit(1)
         if (dbUser) {
+          token.role = dbUser.role
+          token.territory = dbUser.territory
           token.avatar = dbUser.avatar
         }
       }
