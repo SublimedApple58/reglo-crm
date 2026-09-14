@@ -267,8 +267,7 @@ export async function rsvpCalendarEvent(
 export async function getCalendarEventsForUser(userId: string, timeMin: string, timeMax: string) {
   const session = await auth()
   if (!session?.user) return []
-  const role = (session.user as Record<string, unknown>).role
-  if (role !== "admin" && role !== "both") return []
+  // Overlay calendari colleghi visibile a TUTTI i sales (in precedenza solo admin/both).
 
   const calendar = await getGoogleCalendarClient(userId)
   if (!calendar) return []
@@ -298,8 +297,7 @@ export async function getCalendarEventsForUser(userId: string, timeMin: string, 
 export async function getSalesWithGoogle() {
   const session = await auth()
   if (!session?.user) return []
-  const role = (session.user as Record<string, unknown>).role
-  if (role !== "admin" && role !== "both") return []
+  // Lista calendari colleghi visibile a TUTTI i sales (in precedenza solo admin/both).
 
   const results = await db
     .select({
